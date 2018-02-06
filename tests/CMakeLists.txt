@@ -6,9 +6,9 @@
 #
 #==--------------------------------------------------------------------------==#
 
-add_executable(test cuda_test.cu)
+add_executable(cuda_test cuda_test.cu)
 
-set_target_properties(test PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+set_target_properties(cuda_test PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 #target_link_libraries(test PRIVATE fluidity_cuda_test)
 
 #if(APPLE)
