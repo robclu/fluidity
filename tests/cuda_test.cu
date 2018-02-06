@@ -11,6 +11,7 @@
 //
 //==------------------------------------------------------------------------==//
 
+#include <fluidity/utility/debug.hpp>
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -32,5 +33,5 @@ int main(int argc, char** argv) {
     iterations = atoi(argv[2]);
 
   invoke_kernel<<<1, threads>>>(sum, iterations);
-  cudaDeviceSynchronize();
+  fluidity_check_cuda_result(cudaDeviceSynchronize());
 }

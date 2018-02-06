@@ -6,9 +6,6 @@
 #
 #==--------------------------------------------------------------------------==#
 
-find_package(CUDA REQUIRED)
-message("CUDA VERSION: ${CUDA_VERSION_STRING} ")
-
 add_library(
   fluidity_cuda_test STATIC
   ${fluidity_SOURCE_DIR}/src/fluidity/fluidity_cuda_test.cpp
@@ -26,4 +23,5 @@ set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -arch=sm_30")
 # with -dc so that the member functions can be called by other libraries and
 # executables.
 set_target_properties(
-  fluidity_cuda_test PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+  fluidity_cuda_test PROPERTIES CUDA_SEPARABLE_COMPILATION ON
+)

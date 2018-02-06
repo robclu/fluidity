@@ -16,7 +16,23 @@ if(NOT CMAKE_BUILD_TYPE)
 endif(NOT CMAKE_BUILD_TYPE)
 
 # Change if we want to use clang as the host compiler:
-set(CMAKE_CUDA_COMPILER /lsc/opt/cuda-9.1/bin/nvcc)
+if (NOT APPLE)
+  set(CMAKE_CUDA_COMPILER /lsc/opt/cuda-9.1/bin/nvcc)
+endif()
+
+# Test that the version of the cuda compiler is sufficient:
+message("-- Using CUDA Compiler : ${CMAKE_CUDA_COMPILER}")
+execute_process(
+  COMMAND ${CMAKE_CUDA_COMPILER} --version OUTPUT_VARIABLE NVCC_VERSION
+)
+
+if (NVCC_VERSION MATCHES "V9")
+else()
+  message("-- ERROR: NVCC Version > 9 is required.")
+  message(
+    FATAL_ERROR "     Please set -DCMAKE_CUDA_COMPILER=<path/to/nvcc/version>9>"
+  )
+endif()
 
 #==--- Include directories --------------------------------------------------==#
 
@@ -33,7 +49,7 @@ else(APPLE)
   set(RELEASE_FLAGS "${FLAGS_PERF} ${FLAGS_ERRORS}")
   set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${RELEASE_FLAGS}")
   set(CMAKE_CXX_FLAGS_DEBUG   "${CMAKE_CXX_FLAGS_DEBUG} ${DEBUG_FLAGS}")
-  set(CUDA_FLAGS    "-use_fast_math -O3 -std=c++14")
+  set(CUDA_FLAGS    "-use_fast_math -O3 -std=c++14 -arch=sm_30")
 endif()
 
 if(CMAKE_BUILD_TYPE MATCHES Release)
@@ -48,8 +64,7 @@ else()
   )
 endif()
 
-set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} ${CUDA_FLAGS}"
-    CACHE STRING "CUDA FLAGS" FORCE)
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} ${CUDA_FLAGS}")
 
 #==--- Subdirectories -------------------------------------------------------==#
 
