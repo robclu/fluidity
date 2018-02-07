@@ -1,5 +1,7 @@
 //==--- fluidity/test/cuda_test.cu-------------------------- -*- C++ -*- ---==//
 //            
+//                                Fluidity
+// 
 //                      Copyright (c) 2018 Rob Clucas.
 //
 //  This file is distributed under the MIT License. See LICENSE for details.

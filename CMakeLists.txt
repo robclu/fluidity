@@ -17,7 +17,7 @@ endif(NOT CMAKE_BUILD_TYPE)
 
 # Change if we want to use clang as the host compiler:
 if (NOT APPLE)
-  set(CMAKE_CUDA_COMPILER /lsc/opt/cuda-9.1/bin/nvcc)
+  set(CMAKE_CUDA_COMPILER /lsc/opt/cuda-9.0/bin/nvcc)
 endif()
 
 # Test that the version of the cuda compiler is sufficient:
