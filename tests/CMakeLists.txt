@@ -6,10 +6,17 @@
 #
 #==--------------------------------------------------------------------------==#
 
-add_executable(cuda_test cuda_test.cu)
+set(LINK_DIRECTORIES ${LINK_DIRECTORIES} /home/raid/rjc201/opt/google/lib)
 
+add_executable(cuda_test cuda_test.cu)
 set_target_properties(cuda_test PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 #target_link_libraries(test PRIVATE fluidity_cuda_test)
+
+
+#==--- Tests ----------------------------------------------------------------==#
+
+add_executable(container_hosts_tests container_tests_host.cpp)
+target_link_libraries(container_hosts_tests -lgtest -lgtest_main)
 
 #if(APPLE)
   # We need to add the default path to the driver (libcuda.dylib) as an rpath,

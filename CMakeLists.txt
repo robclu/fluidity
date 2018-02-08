@@ -36,7 +36,12 @@ endif()
 
 #==--- Include directories --------------------------------------------------==#
 
-include_directories(${fluidity_SOURCE_DIR}/include)
+message("CUDA: ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}")
+include_directories(
+  ${fluidity_SOURCE_DIR}/include
+  ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}
+  /home/raid/rjc201/opt/google/include
+)
 
 #==--- Compiler Flags -------------------------------------------------------==#
 
