@@ -18,6 +18,8 @@
 #define FLUIDITY_CONTAINER_BASE_TENSOR_HPP
 
 #include <fluidity/utility/portability.hpp>
+#include <cstddef>
+#include <type_traits>
 
 namespace fluid {
 
@@ -41,20 +43,20 @@ class BaseTensor<T, 1> {
   /// Defines the type of the data being stored in the tensor.
   using value_t   = std::decay_t<T>;
   /// Defines the type of the pointer to the data to store.
-  using pointer_t = value_t;
+  using pointer_t = value_t*;
 
   /// Initializes the size of each of the dimensions in the tensor, and the
   /// total number of elements in the tensor.
   /// \param[in] elements The number of elements in the 1D tensor.
-  fluidity_device_host BaseTensor(std::size_t elements);
+  fluidity_host_device BaseTensor(std::size_t elements);
 
   /// Returns the amount of memory required by the tensor, in bytes.
-  fluidity_device_host std::size_t mem_requirement() const;
+  fluidity_host_device std::size_t mem_requirement() const;
 
   /// Returns the number of elements in the tensor.
-  fluidity_device_host std::size_t size() const;
+  fluidity_host_device std::size_t size() const;
 
- private:
+ protected:
   pointer_t   _data = nullptr;  //!< Pointer to the tensor data.
   std::size_t _size = 0;        //!< Number of elements in the tensor.
 };
@@ -63,7 +65,7 @@ class BaseTensor<T, 1> {
 
 template <typename T>
 BaseTensor<T, 1>::BaseTensor(std::size_t elements)
-: _size(elements) {}
+: _data(nullptr), _size(elements) {}
 
 template <typename T>
 std::size_t BaseTensor<T, 1>::mem_requirement() const {

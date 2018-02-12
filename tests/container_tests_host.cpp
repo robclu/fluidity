@@ -22,7 +22,7 @@ using host_tensor1d = fluid::HostTensor<T, 1>;
 TEST(container_host_tensor, can_create_tensor) {
   host_tensor1d<float> t(20);
 
-  EXPECT_EQ(t.size(), 20);
+  EXPECT_EQ(t.size(), static_cast<decltype(t.size())>(20));
 }
 
 int main(int argc, char** argv) {
