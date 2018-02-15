@@ -49,24 +49,46 @@ class HostTensor<T, 1> : public BaseTensor<T, 1> {
   /// \param[in] elements The number of elements in the 1D ensor.
   HostTensor(std::size_t elements);
 
+  /// Cleans up any memory allocated for the tensor.
+  ~HostTensor();
+
  private:
   /// Allocates memory for the array.
   void allocate();
+
+  /// Cleans up any memory allocated for the tensor.
+  void cleanup();
 };
 
 //==--- BaseTensor 1D Implementation ---------------------------------------==//
 
+//===== Public ----------------------------------------------------------=====//
+
 template <typename T>
-HostTensor<T, 1>::HostTensor(std::size_t elements)
+HostTensor<T, 1>::HostTensor(std::size_t elements) 
 :   BaseTensor<T, 1>(elements) {
   allocate();
 }
+
+template <typename T>
+HostTensor<T, 1>::~HostTensor() {
+  cleanup();
+}
+
+//===== Private ---------------------------------------------------------=====//
 
 template <typename T>
 void HostTensor<T, 1>::allocate() {
   // TODO: Add an implementation for aligned allocation...
   if (this->_data == nullptr) {
     this->_data = static_cast<pointer_t>(malloc(this->mem_requirement()));
+  }
+}
+
+template <typename T>
+void HostTensor<T, 1>::cleanup() {
+  if (this->_data != nullptr) {
+    free(this->_data);
   }
 }
 
