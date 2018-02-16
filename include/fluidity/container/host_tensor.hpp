@@ -19,6 +19,8 @@
 #define FLUIDITY_CONTAINER_HOST_TENSOR_HPP
 
 #include "base_tensor.hpp"
+#include <fluidity/iterator/tensor_iterator.hpp>
+#include <cstddef>
 
 namespace fluid {
 
@@ -39,10 +41,18 @@ class HostTensor {
 template <typename T>
 class HostTensor<T, 1> : public BaseTensor<T, 1> {
  public:
+  /// Defines the type of the tensor.
+  using self_t           = HostTensor;
   /// Defines an alias for the base tensor class.
-  using base_t    = BaseTensor<T, 1>;
+  using base_t           = BaseTensor<T, 1>;
+  /// Defines the type of the elements in the tensor.
+  using element_t       = typename base_t::value_t;
   /// Defines the type of the pointer to the data to store.
-  using pointer_t = typename base_t::pointer_t;
+  using pointer_t        = typename base_t::pointer_t;
+  /// Defines the type of a non const iterator.
+  using iterator_t       = TensorIterator<self_t, false>;
+  /// Defines the type of a const iterator.
+  using const_iterator_t = TensorIterator<self_t, true>;
 
   /// Initializes the size of each of the dimensions in the tensor, and the
   /// total number of elements in the tensor.
@@ -51,6 +61,18 @@ class HostTensor<T, 1> : public BaseTensor<T, 1> {
 
   /// Cleans up any memory allocated for the tensor.
   ~HostTensor();
+
+  /// Returns an iterator to the first element in the tensor.
+  iterator_t begin()
+  {
+    return iterator_t{this->_data};
+  }
+
+  /// Returns an iterator to the last element in the tensor.
+  iterator_t end()
+  {
+    return iterator_t{this->_data + this->_size};
+  }
 
  private:
   /// Allocates memory for the array.

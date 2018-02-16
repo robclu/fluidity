@@ -8,7 +8,7 @@
 //
 //==------------------------------------------------------------------------==//
 //
-/// \file  host_tensor.cu
+/// \file  device_tensor.hpp
 /// \brief This file defines a file which implements device (GPU) side tensor
 ///        functionality where the tensor dimensions of the tensor are specified
 ///        at compile time.
@@ -42,10 +42,14 @@ template <typename T>
 template <typename T>
 class DeviceTensor<T, 1> : public BaseTensor<T, 1> {
  public:
+  /// Defines the type of the elements in the tensor.
+  using element_t = T;
   /// Defines an alias for the base tensor class.
   using base_t    = BaseTensor<T, 1>;
   /// Defines the type of the pointer to the data to store.
   using pointer_t = typename base_t::pointer_t;
+
+  /// Defines the number of dimensions in the tensor
 
   /// Initializes the size of each of the dimensions in the tensor, and the
   /// total number of elements in the tensor.

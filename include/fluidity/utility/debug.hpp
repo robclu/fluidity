@@ -18,6 +18,7 @@
 #include <exception>
 #include <stdio.h>
 #include <cuda.h>
+#include <cuda_runtime.h>
 
 namespace fluidity {
 namespace util     {
