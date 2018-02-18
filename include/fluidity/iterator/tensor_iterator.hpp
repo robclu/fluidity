@@ -32,11 +32,11 @@ struct TensorIterator {
   using self_t       = TensorIterator;
   /// Defines the type of the elements the tensor holds, and which are iterated
   /// over.
-  using element_t    = typename T::element_t;
+  using value_t      = typename T::value_t;
   /// Defines the type of a reference to an element.
-  using reference_t  = std::conditional_t<IsConst, const element_t&, element_t&>;
+  using reference_t  = std::conditional_t<IsConst, const value_t&, value_t&>;
   /// Defines the type of the pointer for the iterator.
-  using pointer_t    = std::conditional_t<IsConst, const element_t*, element_t*>;
+  using pointer_t    = std::conditional_t<IsConst, const value_t*, value_t*>;
   /// Defines the type of the difference between two iterators.
   using difference_t = int;
 

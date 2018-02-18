@@ -26,21 +26,26 @@ template <typename T, std::size_t Elements>
 class Array {
  public:
   /// Defines the type of the tensor.
-  using self_t           = Array;
+  using self_t            = Array;
   /// Defines the type of the elements in the tensor.
-  using value_t          = std::decay_t<T>;
+  using value_t           = std::decay_t<T>;
   /// Defines the type of the pointer to the data type.
-  using pointer_t        = value_t*;
+  using pointer_t         = value_t*;
   /// Defines the type of a reference to the data type.
-  using reference_t      = value_t&; 
+  using reference_t       = value_t&; 
+  /// Defines the type of a const reference to the data type.
+  using const_reference_t = const value_t&;
   /// Defines the type of a non const iterator.
-  using iterator_t       = TensorIterator<self_t, false>;
+  using iterator_t        = TensorIterator<self_t, false>;
   /// Defines the type of a const iterator.
-  using const_iterator_t = TensorIterator<self_t, true>;
+  using const_iterator_t  = TensorIterator<self_t, true>;
 
   /// Initializes each of the elements in the array to have the value \p value.
   /// \param[in] value The value to set the array elements to.
-  fluidity_host_device constexpr Array(std::size_t value);
+  fluidity_host_device constexpr Array(value_t value)
+  {
+    fill(this->begin(), this->end(), value);
+  }
 
   /// Copies the contents of the \p other array into a new array.
   /// \param[in] other The other array to copy from.
@@ -61,21 +66,35 @@ class Array {
   /// Overload of access operator to access an element. __Note:__
   /// this does not check that the value of \p i is in range.
   /// \param[in] i The index of the element in the vetor to return.
-  fluidity_host_device constexpr reference_t operator[](size_t i);
+  fluidity_host_device constexpr reference_t operator[](size_t i)
+  {
+    return _data[i];
+  }
 
   /// Overload of access operator to access an element in the array. __Note:__
   /// this does not check that the value of \p i is in range.
   /// \param[in] i The index of the element in the vetor to return.
-  fluidity_host_device constexpr const reference_t operator[](size_t i) const;
+  fluidity_host_device constexpr const_reference_t operator[](size_t i) const
+  {
+    return _data[i];
+  }
 
   /// Returns an iterator to the first element in the tensor.
-  fluidity_host_device constexpr iterator_t begin();
+  fluidity_host_device constexpr iterator_t begin()
+  {
+    return iterator_t{this->_data};
+  }
 
   /// Returns an iterator to the last element in the tensor.
-  fluidity_host_device constexpr iterator_t end();
-
+  fluidity_host_device constexpr iterator_t end()
+  {
+    return iterator_t{this->_data + Elements};
+  }
   /// Returns the number of elements in the array.
-  fluidity_host_device constexpr std::size_t size() const;
+  fluidity_host_device constexpr std::size_t size() const
+  {
+    return Elements;
+  }
 
  private:
   value_t _data[Elements] = {0};  //!< Data for the array.
@@ -85,56 +104,7 @@ class Array {
 
 //===== Public ----------------------------------------------------------=====//
 
-template <typename T, std::size_t Elements>
-Array<T, Elements>::Array(std::size_t value) : _data{value} {}
-
-template <typename T, std::size_t Elements>
-iterator_t begin()
-{
-  return iterator_t{this->_data};
-}
-
-template <typename T, std::size_t Elements>
-iterator_t end()
-{
-  return iterator_t{this->_data + Elements};
-}
-
-template <typename T, std::size_t Elements>
-std::size_t size() const
-{
-  return Elements;
-}
-
-template <typename T, std::size_t Elements>
-reference_t operator[](std::size_t i)
-{
-  return _data[i];
-}
-
-template <typename T, std::size_t Elements>
-const reference_t operator[](std::size_t i) const
-{
-  return _data[i];
-}
-
-
 //===== Private ---------------------------------------------------------=====//
-
-template <typename T>
-void HostTensor<T, 1>::allocate() {
-  // TODO: Add an implementation for aligned allocation...
-  if (this->_data == nullptr) {
-    this->_data = static_cast<pointer_t>(malloc(this->mem_requirement()));
-  }
-}
-
-template <typename T>
-void HostTensor<T, 1>::cleanup() {
-  if (this->_data != nullptr) {
-    free(this->_data);
-  }
-}
 
 
 } // namespace fluid

@@ -46,7 +46,7 @@ class HostTensor<T, 1> : public BaseTensor<T, 1> {
   /// Defines an alias for the base tensor class.
   using base_t           = BaseTensor<T, 1>;
   /// Defines the type of the elements in the tensor.
-  using element_t       = typename base_t::value_t;
+  using value_t          = typename base_t::value_t;
   /// Defines the type of the pointer to the data to store.
   using pointer_t        = typename base_t::pointer_t;
   /// Defines the type of a non const iterator.
