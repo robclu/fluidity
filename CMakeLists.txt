@@ -36,11 +36,26 @@ endif()
 
 #==--- Include directories --------------------------------------------------==#
 
-message("CUDA: ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}")
+message("-- CUDA INCLUDE DIR: ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}")
+
+# Gtest does not currently build without this flag!
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-function")
+
+if (EXISTS ${fluidity_SOURCE_DIR}/googletest)
+  add_subdirectory(googletest)
+else()
+  message("-- NOTE: Googletest not found, fetching ...")
+  execute_process(
+    COMMAND git clone https://github.com/google/googletest.git 
+      ${fluidity_SOURCE_DIR}/googletest
+  )
+  message("-- DONE: Fetched googletest.")
+  add_subdirectory(googletest)
+endif()
+
 include_directories(
   ${fluidity_SOURCE_DIR}/include
   ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}
-  /home/raid/rjc201/opt/google/include
 )
 
 #==--- Compiler Flags -------------------------------------------------------==#
@@ -49,12 +64,13 @@ if(WIN32)
 
 else(APPLE)
   set(FLAGS_ERRORS  "-Wpedantic -Wextra -Wall")
-  set(FLAGS_PERF    "-O3 -std=c++14 -pthread")
+  set(FLAGS_PERF    "-O3 -std=c++14 -pthread -Wno-c++1z-extensions")
   set(DEBUG_FLAGS   "${FLAGS_PERF} ${FLAGS_ERRORS}")
   set(RELEASE_FLAGS "${FLAGS_PERF} ${FLAGS_ERRORS}")
   set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${RELEASE_FLAGS}")
   set(CMAKE_CXX_FLAGS_DEBUG   "${CMAKE_CXX_FLAGS_DEBUG} ${DEBUG_FLAGS}")
   set(CUDA_FLAGS    "-use_fast_math -O3 -std=c++14 -arch=sm_30 -pthread")
+  set(CUDA_FLAGS    "${CUDA_FLAGS} -Wno-c++1z-extensions")
 endif()
 
 if(CMAKE_BUILD_TYPE MATCHES Release)

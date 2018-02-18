@@ -21,8 +21,8 @@ namespace fluid {
 /// The StorageFormat enum class defines the options for the storage format
 /// which can be used to store data.
 enum class StorageFormat : uint8_t {
-  array_of_struct_t = 0,    //!< Stores the data in AOS.
-  struct_of_array_t = 1     //!< Stores the data as SOA.
+  row_major = 0,    //!< Stores the data row major (can be in AOS).
+  col_major = 1     //!< Stores the data column major (can be SOA).
 };
 
 /// Defines a struct which specifies the traits of the layout for an array.
@@ -40,7 +40,7 @@ struct LayoutTraits {
 /// Defines an array class.
 template <typename    T       ,
           std::size_t Elements,
-          typename    Format  = StorageFormat::array_of_struct_t>
+          typename    Format  = StorageFormat::row_major>
 class Array {
 
 };

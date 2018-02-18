@@ -37,6 +37,21 @@ TEST(container_host_tensor, canFillTensor)
   }
 }
 
+TEST(container_host_tensor, canFillTensorWithFunctor)
+{
+  host_tensor1d<int> t(20);
+  std::size_t count = 0;
+  fluid::fill(t.begin(), t.end(), [&count] (auto iterator)
+  {
+    *iterator = count++;
+  });
+
+  count = 0;
+  for (const auto& element : t) {
+    EXPECT_EQ(element, count++);
+  }
+}
+
 int main(int argc, char** argv) {
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();

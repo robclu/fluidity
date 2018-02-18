@@ -88,28 +88,34 @@ class HostTensor<T, 1> : public BaseTensor<T, 1> {
 
 template <typename T>
 HostTensor<T, 1>::HostTensor(std::size_t elements) 
-:   BaseTensor<T, 1>(elements) {
+: BaseTensor<T, 1>(elements)
+{
   allocate();
 }
 
 template <typename T>
-HostTensor<T, 1>::~HostTensor() {
+HostTensor<T, 1>::~HostTensor()
+{
   cleanup();
 }
 
 //===== Private ---------------------------------------------------------=====//
 
 template <typename T>
-void HostTensor<T, 1>::allocate() {
+void HostTensor<T, 1>::allocate()
+{
   // TODO: Add an implementation for aligned allocation...
-  if (this->_data == nullptr) {
+  if (this->_data == nullptr) 
+  {
     this->_data = static_cast<pointer_t>(malloc(this->mem_requirement()));
   }
 }
 
 template <typename T>
-void HostTensor<T, 1>::cleanup() {
-  if (this->_data != nullptr) {
+void HostTensor<T, 1>::cleanup()
+{
+  if (this->_data != nullptr)
+  {
     free(this->_data);
   }
 }

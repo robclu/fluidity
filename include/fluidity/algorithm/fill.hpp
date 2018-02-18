@@ -17,21 +17,35 @@
 #define FLUIDITY_ALGORITHM_FILL_HPP
 
 #include <fluidity/iterator/tensor_iterator.hpp>
+#include <type_traits>
 
 namespace fluid {
 
-/// Fills the range of values defined by { end - begin } with the value of
-/// \p value.
+/// Fills the range of values defined by { end - begin } using \p pred to set
+/// the value of the elements. The \p pred can either be a value or a callable
+/// object.
 /// \param[in] begin    The iterator to start filling from.
 /// \param[in] end      The iterator to end filling at.
-/// \param[in] value    The value to set the pointed to elements to.
+/// \param[in] pred     The predicate to use to set the value.
+/// \param[in] args     Additional arguments if \p pred is callable.
 /// \tparam    Iterator The type of the iterator.
-/// \tparam    T        The type of the data to fill the elements with.
-template <typename Iterator, typename T>
-fluidity_host_only void fill(Iterator begin, Iterator end, T value) noexcept
+/// \tparam    P        The type of the predicate.
+/// \tparam    Args     The type of arguments for a callable predicate.
+template <typename Iterator, typename P, typename... Args>
+fluidity_host_only void
+fill(Iterator begin, Iterator end, P&& pred, Args&&... args) noexcept
 {
+  using it_value_t   = std::decay_t<decltype(*begin)>;
+  using pred_value_t = std::decay_t<P>;
   while (end - begin > 0) {
-    *begin = value;
+    if constexpr (std::is_same<it_value_t, pred_value_t>::value)
+    {
+      *begin = pred;
+    }
+    else
+    {
+      pred(begin, std::forward<Args>(args)...);
+    }
     ++begin;
   }
 }

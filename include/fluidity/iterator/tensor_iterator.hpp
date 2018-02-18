@@ -112,7 +112,7 @@ struct TensorIterator {
   /// Overload of postfix operator to increment the iterator and return a new
   /// iterator to the next element.
   /// \param[in] junk Junk value to specify postfix.
-  fluidity_host_device self_t operator++(int junk)
+  fluidity_host_device self_t operator++(int /*junk*/)
   { 
     self_t i = *this; move_pointer(1); return i; 
   } 
@@ -128,7 +128,7 @@ struct TensorIterator {
   /// Overload of postdecrement operator to iecrement the iterator and return
   /// a new iterator to the previous element.
   /// \param[in] junk Junk value to specify post decrement.
-  fluidity_host_device self_t operator--(int junk) 
+  fluidity_host_device self_t operator--(int /*junk*/) 
   {
     self_t i = *this; move_pointer(-1); return i;
   }

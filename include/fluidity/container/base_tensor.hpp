@@ -68,12 +68,14 @@ BaseTensor<T, 1>::BaseTensor(std::size_t elements)
 : _data(nullptr), _size(elements) {}
 
 template <typename T>
-std::size_t BaseTensor<T, 1>::mem_requirement() const {
+std::size_t BaseTensor<T, 1>::mem_requirement() const
+{
   return sizeof(value_t) * _size;
 }
 
 template <typename T>
-std::size_t BaseTensor<T, 1>::size() const {
+std::size_t BaseTensor<T, 1>::size() const
+{
   return _size;
 }
 

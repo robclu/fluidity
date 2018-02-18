@@ -75,21 +75,25 @@ class DeviceTensor<T, 1> : public BaseTensor<T, 1> {
 
 template <typename T>
 DeviceTensor<T, 1>::DeviceTensor(std::size_t elements)
-:   BaseTensor<T, 1>(elements) {
+: BaseTensor<T, 1>(elements)
+{
   allocate();
 }
 
 template <typename T>
-DeviceTensor<T, 1>::~DeviceTensor() {
+DeviceTensor<T, 1>::~DeviceTensor()
+{
   cleanup();
 }
 
 //===== Private ---------------------------------------------------------=====//
 
 template <typename T>
-void DeviceTensor<T, 1>::allocate() {
+void DeviceTensor<T, 1>::allocate()
+{
   // TODO: Add an implementation for aligned allocation...
-  if (this->_data == nullptr) {
+  if (this->_data == nullptr) 
+  {
     fluidity_check_cuda_result(
       cudaMalloc(reinterpret_cast<void**>(&this->_data), 
                  this->mem_requirement())
@@ -98,8 +102,10 @@ void DeviceTensor<T, 1>::allocate() {
 }
 
 template <typename T>
-void DeviceTensor<T, 1>::cleanup() {
-  if (this->_data != nullptr && this->_must_free) {
+void DeviceTensor<T, 1>::cleanup()
+{
+  if (this->_data != nullptr && this->_must_free)
+  {
     fluidity_check_cuda_result(cudaFree(this->_data));
   }
 }
