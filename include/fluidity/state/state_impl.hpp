@@ -28,7 +28,7 @@ using namespace traits;
 /// Defines a message to print when there is a concept error on a function call,
 /// i.e, when an attempt is made to invoke a function where the template param
 /// is a State but the argument is not.
-static constexpr const char* state_concept_error =
+static constexpr const char* const state_concept_error =
   "Attempt to invoke a state function on a type which is not a state";
 
 /// Returns the sum of the square velocity of each of the velocity conponents
@@ -40,8 +40,9 @@ fluidity_host_device inline constexpr auto
 v_squared_sum(State&& state) noexcept
 {
   using state_t = std::decay_t<State>;
-  using value_t = state_t::value_t;
-  static_assert(is_state_v<state_t>, detail::state_concept_error);
+  using value_t = typename state_t::value_t;
+  static_assert(is_state_v<state_t>,
+    "Attempt to invoke a state function on a type which is not a state");
 
   value_t sum = 0;
   unrolled_for<state_t::dimensions>([&sum, &state] (auto i) 
@@ -60,7 +61,8 @@ template <typename State>
 fluidity_host_device inline constexpr auto density(State&& state) noexcept
 {
   using state_t = std::decay_t<State>;
-  static_assert(is_state_v<state_t>, detail::state_concept_error);
+  static_assert(is_state_v<state_t>,
+    "Attempt to invoke a state function on a type which is not a state");
   return state[state_t::index::density];
 }
 
@@ -73,10 +75,11 @@ fluidity_host_device inline constexpr auto
 velocity(State&& state, std::size_t dim) noexcept
 {
   using state_t = std::decay_t<State>;
-  using index_t = state_t::index;
-  static_assert(is_state_v<state_t>, detail::state_concept_error);
+  using index_t = typename state_t::index;
+  static_assert(is_state_v<state_t>,
+    "Attempt to invoke a state function on a type which is not a state");
 
-  if constexpr (state_t::format_t == Format::primitive)
+  if constexpr (state_t::format_t == FormType::primitive)
   {
     return state[index_t::velocity(dim)];
   } 
@@ -95,10 +98,11 @@ fluidity_host_device inline constexpr auto
 velocity(State&& state, Dimension<V> dim) noexcept
 {
   using state_t = std::decay_t<State>;
-  using index_t = state_t::index;
-  static_assert(is_state_v<state_t>, detail::state_concept_error);
+  using index_t = typename state_t::index;
+  static_assert(is_state_v<state_t>,
+    "Attempt to invoke a state function on a type which is not a state");
 
-  if constexpr (state_t::format_t == Format::primitive)
+  if constexpr (state_t::format_t == FormType::primitive)
   {
     return state[index_t::velocity(Dimension<V>{})];
   } 
@@ -119,9 +123,10 @@ fluidity_host_device inline constexpr auto
 pressure(State&& state, Material&&  material) noexcept
 {
   using state_t = std::decay_t<State>;
-  static_assert(is_state_v<state_t>, detail::state_concept_error);
+  static_assert(is_state_v<state_t>,
+    "Attempt to invoke a state function on a type which is not a state");
 
-  if constexpr (state_t::format_t == Format::primitive)
+  if constexpr (state_t::format_t == FormType::primitive)
   {
     return state[state_t::index::pressure];
   } 
@@ -143,9 +148,10 @@ fluidity_host_device inline constexpr auto
 energy(State&& state, Material&& material) noexcept
 {
   using state_t = std::decay_t<State>;
-  static_assert(is_state_v<state_t>, detail::state_concept_error);
+  static_assert(is_state_v<state_t>,
+    "Attempt to invoke a state function on a type which is not a state");
 
-  if constexpr (state_t::format_t == Format::primitive)
+  if constexpr (state_t::format_t == FormType::primitive)
   {
     return state.density() * 
            (0.5 * state.v_squared_sum() + material.eos(state));
@@ -160,4 +166,4 @@ energy(State&& state, Material&& material) noexcept
 } // namespace state
 } // namespace fluid
 
-#endif FLUIDITY_STATE_STATE_IMPL_HPP
+#endif // FLUIDITY_STATE_STATE_IMPL_HPP

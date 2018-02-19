@@ -20,9 +20,9 @@
 /// Defines the type of data to use.
 using real_t           = double;
 /// Defines a 2 dimensional conservative state with one additional component.
-using conservative_2dt = fluid::state::conservative_t<real_t, 2, 1>;
+using conservative2d_t = fluid::state::conservative_t<real_t, 2>;
 /// Defines a 2 dimensional conservative state with one additional component.
-using primitive_2dt    = fluid::state::primitive_t<real_t, 2, 1>;
+using primitive2d_t    = fluid::state::primitive_t<real_t, 2>;
 /// Defines the material type to use for the tests.
 using material_t       = fluid::material::IdealGas<real_t>;
 
@@ -32,7 +32,7 @@ static constexpr real_t adi_index = 1.4;
 using namespace fluid::state;
 
 TEST(state_tests_host, canCreatePrimitiveState) {
-  primitive_2dt state;
+  primitive2d_t state;
   material_t    material(adi_index);
 
   state.density()     = real_t(1);

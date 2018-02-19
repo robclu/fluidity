@@ -24,6 +24,9 @@ target_link_libraries(container_host_tests ${GTEST_BOTH_LIBRARIES})
 add_executable(iterator_host_tests iterator_tests_host.cpp)
 target_link_libraries(iterator_host_tests ${GTEST_BOTH_LIBRARIES})
 
+add_executable(state_host_tests state_tests_host.cpp)
+target_link_libraries(state_host_tests ${GTEST_BOTH_LIBRARIES})
+
 #if(APPLE)
   # We need to add the default path to the driver (libcuda.dylib) as an rpath,
   # so that the static cuda runtime can find it at runtime.

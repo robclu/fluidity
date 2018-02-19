@@ -26,8 +26,8 @@ namespace state  {
 template <typename T,
           FormType      Form,         
           std::size_t   Dimensions,
-          std::size_t   Components = 0
-          StorageFormat Format     = StorageFormat::row_major>
+          std::size_t   Components,
+          StorageFormat Format    >
 class State : public traits::storage_t<T, Dimensions, Components, Format> {
  public:
   /// Defines an alias for the type of storage;
@@ -40,7 +40,7 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
     /// Defines that the density is always stored as the first state element.
     static constexpr int density  = 0;
     /// Defines that the presure is the second element if the state is prim.
-    static constexpr int pressure = Form == FormType::primitve ? 1 : -1;
+    static constexpr int pressure = Form == FormType::primitive ? 1 : -1;
     /// Defines that the energy is the second element if the stat is cons.
     static constexpr int energy   = Form == FormType::conservative ? 1 : -1;
     /// Defines the offset to the first velocity element.
@@ -48,7 +48,7 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
 
     /// Returns the offset to the velocity element to the \p dim direction.
     /// \param[in] dim The dimensions to get the velocity index for.
-    static constexpr int velocity(std::size_t dim) const
+    static constexpr int velocity(std::size_t dim)
     {
       return dim + v_offset;
     }
@@ -57,7 +57,7 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
     /// \param[in] dim    The dimensions to get the velocity index for.
     /// \tparam    Value  The value of the compile time dimension type. 
     template <std::size_t Value>
-    static constexpr int velocity(Dimension<Value> dim) const
+    static constexpr int velocity(Dimension<Value> dim)
     {
       return Dimension<Value>::value + v_offset;
     }
@@ -103,7 +103,23 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
   }
 };
 
+/// Alias for a primitive state.
+template <typename T,
+          std::size_t   Dimensions,
+          std::size_t   Components = 0,
+          StorageFormat Format     = StorageFormat::row_major>
+using primitive_t =
+  State<T, FormType::primitive, Dimensions, Components, Format>;
+
+/// Alias for a conservative state.
+template <typename T,
+          std::size_t   Dimensions,
+          std::size_t   Components = 0,
+          StorageFormat Format     = StorageFormat::row_major>
+using conservative_t =
+  State<T, FormType::conservative, Dimensions, Components, Format>;
+
 } // namespace state
 } // namespace fluid
 
-#endif FLUIDITY_STATE_STATE_HPP
+#endif // FLUIDITY_STATE_STATE_HPP

@@ -17,6 +17,8 @@
 #ifndef FLUIDITY_STATE_STATE_TRAITS_HPP
 #define FLUIDITY_STATE_STATE_TRAITS_HPP
 
+#include <fluidity/container/array.hpp>
+#include <fluidity/container/array_view.hpp>
 #include <fluidity/container/layout.hpp>
 
 namespace fluid  {
@@ -73,7 +75,7 @@ static constexpr dimz_t dim_z = dimz_t{};
 namespace state  {
 
 /// Defines the type of the state: primitive or conservative.
-enum class Format {
+enum class FormType {
   primitive    = 0,   //!< Stored state data is in primitive form.
   conservative = 1    //!< Stored state data is in conservative form.
 };
@@ -83,7 +85,7 @@ enum class Format {
 template <typename T,
           FormType      Form,         
           std::size_t   Dimensions,
-          std::size_t   Components = 0
+          std::size_t   Components = 0,
           StorageFormat Format     = StorageFormat::row_major>
 class State;
 
@@ -126,12 +128,12 @@ static constexpr bool is_state_v = detail::IsState<T>::value;
 /// \tparam Format     The format to store the the data in.
 template <typename T,        
           std::size_t   Dimensions,
-          std::size_t   Components = 0
+          std::size_t   Components = 0,
           StorageFormat Format     = StorageFormat::row_major>
 using storage_t = 
   std::conditional_t<
-    std::is_same_v<Format, StorageFormat::row_major>,
-      Array<T, Dimension + Components + 2>,
+    Format == StorageFormat::row_major,
+      Array<T, Dimensions + Components + 2>,
       ArrayView<T, Dimensions + Components + 2>
   >;
 

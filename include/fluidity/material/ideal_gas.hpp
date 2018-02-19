@@ -16,8 +16,9 @@
 #ifndef FLUIDITY_MATERIAL_IDEAL_GAS_HPP
 #define FLUIDITY_MATERIAL_IDEAL_GAS_HPP
 
-#include "material.hpp"
+//#include "material.hpp"
 #include <fluidity/utility/portability.hpp>
+#include <cmath>
 
 namespace fluid    {
 namespace material {
@@ -44,7 +45,7 @@ struct IdealGas {
   }
 
   /// Returns the value of the adiabatic index for the ideal gas.
-  fluidity_host_device constexpr value adiIndex() const noexcept
+  fluidity_host_device constexpr value_t adiabatic() const noexcept
   {
     return _adi_index;
   }

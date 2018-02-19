@@ -51,20 +51,20 @@ class ArrayView {
   /// Initializes pointer to the first element and the step size.
   /// \param[in] ptr  The pointer to the first element.
   /// \param[in] step The step size between elements that are being referenced.
-  fluidity_host_device ArrayRef(pointer_t ptr, std::size_t step)
+  fluidity_host_device ArrayView(pointer_t ptr, std::size_t step)
   : _ptr(ptr), _step(step) {}
 
   /// Creates a new array view by setting the pointer and the step size to that
   /// of the other array view.
   /// \param[in] other The other ArrayRef to copy.
-  fluidity_host_device ArrayRef(const self_t& other)
+  fluidity_host_device ArrayView(const self_t& other)
   : _ptr(other._ptr), _step(other._step) {}
 
   /// Creates a new array view by setting the pointer and the step size to that
   /// of the other array view. This moves the pointer from \p other to this
   /// array view, invalidating \p other.
   /// \param[in] other The other ArrayView to copy.
-  fluidity_host_device ArrayRef(self_t&& other) noexcept
+  fluidity_host_device ArrayView(self_t&& other)
   : _ptr(std::move(other._ptr)), _step(other._step)
   { 
     other._ptr = nullptr; other._step = 0;
@@ -83,7 +83,7 @@ class ArrayView {
   /// \p ith element in the array.
   /// \param[in] i The index of the element to get a referemce to.
   /// \return    A constant reference to the element at position \p i.
-  fluidity_host_device const_reference_t operator[](SizeType i) const
+  fluidity_host_device const_reference_t operator[](std::size_t i) const
   {
     return _ptr[i * _step];
   }
@@ -123,7 +123,7 @@ void ArrayView<T, Elements>::copy_from_container(Container&& container)
 {
   if constexpr (size() < max_unroll_depth)
   {
-    unrolled_for<size()>([this] (auto i)
+    unrolled_for<size()>([&] (auto i)
     {
       _ptr[i * _step] = container[i];
     });

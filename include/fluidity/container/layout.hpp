@@ -37,12 +37,4 @@ struct LayoutTraits {
   //static constexpr configureable_storage_v = std::is_base_of_v<>;
 };
 
-/// Defines an array class.
-template <typename    T       ,
-          std::size_t Elements,
-          typename    Format  = StorageFormat::row_major>
-class Array {
-
-};
-
 } // namespace fluid
