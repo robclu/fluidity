@@ -19,12 +19,32 @@
 
 TEST(algorithm_host, canCompiletimeUnroll)
 {
+  constexpr std::size_t amount = 3;
   int sum = 0;
-  fluid::unrolled_for<3>([&sum] (auto i)
+  fluid::unrolled_for<amount>([&sum] (auto i)
   {
     sum += i;
   });
-  EXPECT_EQ(sum, 3);
+  EXPECT_EQ(sum, amount);
+}
+
+TEST(algorithm_host, canCompileTimeUnrollAboveMaxUnrollDepth)
+{
+  constexpr std::size_t amount = 64;
+  static_assert(amount > fluid::max_unroll_depth,
+                "Test is useless, MAX_UNROLL_DEPTH is extremely high!");
+
+  int sum = 0, result = 0;
+  fluid::unrolled_for_bounded<amount>([&sum] (auto i)
+  {
+    sum += i;
+  });
+
+  for (const auto i : fluid::range(amount))
+  {
+    result += i;
+  }
+  EXPECT_EQ(sum, result);
 }
 
 int main(int argc, char** argv) {

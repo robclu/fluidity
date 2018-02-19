@@ -17,7 +17,10 @@
 #ifndef FLUIDITY_ITERATOR_RANGE_HPP
 #define FLUIDITY_ITERATOR_RANGE_HPP
 
-#include <fluidity/util/portability.hpp>
+#include <fluidity/utility/portability.hpp>
+#include <type_traits>
+
+namespace fluid {
 
 /// The Range class defines a utility class which allows a more simpler syntax
 /// for looping. It allows a python like range based for loop. It is wrapped
@@ -51,6 +54,9 @@
 template <typename T>
 class Range {
  private:
+  /// Defines the type of the iterator data.
+  using value_t = T;
+
   /// The Iterator class defines an iterator for iterating over a range.
   /// \tparam IsConst If the iterator is constant.
   template <bool IsConst>

@@ -64,7 +64,7 @@ if(WIN32)
 
 else(APPLE)
   set(FLAGS_ERRORS  "-Wpedantic -Wextra -Wall")
-  set(FLAGS_PERF    "-O3 -std=c++14 -pthread -Wno-c++1z-extensions")
+  set(FLAGS_PERF    "-O3 -std=c++17 -pthread -Wno-c++1z-extensions")
   set(DEBUG_FLAGS   "${FLAGS_PERF} ${FLAGS_ERRORS}")
   set(RELEASE_FLAGS "${FLAGS_PERF} ${FLAGS_ERRORS}")
   set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${RELEASE_FLAGS}")

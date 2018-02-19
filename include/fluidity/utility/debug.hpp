@@ -27,7 +27,7 @@
 #endif  // MAX_UNROLL_DEPTH
 
 
-namespace fluidity {
+namespace fluid {
 
 /// Defines the maximum loop size where compile time unrolling may be performed
 /// instead of a traditional loop.
@@ -49,7 +49,7 @@ inline void check_cuda_error(cudaError_t code, const char* file, int line) {
 }
 
 } // namespace util
-} // namespace fluidity
+} // namespace fluid
 
 #if defined(NDEBUG)
 
@@ -61,7 +61,7 @@ inline void check_cuda_error(cudaError_t code, const char* file, int line) {
 
 /// Defines a macro to check the result of cuda calls in debug mode.
 #define fluidity_check_cuda_result(result)                                  \
-  ::fluidity::util::check_cuda_error((result), __FILE__, __LINE__)
+  ::fluid::util::check_cuda_error((result), __FILE__, __LINE__)
 
 #endif // NDEBUG
 
