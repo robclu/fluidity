@@ -20,8 +20,10 @@
 
 namespace fluid {
 
-/// Specialization for the case that the tensor is 1 Dimensional.
-/// \tparam T The type of the data to store in the tensor.
+/// The Array class defined a 1 dimensional, contiguous container with a size
+/// known at compile time. 
+/// \tparam T         The type of the data to store in the tensor.
+/// \tparam Elements  The number of elements in the array.
 template <typename T, std::size_t Elements>
 class Array {
  public:

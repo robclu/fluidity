@@ -1,5 +1,7 @@
 //==--- fluidity/utility/debug.hpp ------------------------- -*- C++ -*- ---==//
 //
+//                                Fluidity
+//                                
 //                      Copyright (c) 2018 Rob Clucas.
 //
 //  This file is distributed under the MIT License. See LICENSE for details.
@@ -20,7 +22,17 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
 
+#ifndef MAX_UNROLL_DEPTH
+  #define MAX_UNROLL_DEPTH 4
+#endif  // MAX_UNROLL_DEPTH
+
+
 namespace fluidity {
+
+/// Defines the maximum loop size where compile time unrolling may be performed
+/// instead of a traditional loop.
+static constexpr std::size_t max_unroll_depth = MAX_UNROLL_DEPTH;
+
 namespace util     {
 
 /// Checks if a cuda error code was a success, and if not, then it prints
