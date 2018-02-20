@@ -104,8 +104,8 @@ struct IsState {
 /// Returns true if the type T is a State class. This is the general case for
 /// when the class is a State.
 /// \tparam T   The type to check for a State type.
-template <typename... Ts>
-struct IsState<State<Ts...>> {
+template <typename T, FormType F, std::size_t D, std::size_t C, StorageFormat S>
+struct IsState<State<T, F, D, C, S>> {
   static constexpr bool value = true;
 };
 
