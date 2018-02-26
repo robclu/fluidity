@@ -17,6 +17,7 @@
 #define FLUIDITY_STATE_STATE_HPP
 
 #include "state_impl.hpp"
+#include <fluidity/container/number.hpp>
 
 namespace fluid  {
 namespace state  {
@@ -35,6 +36,12 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
   /// Defines the type of the data elements in the state.
   using value_t   = std::decay_t<T>;
 
+  /// Returns the format of the state.
+  static constexpr FormType format = Form;
+
+  /// Returns the number of additional components for the state.
+  static constexpr std::size_t additional_components = Components;
+
   /// The index struct returns the values where data is stored in the state.
   struct index {
     /// Defines that the density is always stored as the first state element.
@@ -46,7 +53,7 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
     /// Defines the offset to the first velocity element.
     static constexpr int v_offset = 2;
     /// Defines the offset to the first additional element.
-    static constexpr int a_offset = v_offset + Components;
+    static constexpr int a_offset = v_offset + Dimensions;
 
     /// Returns the offset to the velocity element to the \p dim direction.
     /// \param[in] dim The dimensions to get the velocity index for.
@@ -59,7 +66,7 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
     /// \param[in] dim    The dimensions to get the velocity index for.
     /// \tparam    Value  The value of the compile time dimension type. 
     template <std::size_t Value>
-    static constexpr int velocity(Dimension<Value> dim)
+    static constexpr int velocity(Dimension<Value> /*dim*/)
     {
       return Dimension<Value>::value + v_offset;
     }
@@ -74,10 +81,10 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
     /// Returns the offset to the Nth additional element of the state.
     /// \param[in] n  The index of the element to get.
     /// \tparam    N  The value of the index of the element to get.
-    template <std::size_t N>
-    static constexpr int velocity(Index<N> dim)
+    template <int N>
+    static constexpr int additional(Number<N> /*dim*/)
     {
-      return Index<N>::value + a_offset;
+      return Number<N>::value + a_offset;
     }
   };
 
@@ -157,8 +164,9 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
   /// \todo Add debug check for invalid dim.
   /// 
   /// \param[in]  dim   The dimension to get the velocity for.
+  /// \tparam     V     The value of the dimension.
   template <std::size_t V>
-  fluidity_host_device constexpr auto velocity(Dimension<V> dim) const
+  fluidity_host_device constexpr auto velocity(Dimension<V> /*dim*/) const
   {
     return detail::velocity(*this, Dimension<V>{});
   }
@@ -166,9 +174,10 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
   /// Sets the velocity of the state for a given dimension \p dim.
   /// \param[in] value The value to set the velocity to.
   /// \param[in] dim   The dimension to set the velocity for.
+  /// \tparam    V     The value whihc defines the dimension.
   template <std::size_t V>
   fluidity_host_device constexpr void
-  set_velocity(value_t value, Dimension<V> dim)
+  set_velocity(value_t value, Dimension<V> /*dim*/)
   {
     // For the conservative form we need to add the density multiplication
     // because {\rho v} is what is actually stored.
@@ -180,10 +189,63 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
   }
 
   /// Returns the \p nth additional component of the state, if it exists.
+  /// \param[in] n The nth additional component to return.
   fluidity_host_device constexpr auto additional(std::size_t n) const
   {
-    return this->operator[](index::)
+    return this->operator[](index::additional(n));
   }
+
+  /// Returns the \p nth additional component of the state, if it exists. This
+  /// version is more safe and performant as it allows compile time checking of
+  /// the validity of the requested component (i.e that it exists). The
+  /// offsetting of the index is also computed at compile time.
+  /// 
+  /// Example usage is:
+  /// 
+  /// ~~~cpp
+  /// for_unrolled<state_t::additional_components>([&] (auto i)
+  /// {
+  ///   auto component = state.additional(Number<i>{});
+  ///   do_something(compoenent);
+  /// }
+  /// ~~~
+  /// 
+  /// \param[in] i      The Number type which wraps the index of the additional
+  ///            type to get.
+  /// \tparam    Index  The compile time value of the index to get.
+  template <int Index>
+  fluidity_host_device constexpr auto additional(Number<Index> i) const
+  {
+    static_assert(Index < additional_components,
+                  "Out of range additional component access!");
+    return this->operator[](index::additional(Number<Index>{}));
+  }
+
+  /// Sets the value of the \p index additional component of the state to
+  /// \p value.
+  /// \param[in] index The index of the element to set.
+  /// \param[in] value The value to set the component to.
+  fluidity_host_device constexpr void
+  set_additional(value_t value, std::size_t index)
+  {
+    this->operator[](index::additional(index)) = value;
+  }
+
+  /// Sets the value of the \p index additional component of the state to
+  /// \p value. THis s the more performant version as it allows compile time
+  /// assertation for the validity of the requested index.
+  /// \param[in] index The index of the element to set.
+  /// \param[in] value The value to set the component to.
+  /// \tparam    Index The value of the index of the compoenent.
+  template <int Index>
+  fluidity_host_device constexpr void
+  set_additional(value_t value, Number<Index> index)
+  {
+    static_assert(Index < additional_components,
+                  "Out of range additional component access!");
+    this->operator[](index::additional(Number<Index>{})) = value;
+  }
+
 };
 
 /// Alias for a primitive state.

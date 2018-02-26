@@ -79,7 +79,7 @@ velocity(State&& state, std::size_t dim) noexcept
   static_assert(is_state_v<state_t>,
     "Attempt to invoke a state function on a type which is not a state");
 
-  if constexpr (state_t::format_t == FormType::primitive)
+  if constexpr (state_t::format == FormType::primitive)
   {
     return state[index_t::velocity(dim)];
   } 
@@ -95,14 +95,14 @@ velocity(State&& state, std::size_t dim) noexcept
 /// \tparam     State   The type of the state.
 template <typename State, std::size_t V>
 fluidity_host_device inline constexpr auto 
-velocity(State&& state, Dimension<V> dim) noexcept
+velocity(State&& state, Dimension<V> /*dim*/) noexcept
 {
   using state_t = std::decay_t<State>;
   using index_t = typename state_t::index;
   static_assert(is_state_v<state_t>,
     "Attempt to invoke a state function on a type which is not a state");
 
-  if constexpr (state_t::format_t == FormType::primitive)
+  if constexpr (state_t::format == FormType::primitive)
   {
     return state[index_t::velocity(Dimension<V>{})];
   } 
@@ -126,7 +126,7 @@ pressure(State&& state, Material&&  material) noexcept
   static_assert(is_state_v<state_t>,
     "Attempt to invoke a state function on a type which is not a state");
 
-  if constexpr (state_t::format_t == FormType::primitive)
+  if constexpr (state_t::format == FormType::primitive)
   {
     return state[state_t::index::pressure];
   } 
@@ -151,7 +151,7 @@ energy(State&& state, Material&& material) noexcept
   static_assert(is_state_v<state_t>,
     "Attempt to invoke a state function on a type which is not a state");
 
-  if constexpr (state_t::format_t == FormType::primitive)
+  if constexpr (state_t::format == FormType::primitive)
   {
     return state.density() * 
            (0.5 * state.v_squared_sum() + material.eos(state));

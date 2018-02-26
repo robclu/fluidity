@@ -35,17 +35,17 @@ TEST(state_tests_host, canCreatePrimitiveState) {
   primitive2d_t state;
   material_t    material(adi_index);
 
-  state.set_density(1);
-  state.set_pressure(2);
-  state.set_velocity(3, fluid::dim_x);
-  state.set_velocity(1, fluid::dim_y);
-  state.set_additional(0);
+  state.set_density(real_t(1));
+  state.set_pressure(real_t(2));
+  state.set_velocity(real_t(3), fluid::dim_x);
+  state.set_velocity(real_t(4), fluid::dim_y);
+  state.set_additional(real_t(5), 0);
 
-  EXPECT_EQ(state.density()    , real_t(1));
-  EXPECT_EQ(state.pressure()   , real_t(2));
-  EXPECT_EQ(state.velocity(0)  , real_t(3));
-  EXPECT_EQ(state.velocity(1)  , real_t(4));
-  EXPECT_EQ(state.additional(0), real_t(5));
+  EXPECT_EQ(state.density()             , real_t(1));
+  EXPECT_EQ(state.pressure(material)    , real_t(2));
+  EXPECT_EQ(state.velocity(fluid::dim_x), real_t(3));
+  EXPECT_EQ(state.velocity(fluid::dim_y), real_t(4));
+  EXPECT_EQ(state.additional(0)         , real_t(5));
 }
 /*
 TEST(StateTests, CanCreateConservativeState) {
