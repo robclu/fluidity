@@ -162,6 +162,153 @@ energy(State&& state, Material&& material) noexcept
   }
 }
 
+/// Makes additional components of the \p flux container.
+/// \param[in] state    The state to compute the flux for.
+/// \param[in] flux     The flux to compute the values of the additional
+///            components for.
+/// \param[in] dim      The dimension not to compute a flux for.
+/// \tparam    State    The type of the state.
+/// \tparam    Flux     The type of the flux container.
+/// \tparam    Value    The value which defines the dimension.
+template <typename State, typename Flux, std::size_t Value>
+fluidity_host_device inline constexpr auto
+make_other_fluxes(State&& state, Flux&& flux, Dimension<Value> /*dim*/)
+{
+  using state_t      = std::decay_t<State>;
+  constexpr auto it  = state_t::dimensions + state_t::additional_components - 1;
+  constexpr auto dim = Dimension<Value>{};
+
+  unrolled_for<it>([&] (auto i)
+  {
+    if constexpr (i == Value)
+    {
+      constexpr auto index = state_t::index::v_offset + i + 1;
+    }
+    else
+    {
+      constexpr auto index = state_t::index::v_offset + i;
+    }
+
+    flux[index] = state[index] * state.velocity(dim);
+    if constexpr (state_t::format == FormType::primitive)
+    {
+      flux[index] *= state.density();
+    }
+  });
+}
+
+/// Computes the flux for a state.
+/// \param[in] state    The state to compute the flux for.
+/// \param[in] mat      The material for the system.
+/// \param[in] dim      The dimension to compute the flux in terms of.
+/// \tparam    State    The type of the state.
+/// \tparam    Material The type of the material.
+/// \tparam    Value    The value of the dimension.
+template <typename State, typename Material, std::size_t Value>
+fluidity_host_device inline constexpr auto
+flux(State&& state, Material&& mat, Dimension<Value> /*dim*/)
+{
+  using state_t   = std::decay_t<State>;
+  using index_t   = typename state_t::index;
+  using storage_t = typename state_t::storage_t;
+
+  constexpr auto dim = Dimension<Value>{};
+  const     auto v   = state.velocity(dim);
+  const     auto p   = state.pressure(mat);
+  const     auto e   = state.energy(mat);
+
+  storage_t flux;
+  flux[index_t::density]       = state.density() * v;
+  flux[index_t::velocity(dim)] = flux[index_t::density] * v + p;
+
+  if constexpr (state_t::format == FormType::primitive)
+  {
+    flux[index_t::pressure] = v * (e + p);
+  }
+  else
+  {
+    flux[index_t::energy] = v * (e + p);
+  }
+
+  if constexpr (state_t::dimensions > 1 || state_t::additional_components > 0)
+  {
+    make_other_fluxes(std::forward<State>(state), flux, dim);
+  }
+}
+
+/// Returns the primitive form of the state, regardless of whether the type of
+/// the state is primitive or conservative. If the state is conservative, then
+/// a conversion is performed to convert the state.
+template <typename State, typename Material>
+fluidity_host_device inline constexpr auto
+primitive(State&& state, Material&& mat)
+{
+  using state_t  = std::decay_t<State>;
+  using index_t  = typename state_t::index;
+  using result_t = ::fluid::state::State
+                      < typename state_t::value_t
+                      , FormType::primitive
+                      , state_t::dimensions
+                      , state_t::additional_components
+                      , state_t::storage_layout
+                      >;
+  if constexpr (state_t::format == FormType::primitive)
+  {
+    return state;
+  }
+  else
+  {
+    result_t result;
+    result[index_t::density]  = state.density();
+    result[index_t::pressure] = state.pressure(mat);
+
+    constexpr auto it = state_t::dimensions + state_t::additional_components;
+    unrolled_for<it>([&] (auto i)
+    {
+      constexpr auto index = index_t::v_offset + i;
+      result[index] = state[index] / state.density();
+    });
+    return result;
+  }
+}
+
+/// Returns the conservative form of the state, regardless of whether the type
+/// of the state is primitive or conservative. If the state is primtive, then
+/// a conversion is performed to convert the state.
+template <typename State, typename Material>
+fluidity_host_device inline constexpr auto
+conservative(State&& state, Material&& mat)
+{
+  using state_t  = std::decay_t<State>;
+  using index_t  = typename state_t::index;
+  using result_t = ::fluid::state::State
+                      < typename state_t::value_t
+                      , FormType::conservative
+                      , state_t::dimensions
+                      , state_t::additional_components
+                      , state_t::storage_layout
+                      >;
+
+  if constexpr (state_t::format == FormType::conservative)
+  {
+    return state;
+  }
+  else
+  {
+    result_t result;
+    result[index_t::density] = state.density();
+    result[index_t::energy]  = state.energy(mat);
+
+    constexpr auto it = state_t::dimensions + state_t::additional_components;
+    unrolled_for<it>([&] (auto i)
+    {
+      constexpr auto index = index_t::v_offset + i;
+      result[index] = state[index] * state.density();
+    });
+    return result;
+  }
+}
+
 } // namespace detail
 } // namespace state
 } // namespace fluid

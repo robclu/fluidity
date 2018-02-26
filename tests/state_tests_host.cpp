@@ -31,7 +31,7 @@ static constexpr real_t adi_index = 1.4;
 
 using namespace fluid::state;
 
-TEST(state_tests_host, canCreatePrimitiveState) {
+TEST(state_tests_host, canCreateprim_state) {
   primitive2d_t state;
   material_t    material(adi_index);
 
@@ -65,45 +65,46 @@ TEST(state_tests_host, canCreateConservativeState) {
   EXPECT_EQ(state.additional(0)         , real_t(5));
 }
 
-/*
-TEST(StateTests, CanConvertPrimitiveToConservative) {
-  Primitive2D primitiveState;
-  Gas         gas(adiIndex);
 
-  primitiveState.density()     = T(1.0);
-  primitiveState.pressure()    = T(2.0);
-  primitiveState.velocity(0)   = T(3.0);
-  primitiveState.velocity(1)   = T(4.0);
-  primitiveState.additional(0) = T(5.0);
+TEST(state_tests_host, canConvertPrimitiveToConservative) {
+  primitive2d_t prim_state;
+  material_t    material(adi_index);
 
-  EXPECT_EQ(primitiveState.density()    , T(1.0));
-  EXPECT_EQ(primitiveState.pressure()   , T(2.0));
-  EXPECT_EQ(primitiveState.velocity(0)  , T(3.0));
-  EXPECT_EQ(primitiveState.velocity(1)  , T(4.0));
-  EXPECT_EQ(primitiveState.additional(0), T(5.0));
+  prim_state.set_density(1.0);
+  prim_state.set_pressure(2.0);
+  prim_state.set_velocity(3.0, fluid::dim_x);
+  prim_state.set_velocity(4.0, fluid::dim_y);
+  prim_state.set_additional(5.0, 0);
 
-  auto conservativeState = primitiveState.conservative(gas);
-  auto convertedState    = conservativeState.conservative(gas);
+  EXPECT_EQ(prim_state.density()             , real_t(1.0));
+  EXPECT_EQ(prim_state.pressure(material)    , real_t(2.0));
+  EXPECT_EQ(prim_state.velocity(fluid::dim_x), real_t(3.0));
+  EXPECT_EQ(prim_state.velocity(fluid::dim_y), real_t(4.0));
+  EXPECT_EQ(prim_state.additional(0)         , real_t(5.0));
 
-  EXPECT_EQ(convertedState.density()     , T(1.0));
-  EXPECT_EQ(convertedState.velocity(0)   , T(3.0));
-  EXPECT_EQ(convertedState.velocity(1)   , T(4.0));
-  EXPECT_EQ(convertedState.additional(0) , T(5.0));
+  auto cons_state = prim_state.conservative(material);
+  auto conv_state = cons_state.primitive(material);
 
-  EXPECT_EQ(primitiveState.density()    , conservativeState.density()    );
-  EXPECT_EQ(primitiveState.velocity(0)  , conservativeState.velocity(0)  );
-  EXPECT_EQ(primitiveState.velocity(1)  , conservativeState.velocity(1)  );
-  EXPECT_EQ(primitiveState.energy(gas)  , conservativeState.energy()     );
+  EXPECT_EQ(conv_state.density()             , real_t(1.0));
+  EXPECT_EQ(conv_state.velocity(fluid::dim_x), real_t(3.0));
+  EXPECT_EQ(conv_state.velocity(fluid::dim_y), real_t(4.0));
+  EXPECT_EQ(conv_state.additional(0)         , real_t(5.0));
+
+  EXPECT_EQ(prim_state.density()             , cons_state.density()             );
+  EXPECT_EQ(prim_state.velocity(fluid::dim_x), cons_state.velocity(fluid::dim_x));
+  EXPECT_EQ(prim_state.velocity(fluid::dim_y), cons_state.velocity(fluid::dim_y));
+  EXPECT_EQ(prim_state.energy(material)      , cons_state.energy(material)      );
 
   constexpr auto tolerance = 1e-15;
-  const auto diffa         = std::abs(convertedState.pressure(gas) - T(2.0));
-  const auto diffb         = std::abs(primitiveState.pressure() -
-                              conservativeState.pressure(gas));
+  const auto diff_a = std::abs(conv_state.pressure(material) - real_t(2.0));
+  const auto diff_b = std::abs(prim_state.pressure(material) -
+                               cons_state.pressure(material));
 
-  EXPECT_LT(diffa, tolerance);
-  EXPECT_LT(diffb, tolerance);
+  EXPECT_LT(diff_a, tolerance);
+  EXPECT_LT(diff_b, tolerance);
 }
 
+/*
 
 TEST(StateTests, CanConvertConservativeToPrimitive) {
   Conservative2D conservativeState;
@@ -121,8 +122,8 @@ TEST(StateTests, CanConvertConservativeToPrimitive) {
   EXPECT_EQ(conservativeState.energy()      , T(3.0));
   EXPECT_EQ(conservativeState.additional(0) , T(3.0));
 
-  auto primitiveState = conservativeState.primitive(gas);
-  auto convertedState = primitiveState.conservative(gas);
+  auto prim_state = conservativeState.primitive(gas);
+  auto convertedState = prim_state.conservative(gas);
 
   EXPECT_EQ(convertedState.density()     , T(1.0));
   EXPECT_EQ(convertedState.rhoVelocity(0), T(2.0));
@@ -130,11 +131,11 @@ TEST(StateTests, CanConvertConservativeToPrimitive) {
   EXPECT_EQ(convertedState.energy(gas)   , T(3.0));
   EXPECT_EQ(convertedState.additional(0) , T(3.0));
 
-  EXPECT_EQ(primitiveState.density()    , conservativeState.density()    );
-  EXPECT_EQ(primitiveState.velocity(0)  , conservativeState.velocity(0)  );
-  EXPECT_EQ(primitiveState.velocity(1)  , conservativeState.velocity(1)  );
-  EXPECT_EQ(primitiveState.pressure(gas), conservativeState.pressure(gas));
-  EXPECT_EQ(primitiveState.energy(gas)  , conservativeState.energy(gas)  );
+  EXPECT_EQ(prim_state.density()    , conservativeState.density()    );
+  EXPECT_EQ(prim_state.velocity(0)  , conservativeState.velocity(0)  );
+  EXPECT_EQ(prim_state.velocity(1)  , conservativeState.velocity(1)  );
+  EXPECT_EQ(prim_state.pressure(gas), conservativeState.pressure(gas));
+  EXPECT_EQ(prim_state.energy(gas)  , conservativeState.energy(gas)  );
 }
 
 TEST(StateTests, PrimitiveAndConservativeFluxesAreTheSame) {
@@ -153,9 +154,9 @@ TEST(StateTests, PrimitiveAndConservativeFluxesAreTheSame) {
   EXPECT_EQ(conservativeState.energy()      , T(3.0));
   EXPECT_EQ(conservativeState.additional(0) , T(3.0));
 
-  auto primitiveState = conservativeState.primitive(gas);
+  auto prim_state = conservativeState.primitive(gas);
   auto consFluxes     = conservativeState.flux(gas, 0);
-  auto primFluxes     = primitiveState.flux(gas, 0);
+  auto primFluxes     = prim_state.flux(gas, 0);
 
   // P = (gamma - 1) * (E - 0.5 * rho * (u^2 + v^2))
   // gamma = 1.4

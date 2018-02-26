@@ -42,6 +42,8 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
   static constexpr std::size_t additional_components = Components;
   /// Returns the number of dimensions in the state.
   static constexpr std::size_t dimensions            = Dimensions;
+  /// Returns the storage layout of the state.
+  static constexpr auto        storage_layout        = Format;
 
   /// The index struct returns the values where data is stored in the state.
   struct index {
@@ -204,7 +206,7 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
   /// Example usage is:
   /// 
   /// ~~~cpp
-  /// for_unrolled<state_t::additional_components>([&] (auto i)
+  /// unrolled_for<state_t::additional_components>([&] (auto i)
   /// {
   ///   auto component = state.additional(Number<i>{});
   ///   do_something(compoenent);
@@ -245,6 +247,28 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
     static_assert(Index < additional_components,
                   "Out of range additional component access!");
     this->operator[](index::additional(Number<Index>{})) = value;
+  }
+
+  /// Returns a conservative form of the state, regardless of whether the
+  /// state is primitive or conservative.
+  /// \param[in] material The material to use in the case where conversion is
+  ///            required.
+  /// \tparam    Material The type of the material.
+  template <typename Material>
+  fluidity_host_device constexpr auto conservative(Material&& material) const
+  {
+    return detail::conservative(*this, std::forward<Material>(material));
+  }
+
+  /// Returns a primitive form of the state, regardless of whether the
+  /// state is primitive or conservative.
+  /// \param[in] material The material to use in the case where conversion is
+  ///            required.
+  /// \tparam    Material The type of the material.
+  template <typename Material>
+  fluidity_host_device constexpr auto primitive(Material&& material) const
+  {
+    return detail::primitive(*this, std::forward<Material>(material));
   }
 
   /// Returns the sum of sqaured velocities for the state.
