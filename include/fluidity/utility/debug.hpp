@@ -33,15 +33,17 @@ namespace fluid {
 /// instead of a traditional loop.
 static constexpr std::size_t max_unroll_depth = MAX_UNROLL_DEPTH;
 
-namespace util     {
+namespace util {
 
 /// Checks if a cuda error code was a success, and if not, then it prints
 /// the error message.
 /// \param[in] errCode The cuda error code.
 /// \param[in] file    The file where the error was detected.
 /// \param[in] line    The line in the file where the error was detected.
-inline void check_cuda_error(cudaError_t code, const char* file, int line) {
-  if (code != cudaSuccess)  {
+inline void check_cuda_error(cudaError_t code, const char* file, int line)
+{
+  if (code != cudaSuccess)
+  {
     printf("\nCuda Error : %s\nFile       : %s\nLine       :  %i\n\n",
       cudaGetErrorString(code), file, line);
     std::terminate();

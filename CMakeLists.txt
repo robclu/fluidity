@@ -69,8 +69,7 @@ else(APPLE)
   set(RELEASE_FLAGS "${FLAGS_PERF} ${FLAGS_ERRORS}")
   set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} ${RELEASE_FLAGS}")
   set(CMAKE_CXX_FLAGS_DEBUG   "${CMAKE_CXX_FLAGS_DEBUG} ${DEBUG_FLAGS}")
-  set(CUDA_FLAGS    "-use_fast_math -O3 -std=c++14 -arch=sm_30 -pthread")
-  set(CUDA_FLAGS    "${CUDA_FLAGS} -Wno-c++1z-extensions")
+  set(CUDA_FLAGS    "-use_fast_math -O3 -std=c++14")
 endif()
 
 if(CMAKE_BUILD_TYPE MATCHES Release)
@@ -89,5 +88,5 @@ set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} ${CUDA_FLAGS}")
 
 #==--- Subdirectories -------------------------------------------------------==#
 
-add_subdirectory(src)
+#add_subdirectory(src)
 add_subdirectory(tests)
