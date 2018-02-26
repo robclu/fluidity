@@ -20,9 +20,9 @@
 /// Defines the type of data to use.
 using real_t           = double;
 /// Defines a 2 dimensional conservative state with one additional component.
-using conservative2d_t = fluid::state::conservative_t<real_t, 2>;
+using conservative2d_t = fluid::state::conservative_t<real_t, 2, 1>;
 /// Defines a 2 dimensional conservative state with one additional component.
-using primitive2d_t    = fluid::state::primitive_t<real_t, 2>;
+using primitive2d_t    = fluid::state::primitive_t<real_t, 2, 1>;
 /// Defines the material type to use for the tests.
 using material_t       = fluid::material::IdealGas<real_t>;
 
@@ -47,24 +47,25 @@ TEST(state_tests_host, canCreatePrimitiveState) {
   EXPECT_EQ(state.velocity(fluid::dim_y), real_t(4));
   EXPECT_EQ(state.additional(0)         , real_t(5));
 }
-/*
-TEST(StateTests, CanCreateConservativeState) {
-  Conservative2D state;
-  Gas            gas(adiIndex);
 
-  state.density()      = T(1.0);
-  state.rhoVelocity(0) = T(2.0);
-  state.rhoVelocity(1) = T(2.5);
-  state.energy()       = T(3.0);
-  state.additional(0)  = T(3.0);
+TEST(state_tests_host, canCreateConservativeState) {
+  conservative2d_t state;
+  material_t       material(adi_index);
 
-  EXPECT_EQ(state.density()     , T(1.0));
-  EXPECT_EQ(state.rhoVelocity(0), T(2.0));
-  EXPECT_EQ(state.rhoVelocity(1), T(2.5));
-  EXPECT_EQ(state.energy()      , T(3.0));
-  EXPECT_EQ(state.additional(0) , T(3.0));
+  state.set_density(real_t(1));
+  state.set_velocity(real_t(2), fluid::dim_x);
+  state.set_velocity(real_t(3), fluid::dim_y);
+  state.set_energy(real_t(4));
+  state.set_additional(real_t(5), 0);
+
+  EXPECT_EQ(state.density()             , real_t(1));
+  EXPECT_EQ(state.velocity(fluid::dim_x), real_t(2));
+  EXPECT_EQ(state.velocity(fluid::dim_y), real_t(3));
+  EXPECT_EQ(state.energy(material)      , real_t(4));
+  EXPECT_EQ(state.additional(0)         , real_t(5));
 }
 
+/*
 TEST(StateTests, CanConvertPrimitiveToConservative) {
   Primitive2D primitiveState;
   Gas         gas(adiIndex);

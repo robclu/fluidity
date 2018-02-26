@@ -37,10 +37,11 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
   using value_t   = std::decay_t<T>;
 
   /// Returns the format of the state.
-  static constexpr FormType format = Form;
-
+  static constexpr FormType    format                = Form;
   /// Returns the number of additional components for the state.
   static constexpr std::size_t additional_components = Components;
+  /// Returns the number of dimensions in the state.
+  static constexpr std::size_t dimensions            = Dimensions;
 
   /// The index struct returns the values where data is stored in the state.
   struct index {
@@ -53,7 +54,7 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
     /// Defines the offset to the first velocity element.
     static constexpr int v_offset = 2;
     /// Defines the offset to the first additional element.
-    static constexpr int a_offset = v_offset + Dimensions;
+    static constexpr int a_offset = v_offset + dimensions;
 
     /// Returns the offset to the velocity element to the \p dim direction.
     /// \param[in] dim The dimensions to get the velocity index for.
@@ -244,6 +245,12 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
     static_assert(Index < additional_components,
                   "Out of range additional component access!");
     this->operator[](index::additional(Number<Index>{})) = value;
+  }
+
+  /// Returns the sum of sqaured velocities for the state.
+  fluidity_host_device constexpr value_t v_squared_sum() const
+  {
+    return detail::v_squared_sum(*this);
   }
 
 };
