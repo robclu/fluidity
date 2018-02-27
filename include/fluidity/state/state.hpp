@@ -50,9 +50,9 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
     /// Defines that the density is always stored as the first state element.
     static constexpr int density  = 0;
     /// Defines that the presure is the second element if the state is prim.
-    static constexpr int pressure = Form == FormType::primitive ? 1 : -1;
+    static constexpr int pressure = format == FormType::primitive ? 1 : -1;
     /// Defines that the energy is the second element if the stat is cons.
-    static constexpr int energy   = Form == FormType::conservative ? 1 : -1;
+    static constexpr int energy   = format == FormType::conservative ? 1 : -1;
     /// Defines the offset to the first velocity element.
     static constexpr int v_offset = 2;
     /// Defines the offset to the first additional element.

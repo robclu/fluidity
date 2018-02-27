@@ -63,7 +63,7 @@ struct IdealGas {
   fluidity_host_device constexpr value_t eos(State&& state) const
   {
     return state.pressure(*this) / 
-          ((_adi_index - value_t(1)) * state.density());
+          ((_adi_index - value_t{1}) * state.density());
   }
 
   /// Calculates the speed of sound for the ideal gas, based on the equation
@@ -77,7 +77,7 @@ struct IdealGas {
   /// \param[in]  state   The state to use to compute the sound speed.
   /// \tparam     State   The type of the state.
   template <typename State>
-  fluidity_host_device constexpr value_t soundSpeed(State&& state) const
+  fluidity_host_device constexpr value_t sound_speed(State&& state) const
   {
     return std::sqrt(_adi_index * state.pressure(*this) / state.density());
   } 

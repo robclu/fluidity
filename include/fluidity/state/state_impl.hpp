@@ -123,6 +123,7 @@ fluidity_host_device inline constexpr auto
 pressure(State&& state, Material&&  material) noexcept
 {
   using state_t = std::decay_t<State>;
+  using value_t = typename state_t::value_t;
   static_assert(is_state_v<state_t>,
     "Attempt to invoke a state function on a type which is not a state");
 
@@ -132,9 +133,9 @@ pressure(State&& state, Material&&  material) noexcept
   } 
   else 
   {
-    return (material.adiabatic() - 1)     *
-           (state[state_t::index::energy] -
-            0.5 * state.density() * state.v_squared_sum());
+    return (material.adiabatic() - value_t{1})
+           * (state[state_t::index::energy]
+           -  value_t{0.5} * state.density() * state.v_squared_sum());
   }
 }
 
@@ -244,7 +245,6 @@ fluidity_host_device inline constexpr auto
 primitive(State&& state, Material&& mat)
 {
   using state_t  = std::decay_t<State>;
-  using index_t  = typename state_t::index;
   using result_t = ::fluid::state::State
                       < typename state_t::value_t
                       , FormType::primitive
@@ -252,6 +252,8 @@ primitive(State&& state, Material&& mat)
                       , state_t::additional_components
                       , state_t::storage_layout
                       >;
+  using index_t  = typename result_t::index;
+
   if constexpr (state_t::format == FormType::primitive)
   {
     return state;
@@ -280,7 +282,6 @@ fluidity_host_device inline constexpr auto
 conservative(State&& state, Material&& mat)
 {
   using state_t  = std::decay_t<State>;
-  using index_t  = typename state_t::index;
   using result_t = ::fluid::state::State
                       < typename state_t::value_t
                       , FormType::conservative
@@ -288,6 +289,7 @@ conservative(State&& state, Material&& mat)
                       , state_t::additional_components
                       , state_t::storage_layout
                       >;
+  using index_t  = typename result_t::index;
 
   if constexpr (state_t::format == FormType::conservative)
   {
