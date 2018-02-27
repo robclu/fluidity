@@ -164,17 +164,7 @@ TEST(state_tests_host, primitiveAndConservativeFluxesAreTheSame) {
   auto prim_state  = cons_state.primitive(material);
   auto cons_fluxes = cons_state.flux(material, fluid::dim_x);
   auto prim_fluxes = prim_state.flux(material, fluid::dim_x);
-
-  // P = (gamma - 1) * (E - 0.5 * rho * (u^2 + v^2))
-  // gamma = 1.4
-  // E     = 3.0
-  // rho   = 1.0
-  // u     = 2.0
-  // v     = 2.5
-  //const auto p = (gas.adi() - real_t(1))
-  //             * (real_t(3) - real_t(0.5) * T(1) * (T(2) * T(2) + T(2.5) * T(2.5)));
-  //             
-
+  
   using index_t = typename conservative2d_t::index;
   const auto di      = index_t::density;
   const auto vxi     = index_t::velocity(fluid::dim_x);

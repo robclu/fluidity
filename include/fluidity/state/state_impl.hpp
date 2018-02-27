@@ -180,7 +180,7 @@ make_other_fluxes(State&& state, Flux&& flux, Dimension<Value> /*dim*/)
 
   unrolled_for<it>([&] (auto i)
   {
-    constexpr auto dim = Dimension<Value>{};
+    constexpr auto dim   = Dimension<Value>{};
     constexpr auto index = state_t::index::v_offset + i + (i >= Value ? 1 : 0);
 
     flux[index] = state[index] * state.velocity(dim);
