@@ -271,12 +271,26 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
     return detail::primitive(*this, std::forward<Material>(material));
   }
 
+
+  /// Returns the flux from the state vector, in terms of a specific spacial
+  /// dimension \p dim for a given material \p material.
+  /// \param[in] material The material which describes the system.
+  /// \param[in] dim      The dimension to compute the fluxes in terms of.
+  /// \tparam    Material The type of the material.
+  /// \tparam    Value    The value which defines the dimension.
+  template <typename Material, std::size_t Value>
+  fluidity_host_device constexpr auto
+  flux(Material&& material, Dimension<Value> /*dim*/) const
+  {
+    constexpr auto dim = Dimension<Value>{};
+    return detail::flux(*this, std::forward<Material>(material), dim);
+  }
+
   /// Returns the sum of sqaured velocities for the state.
   fluidity_host_device constexpr value_t v_squared_sum() const
   {
     return detail::v_squared_sum(*this);
   }
-
 };
 
 /// Alias for a primitive state.

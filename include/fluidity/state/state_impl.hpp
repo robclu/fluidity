@@ -175,20 +175,13 @@ template <typename State, typename Flux, std::size_t Value>
 fluidity_host_device inline constexpr auto
 make_other_fluxes(State&& state, Flux&& flux, Dimension<Value> /*dim*/)
 {
-  using state_t      = std::decay_t<State>;
-  constexpr auto it  = state_t::dimensions + state_t::additional_components - 1;
-  constexpr auto dim = Dimension<Value>{};
+  using state_t     = std::decay_t<State>;
+  constexpr auto it = state_t::dimensions + state_t::additional_components - 1;
 
   unrolled_for<it>([&] (auto i)
   {
-    if constexpr (i == Value)
-    {
-      constexpr auto index = state_t::index::v_offset + i + 1;
-    }
-    else
-    {
-      constexpr auto index = state_t::index::v_offset + i;
-    }
+    constexpr auto dim = Dimension<Value>{};
+    constexpr auto index = state_t::index::v_offset + i + (i >= Value ? 1 : 0);
 
     flux[index] = state[index] * state.velocity(dim);
     if constexpr (state_t::format == FormType::primitive)
@@ -235,6 +228,7 @@ flux(State&& state, Material&& mat, Dimension<Value> /*dim*/)
   {
     make_other_fluxes(std::forward<State>(state), flux, dim);
   }
+  return flux;
 }
 
 /// Returns the primitive form of the state, regardless of whether the type of
