@@ -105,7 +105,7 @@ class Array {
   value_t _data[Elements] = {0};  //!< Data for the array.
 };
 
-//==--- BaseTensor 1D Implementation ---------------------------------------==//
+//==--- Array Implementation -----------------------------------------------==//
 
 //===== Public ----------------------------------------------------------=====//
 
@@ -115,4 +115,3 @@ class Array {
 } // namespace fluid
 
 #endif // FLUIDITY_CONTAINER_ARRAY_HPP
-#define FLUIDITY_STATE_STATE_IMPL_HPP

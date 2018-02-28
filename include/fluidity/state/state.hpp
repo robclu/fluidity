@@ -44,6 +44,10 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
   static constexpr std::size_t dimensions            = Dimensions;
   /// Returns the storage layout of the state.
   static constexpr auto        storage_layout        = Format;
+  /// Returns the number of elements in the state.
+  static constexpr auto        elements              = 2 
+                                                     + dimensions
+                                                     + additional_components;
 
   /// The index struct returns the values where data is stored in the state.
   struct index {
@@ -290,6 +294,12 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
   fluidity_host_device constexpr value_t v_squared_sum() const
   {
     return detail::v_squared_sum(*this);
+  }
+
+  /// Returns the number of elements (total components) of the state.
+  fluidity_host_device constexpr auto size() const
+  {
+    return index::a_offset + additional_components;
   }
 };
 

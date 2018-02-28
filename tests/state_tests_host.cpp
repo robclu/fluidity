@@ -31,7 +31,7 @@ static constexpr real_t adi_index = 1.4;
 
 using namespace fluid::state;
 
-TEST(state_tests_host, canCreateprim_state) {
+TEST(state_tests_host, can_create_primitive_state) {
   primitive2d_t state;
   material_t    material(adi_index);
 
@@ -41,6 +41,7 @@ TEST(state_tests_host, canCreateprim_state) {
   state.set_velocity(real_t(4), fluid::dim_y);
   state.set_additional(real_t(5), 0);
 
+  EXPECT_EQ(state.size()                , 5        );
   EXPECT_EQ(state.density()             , real_t(1));
   EXPECT_EQ(state.pressure(material)    , real_t(2));
   EXPECT_EQ(state.velocity(fluid::dim_x), real_t(3));
@@ -48,7 +49,7 @@ TEST(state_tests_host, canCreateprim_state) {
   EXPECT_EQ(state.additional(0)         , real_t(5));
 }
 
-TEST(state_tests_host, canCreatecons_state) {
+TEST(state_tests_host, can_create_cons_state) {
   conservative2d_t state;
   material_t       material(adi_index);
 
@@ -58,6 +59,7 @@ TEST(state_tests_host, canCreatecons_state) {
   state.set_energy(real_t(4));
   state.set_additional(real_t(5), 0);
 
+  EXPECT_EQ(state.size()                , 5        );
   EXPECT_EQ(state.density()             , real_t(1));
   EXPECT_EQ(state.velocity(fluid::dim_x), real_t(2));
   EXPECT_EQ(state.velocity(fluid::dim_y), real_t(3));
@@ -66,7 +68,7 @@ TEST(state_tests_host, canCreatecons_state) {
 }
 
 
-TEST(state_tests_host, canConvertPrimitiveToConservative) {
+TEST(state_tests_host, can_convert_primitive_to_conservative) {
   primitive2d_t prim_state;
   material_t    material(adi_index);
 
@@ -104,7 +106,7 @@ TEST(state_tests_host, canConvertPrimitiveToConservative) {
   EXPECT_LT(diff_b, tolerance);
 }
 
-TEST(state_tests_host, canConvertConservativeToPrimitive) {
+TEST(state_tests_host, can_convert_conservative_to_primitive) {
   conservative2d_t cons_state;
   material_t       material(adi_index);
 
@@ -136,7 +138,7 @@ TEST(state_tests_host, canConvertConservativeToPrimitive) {
   EXPECT_EQ(prim_state.energy(material)      , cons_state.energy(material)      );
 }
 
-TEST(state_tests_host, primitiveAndConservativeFluxesAreTheSame) {
+TEST(state_tests_host, primitive_and_conservative_fluxes_are_the_same) {
   conservative2d_t cons_state;
   material_t       material(adi_index);
 

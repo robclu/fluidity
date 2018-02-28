@@ -132,13 +132,20 @@ struct HllcSolver {
   /// \tparam    Material    The type of the material.
   /// \tparam    Value       The value which defines the dimension.
   template <typename T, typename State, typename Material, std::size_t Value>
-  fluidity_host_device static T wavespeed(const State&  state     ,
-                                          T             pstar     ,
-                                       T                sound_peed,
-                                       T                adi_factor, 
-                                       Material&&       material  ,
-                                       Dimension<Value> /*dim*/   )
+  fluidity_host_device static T wavespeed(const State&     state     ,
+                                          T                pstar     ,
+                                          T                sound_peed,
+                                          T                adi_factor, 
+                                          Material&&       material  ,
+                                          Dimension<Value> /*dim*/   )
   {
+    using state_t = std::decay_t<State>;
+    static_assert(state_t::format == state::FormType::primtive,
+                  "Wavespeed computation requires primitive state vector.");
+
+    // Define the dimension to ensure constexpr functionality:
+    constexpr auto dim = Dimension<Value>{};
+
     // Rarefaction wave:
     if (pstar <= state.pressure(material))
     {
@@ -153,6 +160,99 @@ struct HllcSolver {
            );
   }
 
+  /// Computes the wavespeed in the star region, S*, as follows:
+  ///
+  ///   \begin{equation}
+  ///   \end{equation}
+  ///   
+  /// and returns the result.
+  ///
+  /// \param[in] statel     The __primitve__ left state vector.
+  /// \param[in] stater     The __primitive__ right state vector.
+  /// \param[in] wavespeedl The left wave speed: SL.
+  /// \param[in] wavespeedr The right wave speed: SR.
+  /// \param[in] mat        The material describing the system.
+  /// \param[in] dim        The dimension to use the velocity component of.
+  /// \tparam    T          The type of the data.
+  /// \tparam    State      The type of the states.
+  /// \tparam    Material   The type of the material.
+  /// \tparam    Value      The value which defines the dimension.
+  template <typename T, typename State, typename Material, std::size_t Value>
+  fluidity_host_device static T star_speed(const State&     statel    ,
+                                           const State&     stater    ,
+                                           T                wavespeedl,
+                                           T                wavespeedr,
+                                           Material&&       material  ,
+                                           Dimension<Value> /*dim*/   )
+  {
+    // Define the dimension to ensure constexpr functionality.
+    constexpr auto dim = Dimension<Value>{};
+
+    // Compute the factor: $\rho * (S-k - u_k)
+    const auto factorl = statel.density() * (wavespeedl - state.velocity(dim));
+    const auto factorr = stater.density() * (wavespeedr - state.velocity(dim));
+
+    // The computation is the following (dX = Density x):
+    //    pR - pL + dL * vL(SL - vL) - dR * vR(SR - vR)
+    //    ---------------------------------------------
+    //              dL(SL - vL) - dR(SR - vR)
+    return ((stater.pressure(mat) - statel.pressure(mat)) +
+            (statel.velocity(dim) * factorl)              -
+            (stater.velocity(dim) * factorr)              )
+           / (factorl - factorr);  
+  }
+
+  /// Computes the star state, UL* or UR*, given by:
+  /// 
+  ///   /begin{equation}
+  ///   /end{equation}
+  /// 
+  /// and returns the result.
+  ///
+  /// \param[in] state       The __primitive__ state to compute the conservative
+  ///            star state from.
+  /// \param[in] state_speed The max wave speed Sk for the state in this 
+  ///            direction, k.
+  /// \param[in] star_speed  The star speed.
+  /// \param[in] dim         The dimension to use the velocity component of.
+  /// \tparam    T           The data type being used.
+  /// \tparam    State       The type of the state.
+  /// \tparam    Material    The type of material.
+  /// \tparam    Value       The value which defines the dimension.
+  template <typename T, typename State, typename Material, std::size_t Value>
+  fluidity_host_device static auto star_state(const State&     state      ,
+                                              T                state_speed,
+                                              T                star_speed ,
+                                              Material&&       material   ,
+                                              Dimension<Value> /*dim*/    )
+  {
+    using state_t  = std::decay_t<State>;
+    using index_t  = typename state_t::index;
+    using vector_t = Array<typename state_t::value_t, state_t::elements>;
+
+    // Define the dimension to ensure constexpr functionality.
+    constexpr auto dim = Dimension<Value>{};
+
+    const auto state_factor = state.density()
+                            * (state_speed - state.velocity(dim));
+    const auto scale_factor = state_factor / (state_speed - star_speed);
+    const auto e_div_rho    = T{0.5} * state.v_squared_sum()
+                            + material.eos(state);
+
+    // Create a vector which is initially the state scaled by the scaling factor
+    // , which is the default value for most of the components, and then modify
+    // the appropriate other elements.
+    vector_t temp(scale_factor * state);
+    temp[index_t::density]       = scale_factor;
+    temp[index_t::velocity(dim)] = scale_factor * star_speed;
+    temp[index_t::pressure]      =
+        scale_factor
+      * (e_div_rho
+      +  (star_speed - state.velocity(dim))
+      *  (star_speed + state.pressure(material) / scale_factor)
+        );
+    return temp;
+  }
 };
 
 }} // namespace fluid::solver
