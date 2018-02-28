@@ -16,6 +16,8 @@
 #ifndef FLUIDITY_LIMITING_VAN_LEER_LIMITER_HPP
 #define FLUIDITY_LIMITING_VAN_LEER_LIMITER_HPP
 
+#include <fluid/utility/portability.hpp>
+
 namespace fluid {
 namespace limit {
 

@@ -167,12 +167,12 @@ TEST(state_tests_host, primitive_and_conservative_fluxes_are_the_same) {
   auto cons_fluxes = cons_state.flux(material, fluid::dim_x);
   auto prim_fluxes = prim_state.flux(material, fluid::dim_x);
   
-  using index_t = typename conservative2d_t::index;
-  const auto di      = index_t::density;
-  const auto vxi     = index_t::velocity(fluid::dim_x);
-  const auto vyi     = index_t::velocity(fluid::dim_y);
-  const auto ei      = index_t::energy;
-  const auto ai      = index_t::additional(0);
+  using index_t  = typename conservative2d_t::index;
+  const auto di  = index_t::density;
+  const auto vxi = index_t::velocity(fluid::dim_x);
+  const auto vyi = index_t::velocity(fluid::dim_y);
+  const auto ei  = index_t::energy;
+  const auto ai  = index_t::additional(0);
 
   // Hand calculations:
   EXPECT_EQ(cons_fluxes[di] , density * v_x                 ); // rho * u
