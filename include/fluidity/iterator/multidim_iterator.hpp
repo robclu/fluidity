@@ -17,6 +17,7 @@
 #ifndef FLUIDITY_ITERATOR_MULTIDIM_ITERATOR_HPP
 #define FLUIDITY_ITERATOR_MULTIDIM_ITERATOR_HPP
 
+#include <fluidity/dimension/thread_index.hpp>
 #include <fluidity/utility/portability.hpp>
 
 namespace fluid {
