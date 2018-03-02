@@ -19,13 +19,15 @@
 template <typename T>
 using device_tensor1d = fluid::DeviceTensor<T, 1>;
 
-TEST(container_host_tensor, can_create_tensor) {
+TEST(container_host_tensor, can_create_tensor)
+{
   device_tensor1d<float> t(20);
 
   EXPECT_EQ(t.size(), static_cast<decltype(t.size())>(20));
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv)
+{
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }

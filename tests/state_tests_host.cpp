@@ -31,7 +31,8 @@ static constexpr real_t adi_index = 1.4;
 
 using namespace fluid::state;
 
-TEST(state_tests_host, can_create_primitive_state) {
+TEST(state_tests_host, can_create_primitive_state)
+{
   primitive2d_t state;
   material_t    material(adi_index);
 
@@ -49,7 +50,8 @@ TEST(state_tests_host, can_create_primitive_state) {
   EXPECT_EQ(state.additional(0)         , real_t(5));
 }
 
-TEST(state_tests_host, can_create_cons_state) {
+TEST(state_tests_host, can_create_cons_state)
+{
   conservative2d_t state;
   material_t       material(adi_index);
 
@@ -68,7 +70,8 @@ TEST(state_tests_host, can_create_cons_state) {
 }
 
 
-TEST(state_tests_host, can_convert_primitive_to_conservative) {
+TEST(state_tests_host, can_convert_primitive_to_conservative)
+{
   primitive2d_t prim_state;
   material_t    material(adi_index);
 
@@ -106,7 +109,8 @@ TEST(state_tests_host, can_convert_primitive_to_conservative) {
   EXPECT_LT(diff_b, tolerance);
 }
 
-TEST(state_tests_host, can_convert_conservative_to_primitive) {
+TEST(state_tests_host, can_convert_conservative_to_primitive)
+{
   conservative2d_t cons_state;
   material_t       material(adi_index);
 
@@ -138,7 +142,8 @@ TEST(state_tests_host, can_convert_conservative_to_primitive) {
   EXPECT_EQ(prim_state.energy(material)      , cons_state.energy(material)      );
 }
 
-TEST(state_tests_host, primitive_and_conservative_fluxes_are_the_same) {
+TEST(state_tests_host, primitive_and_conservative_fluxes_are_the_same)
+{
   conservative2d_t cons_state;
   material_t       material(adi_index);
 
@@ -203,7 +208,8 @@ TEST(StateTests, CanCreateStatesFromVectorExpressions) {
 }
 */
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv)
+{
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }

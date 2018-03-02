@@ -58,7 +58,7 @@ struct DimInfoCt {
   /// elements in the space. This is the product sum of the dimension 
   fluidity_host_device static constexpr auto total_size()
   {
-    return (1 + ... + Sizes);
+    return (1 * ... * Sizes);
   }
 };
 

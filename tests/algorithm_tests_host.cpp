@@ -17,7 +17,7 @@
 #include <gtest/gtest.h>
 #include <fluidity/algorithm/algorithm.hpp>
 
-TEST(algorithm_host, canCompiletimeUnroll)
+TEST(algorithm_host, can_compile_time_unroll)
 {
   constexpr std::size_t amount = 3;
   int sum = 0;
@@ -28,7 +28,7 @@ TEST(algorithm_host, canCompiletimeUnroll)
   EXPECT_EQ(sum, amount);
 }
 
-TEST(algorithm_host, canCompileTimeUnrollAboveMaxUnrollDepth)
+TEST(algorithm_host, can_compile_time_unroll_above_max_unroll_depth)
 {
   constexpr std::size_t amount = 64;
   static_assert(amount > fluid::max_unroll_depth,
@@ -47,7 +47,8 @@ TEST(algorithm_host, canCompileTimeUnrollAboveMaxUnrollDepth)
   EXPECT_EQ(sum, result);
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv)
+{
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }

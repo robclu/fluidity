@@ -22,24 +22,25 @@ template <typename T>
 using host_tensor1d = fluid::HostTensor<T, 1>;
 using array_t       = fluid::Array<int, 3>;
 
-TEST(container_host_tensor, canCreateTensor)
+TEST(container_host_tensor, can_create_tensor)
 {
   host_tensor1d<float> t(20);
 
   EXPECT_EQ(t.size(), static_cast<decltype(t.size())>(20));
 }
 
-TEST(container_host_tensor, canFillTensor)
+TEST(container_host_tensor, can_fill_tensor)
 {
   host_tensor1d<int> t(20);
   fluid::fill(t.begin(), t.end(), 2);
 
-  for (const auto& element : t) {
+  for (const auto& element : t)
+  {
     EXPECT_EQ(element, 2);
   }
 }
 
-TEST(container_host_tensor, canFillTensorWithFunctor)
+TEST(container_host_tensor, can_fill_tensor_with_functor)
 {
   host_tensor1d<int> t(20);
   std::size_t count = 0;
@@ -49,12 +50,13 @@ TEST(container_host_tensor, canFillTensorWithFunctor)
   });
 
   count = 0;
-  for (const auto& element : t) {
+  for (const auto& element : t) 
+  {
     EXPECT_EQ(element, count++);
   }
 }
 
-TEST(container_array, canCreateArray)
+TEST(container_array, can_create_array)
 {
   array_t a{2};
 
@@ -64,7 +66,7 @@ TEST(container_array, canCreateArray)
   EXPECT_EQ(a[2], 2);
 }
 
-TEST(container_array, canCopyArray)
+TEST(container_array, can_copy_array)
 {
   array_t a{2};
   array_t b{a};
@@ -81,7 +83,8 @@ TEST(container_array, canCopyArray)
   EXPECT_EQ(c[2], 2);
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv)
+{
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }
