@@ -46,7 +46,7 @@ TEST(range_host_tests, range_works_with_non_integer_types)
   }
 }
 
-TEST(multidim_iter_host_tests, can_create_multidimensional_iterator)
+TEST(multidim_iter_host_tests, can_create_and_iterate_multidim_iterator)
 {
   using namespace fluid;
 
@@ -126,6 +126,45 @@ TEST(multidim_iter_host_tests, can_create_multidimensional_iterator)
   EXPECT_EQ(*iter2d.offset(1, fluid::dim_x), 9 );
   EXPECT_EQ(*iter2d.offset(2, fluid::dim_x), 10);
   EXPECT_EQ(*iter2d.offset(3, fluid::dim_x), 11);
+}
+
+TEST(multidim_iter_host_tests, can_compute_iterator_differences)
+{
+  using namespace fluid;
+
+  // Create information to define 3 x 3 x 3 dimensional space
+  using dim_info_t   = DimInfoCt<3, 3, 3>;  // 3x2x2 dimensional space
+  using multi_iter_t = MultidimIterator<std::size_t, dim_info_t>;
+
+  constexpr auto size = dim_info_t::total_size();
+
+  std::size_t data[size];
+  for (const auto i : range(size)) { data[i] = i; }
+
+  // Create iterator over the space, the data will look like:
+  //
+  //       |- x x x -| |- x  x  x -| |-  x  x  x -| 
+  //  -----------------------------------------------
+  //    y  |  0 1 2       9  10 11      18 19 20
+  //    y  |  3 4 5       12 13 14      21 22 23
+  //    y  |  6 7 8       15 16 17      24 25 26
+  //        |---z---|    |----z---|    |----z---|
+  multi_iter_t iter(data);
+
+  // Move the iterator to the center of the space.
+  iter.shift(1, fluid::dim_x).shift(1, fluid::dim_y).shift(1, fluid::dim_z);
+
+  EXPECT_EQ(iter.backward_diff(fluid::dim_x), 13 - 12);
+  EXPECT_EQ(iter.forward_diff(fluid::dim_x) , 14 - 13); 
+  EXPECT_EQ(iter.central_diff(fluid::dim_x) , 14 - 12);
+
+  EXPECT_EQ(iter.backward_diff(fluid::dim_y), 13 - 10);
+  EXPECT_EQ(iter.forward_diff(fluid::dim_y) , 16 - 13); 
+  EXPECT_EQ(iter.central_diff(fluid::dim_y) , 16 - 10);
+
+  EXPECT_EQ(iter.backward_diff(fluid::dim_z), 13 - 4 );
+  EXPECT_EQ(iter.forward_diff(fluid::dim_z) , 22 - 13); 
+  EXPECT_EQ(iter.central_diff(fluid::dim_z) , 22 - 4 ); 
 }
 
 int main(int argc, char** argv) 
