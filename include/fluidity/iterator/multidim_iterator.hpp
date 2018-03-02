@@ -17,8 +17,9 @@
 #ifndef FLUIDITY_ITERATOR_MULTIDIM_ITERATOR_HPP
 #define FLUIDITY_ITERATOR_MULTIDIM_ITERATOR_HPP
 
+#include <fluidity/dimension/dimension_info.hpp>
 #include <fluidity/dimension/thread_index.hpp>
-#include <fluidity/utility/portability.hpp>
+#include <fluidity/utility/debug.hpp>
 
 namespace fluid {
 
@@ -29,13 +30,15 @@ namespace fluid {
 template <typename T, typename DimInfo>
 struct MultidimIterator {
   /// Defines the type of this iterator.
-  using self_t     = MultidimIterator;
+  using self_t          = MultidimIterator;
   /// Defines the type of the data being iterated over.
-  using value_t    = std::decay_t<T>;
+  using value_t         = std::decay_t<T>;
   /// Defines the type of the pointer for the iterator.
-  using pointer_t  = value_t*;
+  using pointer_t       = value_t*;
+  /// Defines the type of a constant pointer for the iterator.
+  using const_pointer_t = const value_t*;
   /// Defines the type of the information for the dimensions.
-  using dim_info_t = std::decay_t<DimInfo>;
+  using dim_info_t      = std::decay_t<DimInfo>;
 
  private:
   /// Hides the implementation of the stride computation.
@@ -47,9 +50,9 @@ struct MultidimIterator {
     /// \tparam    Value        The value which defines the dimension.
     template <std::size_t Value>
     fluidity_host_device static constexpr std::size_t
-    stride(Dimension<Value> /*dim*/, std::size_t start_value)
+    offset(Dimension<Value> /*dim*/, std::size_t start_value)
     {
-      return start_value * dim_info_t::stride(Dimension<Value>{});
+      return start_value * dim_info_t::size(Dimension<Value - 1>{});
     }
   };
 
@@ -60,12 +63,14 @@ struct MultidimIterator {
   /// \param[in] ptr The pointer to iterate from.
   fluidity_host_device MultidimIterator(pointer_t ptr) : _ptr(ptr)
   {
-    assert(_ptr != nullptr, "Cannot iterate from a nullptr!");
+    assert(_ptr != nullptr && "Cannot iterate from a nullptr!");
   }
 
   /// Returns amount of offset required to iterate in dimension \p dim. The
   /// offset in the 0 dimension (Value = 0) is always taken to be one.
-  /// \param[in] dim The dimension to get the offset for.
+  /// \param[in] dim    The dimension to get the offset for.
+  /// \tparam    Value  The value which defines the dimension.
+  template <std::size_t Value> 
   fluidity_host_device static constexpr std::size_t
   offset(Dimension<Value> /*dim*/)
   {
@@ -75,7 +80,7 @@ struct MultidimIterator {
     }
     else
     {
-      return detail::stride(Dimension<Value>{}, stride(Dimension<Value-1>{}));
+      return detail::offset(Dimension<Value>{}, offset(Dimension<Value - 1>{}));
     }
   }
 
@@ -110,7 +115,7 @@ struct MultidimIterator {
   }
 
   /// Overload of operator-> to access the value the iterator points to as const.
-  fluidity_host_device const pointer_t operator->() const
+  fluidity_host_device constexpr const_pointer_t operator->() const
   {
     return _ptr;
   }
@@ -122,7 +127,7 @@ struct MultidimIterator {
   /// \tparam     Value   The value which defines the dimension.
   template <std::size_t Value>
   fluidity_host_device constexpr self_t
-  offset(int offset, Dimension<Value> /*dim*/) const
+  offset(int amount, Dimension<Value> /*dim*/) const
   {
     return self_t{_ptr + amount * offset(Dimension<Value>{})};
   }
@@ -134,7 +139,7 @@ struct MultidimIterator {
   /// \param[in]  dim     The dimension to advance the iterator in.
   /// \tparam     Value   The value which defines the dimension.
   template <std::size_t Value>
-  fluidity_host_device constexpr self_t
+  fluidity_host_device constexpr self_t&
   shift(int amount, Dimension<Value> /*dim*/)
   {
     _ptr += amount * offset(Dimension<Value>{});
@@ -258,13 +263,13 @@ fluidity_device_only constexpr auto make_multidim_iterator()
 /// \tparam T       The type of the data to iterate over.
 /// \tparam DimInfo The information which defines the multi dimensional space.
 template <typename T, typename DimInfo>
-fluidity_host_only constexpr auto make_multidim_iterator()
+fluidity_host_only auto make_multidim_iterator()
 {
-  iter_t iter{buffer};
+  using iter_t = MultidimIterator<T, DimInfo>;
   static_assert(std::is_same_v<DimInfo, DimInfoCt>,
                 "DimInfo must be DimInfoCt type to make a multidim iterator!");
-  using iter_t = MultidimIterator<T, DimInfo>
   static thread_local T buffer[DimInfo::total_size()];
+  iter_t iter{buffer};
 
   // Move the iterator to the current thread.
   iter.shift(dim_x, thread_id(dim_x))

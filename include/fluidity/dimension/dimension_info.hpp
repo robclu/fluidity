@@ -53,7 +53,6 @@ struct DimInfoCt {
       return sizes[Value];
   }
 
-
   /// Returns the total size of the N dimensional space i.e the total number of
   /// elements in the space. This is the product sum of the dimension 
   fluidity_host_device static constexpr auto total_size()

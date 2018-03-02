@@ -38,6 +38,21 @@ fluidity_device_only constexpr inline std::size_t thread_id(Dimension<Value>)
 
 #else
 
+/// Returns the value of the thread index in a given dimension. The dimension
+/// must be one of dim_x, dim_y, dim_z, or else a compile time error will be
+/// generated.
+/// \param[in] dim    The dimension to get the thread index for.
+/// \tparam    Value  The value which defines the dimension.
+template <std::size_t Value>
+fluidity_host_only constexpr inline std::size_t thread_id(Dimension<Value>)
+{
+  // \todo, add implementation ... 
+  static_assert(Value <= 2, "Can only get thread id for 3 dimensions {0,1,2}.");
+  if constexpr (Value == 0) { return 0; }
+  if constexpr (Value == 1) { return 1; }
+  if constexpr (Value == 2) { return 2; }
+}
+
 #endif 
 
 } // namespace fluid
