@@ -67,6 +67,10 @@ class GenericSimulator final : public Simulator<typename Traits::state_t> {
   storage_t _initial_states;  //!< States at the start of an iteration.
   storage_t _updated_states;  //!< States at the end of an iteration.
 
+
+  /// Returns the dimension information for the simulator.
+  DimInfo dimension_info() const;
+
 };
 
 //==--- Implementation -----------------------------------------------------==//
@@ -96,35 +100,65 @@ void GenericSimulator<Traits>::fill_data(fillinfo_container_t&& fillers)
   }
 
   /// Go over each of the dimensions and fill the data:
-  auto dim_info = DimInfoRt;
-  unrolled_for<dimensions>([&dim_info] (auto i)
-  {
-    dim_info.push_back(_input_states.size(i));
-  });
-
-  Array<float, 3> pos; 
+  auto pos      = Array<float, 3>; 
+  auto dim_info = dimension_info();
   for (int i = 0; i < _input_states.size(); ++i)
   {
-    unrolled_for<dimensions>([&pos] (auto j)
+    unrolled_for<dimensions>([&pos] (auto d)
     {
-      constexpr auto dim = Dimension<j>{};
-      pos[j] = float(dim_info.flattened_index(i, dim)) / dim_info.size(dim);
+      constexpr auto dim = Dimension<d>{};
+      pos[d] = float(dim_info.flattened_index(i, dim)) / dim_info.size(dim);
     });
 
-    /// Invoke each of the fillers on the each state data property:
+    // Invoke each of the fillers on the each state data property:
     for (const auto& filler : fillers)
     {
-      int j = 0;
+      int fill_index = 0;
       for (auto prop_index : indices)
-        _input_states[i][prop_index] = filler[j++].filler(pos);
+      {
+        _input_states[i][prop_index] = filler[fill_index++].filler(pos);
+      }
     }
   }
 }
 
 template <typename Traits>
-void GenericSimulator<Traits>::write_results(const char* prefix, fs::path) const
+void GenericSimulator<Traits>::write_results(const char* prefix,
+                                             fs::path    path  ) const
 {
+  constexpr auto start = dimensions <= 2 ? 0 : 3;
+  constexpr auto iters = dimensions <= 2 : 1 : dimensions - 2;
 
+  auto dim_info = dimension_info();
+  unrolled_for<iters>([this] (auto i)
+  {
+    constexpr auto d = start + i;
+    fs::path f = path + prefix + prop + std::to_string(d) + ".txt";
+
+    const auto batch_size = dim_info.size()
+                          * (dimensions == 1 ? 1 : dim_info.size(1));
+
+    for (const auto outer_idx : range(dim_info.size(i)))
+    {
+      const auto offset = outer_idx * dim_info.offset(Dimension<i>{});
+      for (const auto inner_idx : range(batch_size))
+      {
+        f << _output_states[offset + idx]
+          << inner_idx % dim_info.size(0) == 0 ? "\n" : " ";
+      }
+    }
+  });
+}
+
+template <typename Traits>
+DimInfo GenericSimulator<Traits>::dimension_info() const
+{
+  auto dim_info = DimInfo;
+  unrolled_for<dimensions>([&] (auto i)
+  {
+    dim_info.push_back(_input_states.size(i));
+  });
+  return dim_info;
 }
 
 }} // namespace fluid::sim
