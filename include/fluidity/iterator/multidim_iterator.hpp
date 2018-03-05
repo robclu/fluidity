@@ -41,22 +41,7 @@ struct MultidimIterator {
   using dim_info_t      = std::decay_t<DimInfo>;
 
  private:
-  /// Hides the implementation of the stride computation.
-  struct detail {
-    /// Computes the offset for a dimension \p dim, using a starting value of
-    /// \p start_value.
-    /// \param[in] dim          The dimension to compute the offset for.
-    /// \param[in] start_value  The starting value for the computation.
-    /// \tparam    Value        The value which defines the dimension.
-    template <std::size_t Value>
-    fluidity_host_device static constexpr std::size_t
-    offset(Dimension<Value> /*dim*/, std::size_t start_value)
-    {
-      return start_value * dim_info_t::size(Dimension<Value - 1>{});
-    }
-  };
-
-  pointer_t _ptr;
+  pointer_t _ptr; //!< A pointer to the data to iterate over.
 
  public:
   /// Initializes the pointer to data to iterate over.
@@ -74,14 +59,7 @@ struct MultidimIterator {
   fluidity_host_device static constexpr std::size_t
   offset(Dimension<Value> /*dim*/)
   {
-    if constexpr (Value == 0)
-    {
-      return 1;
-    }
-    else
-    {
-      return detail::offset(Dimension<Value>{}, offset(Dimension<Value - 1>{}));
-    }
+    return dim_info_t::offset(Dimension<Value>{});
   }
 
   /// Overload of operator() to offset the iterator in a specific dimension.

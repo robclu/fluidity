@@ -62,6 +62,35 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
     /// Defines the offset to the first additional element.
     static constexpr int a_offset = v_offset + dimensions;
 
+    /// Defines the type of map used to store offsets and their named
+    /// equivalents.
+    static constexpr int from_name(const char* name)
+    {
+      // ASCII offst to char code x:
+      constexpr int ascii_offset = 120;
+
+      std::vector<const char*> names = "density";
+      names.emplace_back(format == FormType:primitive ? "pressure" : "energy");
+
+      unrolled_for<dimensions>([&names] (auto i)
+      {
+        std::string s = std::string("v_") + char(ascii_offset + i);
+        names.emplace_back(s.c_str());
+      });
+      unrolled_for<additional_components>([&names] (auto i)
+      {
+        std::string s = "add_" + std::to_string(i);
+        names.emplace_back(s.c_str());
+      });
+
+      for (int i = 0; i < names.size(); ++i)
+      {
+        if (std::strcmp(name, names[i]) == 0)
+          return i;
+      }
+      return -1;
+    }
+
     /// Returns the offset to the velocity element to the \p dim direction.
     /// \param[in] dim The dimensions to get the velocity index for.
     static constexpr int velocity(std::size_t dim)
