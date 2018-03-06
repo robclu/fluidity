@@ -14,11 +14,12 @@
 //==------------------------------------------------------------------------==//
 
 
-#include <fluid/limiting/van_leer_limiter.hpp>
-#include <fluid/reconstruction/muscl_reconstructor.hpp>
-#include <fluid/solver/hllc_solver.hpp>
-#include <fluid/simulator/generic_simulator.hpp>
-#include <fluid/state/state.hpp>
+#include <fluidity/limiting/van_leer_limiter.hpp>
+#include <fluidity/material/ideal_gas.hpp>
+#include <fluidity/reconstruction/muscl_reconstructor.hpp>
+#include <fluidity/solver/hllc_solver.hpp>
+#include <fluidity/simulator/generic_simulator.hpp>
+#include <fluidity/state/state.hpp>
 #include <gtest/gtest.h>
 #include <memory>
 
@@ -31,29 +32,29 @@ using primitive2d_t   = fluid::state::primitive_t<real_t, 2, 1>;
 // Defines the material type to use for the tests.
 using material_t      = fluid::material::IdealGas<real_t>;
 // Defines the type of the limiter for the simulations.
-using reconstructor_t = fluid::recin::MHReconstructor<fluid::limit::VanLeer>;
+using reconstructor_t = fluid::recon::MHReconstructor<fluid::limit::VanLeer>;
 
 // Defines the traits of the 1d simulator:
 using simulator1d_props_t =
-  SimulationTraits
+  fluid::sim::SimulationTraits
   < primitive1d_t
   , material_t
   , reconstructor_t
-  , HllcSolver
+  , fluid::solver::HllcSolver
   >;
 
 // Defines the traits of the 2d simulator:
 using simulator2d_props_t =
-  SimulationTraits
+  fluid::sim::SimulationTraits
   < primitive2d_t
   , material_t
   , reconstructor_t
-  , HllcSolver
+  , fluid::solver::HllcSolver
   >;
 
 TEST(generic_simulator_tests, can_create_and_output_1d_data)
 {
-  using simulator_t = fluid::GenericSimulator<simulator1d_props_t>;
+  using simulator_t = fluid::sim::GenericSimulator<simulator1d_props_t>;
 
   auto simulator = std::make_unique<simulator_t>();
 
@@ -61,17 +62,24 @@ TEST(generic_simulator_tests, can_create_and_output_1d_data)
     {
       "density", [] (const auto& pos)
       {
-        pos[0] < 0.1 ? 0.1 : 1.0;
+        return pos[0] < 0.1 ? 0.1 : 1.0;
       }
     },
     {
       "pressure", [] (const auto& pos)
       {
-        pos[0] < 0.5 : 0.5 : 1.0;
+        return pos[0] < 0.5 ? 0.5 : 1.0;
+      }
+    },
+    {
+      "v_x", [] (const auto& pos)
+      {
+        return 0;
       }
     }
+  });
 
-  })
+  simulator->print_results();
 }
 
 int main(int argc, char** argv)

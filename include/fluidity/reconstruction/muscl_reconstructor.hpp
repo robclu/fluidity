@@ -17,6 +17,7 @@
 #ifndef FLUIDITY_RECONSTRUCTION_MUSCL_RECONSTRUCTOR_HPP
 #define FLUIDITY_RECONSTRUCTION_MUSCL_RECONSTRUCTOR_HPP
 
+#include "riemann_input.hpp"
 #include <fluidity/utility/portability.hpp>
 
 namespace fluid {
@@ -48,7 +49,7 @@ struct MHReconstructor {
   /// Defiens the value of the reconstruction application to a backward face.
   static constexpr int  backward_face = -1;
   /// Defines a vector with all its values being a quarter.
-  static constexpr auto quarter       = value_t{0.25}
+  static constexpr auto quarter       = value_t{0.25};
   /// Defines a vector with all its values being a half.
   static constexpr auto half          = value_t{0.5};
   /// Defines a vector with all its values being one.
@@ -86,9 +87,10 @@ struct MHReconstructor {
       const auto eita   = half * limiter_t::apply(state, dim);
       const auto factor = (half * dtdh)
                         * (state_t(*state - eita).flux(mat, dim)
-                        -  state_t(*state + eita).flux(mat, dim))
+                        -  state_t(*state + eita).flux(mat, dim));
 
-      return Face == forward_face ? fwrd - factor : back - factor;
+      return Face == forward_face ? state_t(*state + eita) - factor
+                                  : state_t(*state - eita) - factor;
     }
   };
 
@@ -134,15 +136,15 @@ struct MHReconstructor {
              value_t          dtdh    ,
              Dimension<Value> /*dim*/ ) const
   {
-    using state_t = std::decay_t<decltype(*state)>;
-    auto input    = make_riemann_input<state_t>();
+    //using state_t = std::decay_t<decltype(*state)>;
+    //auto input    = make_riemann_input<state_t>();
 
     // Define the dimension to ensure constexpr functionality:
     constexpr auto dim = Dimension<Value>{};
-
-    input.left  = fwrd_recon_t{}(state, material, dtdh, dim);
-    input.right = back_recon_t{}(state.offset(1, dim), material, dtdh, dim);
-    return input;
+    return make_riemann_input(
+      fwrd_recon_t{}(state, material, dtdh, dim),
+      back_recon_t{}(state.offset(1, dim), material, dtdh, dim)
+    );
   }
 
  private:

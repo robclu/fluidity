@@ -18,6 +18,7 @@
 #define FLUIDITY_ALGORITHM_UNROLLED_FOR_IMPL_HPP
 
 #include <fluidity/utility/debug.hpp>
+#include <fluidity/utility/portability.hpp>
 
 namespace fluid  {
 namespace detail {

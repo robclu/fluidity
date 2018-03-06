@@ -16,7 +16,12 @@
 #ifndef FLUIDITY_LIMITING_VAN_LEER_LIMITER_HPP
 #define FLUIDITY_LIMITING_VAN_LEER_LIMITER_HPP
 
-#include <fluid/utility/portability.hpp>
+#include <fluidity/algorithm/unrolled_for.hpp>
+#include <fluidity/container/array.hpp>
+#include <fluidity/dimension/dimension.hpp>
+#include <fluidity/math/math.hpp>
+#include <fluidity/utility/portability.hpp>
+#include <algorithm>
 
 namespace fluid {
 namespace limit {
@@ -30,17 +35,18 @@ struct VanLeer {
   static constexpr std::size_t width = 2;
 
   /// Returns the limited value of a single element, defined as follows:
-  /// limiting is defines as:
+  /// limiting is defined as:
   /// 
   ///   \begin{equation}
   ///     \Eita = 
   ///       \begin{cases}
-  ///         \textrm{min}(2|\alpha_L|, 2|\alpha_R|, \alpha_C) \\
+  ///         \textrm{min}(2|\alpha_L|, 2|\alpha_R|, \alpha_C)
   ///         0
   ///       \end{cases}
   ///   \end{equation}
   ///   
   /// where $\alpha_{L,R,C}$ are the backward, forward, and central differences.
+  /// 
   /// \param[in] central The central state to limit on.
   /// \param[in] left    The left state to limit on.
   /// \param[in] right   The right state to limit on.
@@ -74,9 +80,9 @@ struct VanLeer {
       constexpr auto limiter = self_t{};
       constexpr auto dim     = Dimension<Value>{};
 
-      limited[i] = limiter()(state_it.template central_diff<i>(dim) ,
-                             state_it.template backward_diff<i>(dim),
-                             state_it.template forward_diff<i>(dim) );
+      limited[i] = limiter(state_it.template central_diff<i>(dim) ,
+                           state_it.template backward_diff<i>(dim),
+                           state_it.template forward_diff<i>(dim) );
     });
     return limited;
   }

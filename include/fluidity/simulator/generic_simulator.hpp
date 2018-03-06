@@ -18,6 +18,9 @@
 
 #include "simulation_traits.hpp"
 #include "simulator.hpp"
+#include <fluidity/container/host_tensor.hpp>
+#include <fluidity/dimension/dimension_info.hpp>
+#include <iostream>
 
 namespace fluid {
 namespace sim   {
@@ -25,14 +28,24 @@ namespace sim   {
 /// The GenericSimulator class implements the simulation interface.
 /// \tparam Traits The traits which define the simulation paramters.
 template <typename Traits>
-class GenericSimulator final : public Simulator<typename Traits::state_t> {
+class GenericSimulator final : public Simulator<Traits> {
  public:
   /// Defines the type of the traits class.
   using traits_t             = Traits;
   /// Defines the type of the base simulator class.
-  using base_t               = Simulator<typename traits_t::state_t>
+  using base_t               = Simulator<traits_t>;
   /// Defines the type of the filler container .
-  using fillinfo_container_t = typename base_::fillinfo_container_t;
+  using fillinfo_container_t = typename base_t::fillinfo_container_t;
+
+ private:
+  /// Defines the type of the state data to store.
+  using state_t   = typename traits_t::state_t;
+  /// Defines the type of the container used to store the state state.
+  using storage_t = HostTensor<state_t, state_t::dimensions>;
+
+ public:
+  /// Defines the number of spacial dimensions in the simulation.
+  static constexpr auto dimensions = state_t::dimensions;
 
   /// Creates the simulator.
   GenericSimulator() {};
@@ -56,16 +69,10 @@ class GenericSimulator final : public Simulator<typename Traits::state_t> {
   /// Writes the results of the simulation to the \p path using the \p prefix
   /// appended to the property which is output. If \p path = "", then the
   /// current working directory is used as the path.
-  /// \param[in] prefix The prefix of the filename for the result output.
-  /// \param[in] path   The path to write the results to.
-  void write_results(const char* prefix, fs::path path = "") const override;
+  /// \param[in] file_path   The path (inluding the file prefix) to write to.
+  void write_results(fs::path file_path) const override;
 
  private:
-  /// Defines the type of the state data to store.
-  using state_t   = typename traits_t::state_t;
-  /// Defines the type of the container used to store the state state.
-  using storage_t = HostTensor<state_t, state_t::dimensions>;
-
   storage_t _initial_states;  //!< States at the start of an iteration.
   storage_t _updated_states;  //!< States at the end of an iteration.
 
@@ -93,27 +100,27 @@ void GenericSimulator<Traits>::simulate()
 template <typename Traits>
 void GenericSimulator<Traits>::fill_data(fillinfo_container_t&& fillers)
 {
-  using index_t = state_t::index;
+  using index_t = typename state_t::index;
 
   std::vector<int> indices = {};
   for (const auto& fillinfo : fillers) 
   {
-    indices.emplace_back(index_t::from_name(fillinfo.name));
+    indices.emplace_back(index_t::from_name(fillinfo.data_name));
     if (indices.back() == -1)
     {
       throw std::runtime_error(
         std::string("State does not have a data element named: \n\t") +
-        fillinfo.name
+        fillinfo.data_name
       );
     }
   }
 
   /// Go over each of the dimensions and fill the data:
-  auto pos      = Array<float, 3>; 
+  auto pos      = Array<float, 3>();
   auto dim_info = dimension_info();
-  for (int i = 0; i < _input_states.size(); ++i)
+  for (int i = 0; i < _initial_states.size(); ++i)
   {
-    unrolled_for<dimensions>([&pos] (auto d)
+    unrolled_for<dimensions>([&] (auto d)
     {
       constexpr auto dim = Dimension<d>{};
       pos[d] = float(dim_info.flattened_index(i, dim)) / dim_info.size(dim);
@@ -122,10 +129,9 @@ void GenericSimulator<Traits>::fill_data(fillinfo_container_t&& fillers)
     // Invoke each of the fillers on the each state data property:
     for (const auto& filler : fillers)
     {
-      int fill_index = 0;
       for (auto prop_index : indices)
       {
-        _input_states[i][prop_index] = filler[fill_index++].filler(pos);
+        _initial_states[i][prop_index] = filler.filler(pos);
       }
     }
   }
@@ -151,10 +157,10 @@ void GenericSimulator<Traits>::write_results(fs::path file_path) const
 template <typename Traits>
 DimInfo GenericSimulator<Traits>::dimension_info() const
 {
-  auto dim_info = DimInfo;
+  auto dim_info = DimInfo();
   unrolled_for<dimensions>([&] (auto i)
   {
-    dim_info.push_back(_input_states.size(i));
+    dim_info.push_back(_initial_states.size(i));
   });
   return dim_info;
 }
@@ -162,7 +168,7 @@ DimInfo GenericSimulator<Traits>::dimension_info() const
 template <typename Traits> template <typename Stream>
 void GenericSimulator<Traits>::stream_output(Stream&& stream) const
 {
-  using index_t = state_t::index;
+  using index_t = typename state_t::index;
 
   // If the data is 1 or 2 dimensional, then there is no offset, otherwise
   // an offset is created for the page of 2D data which is being output.
@@ -170,7 +176,7 @@ void GenericSimulator<Traits>::stream_output(Stream&& stream) const
 
   // We iterate over all dimensions past the first 2, and then output 2D pages
   // for each of that data.
-  constexpr auto iterations = dimensions <= 2 : 1 : dimensions - 2;
+  constexpr auto iterations = dimensions <= 2 ? 1 : dimensions - 2;
 
   auto dim_info = dimension_info();
   unrolled_for<iterations>([&, this] (auto dim)
@@ -196,13 +202,13 @@ void GenericSimulator<Traits>::stream_output(Stream&& stream) const
         }
         else
         {
-          steam << output << ":\n\n";
+          stream << output << ":\n\n";
         }
 
         const auto offset = outer_idx * dim_info.offset(Dimension<dim>{});
         for (const auto inner_idx : range(batch_size))
         {
-          stream << _output_states[offset + inner_idx]
+          stream << _updated_states[offset + inner_idx]
                  << inner_idx % dim_info.size(dim_x) == 0 ? "\n" : " ";
         }
       }

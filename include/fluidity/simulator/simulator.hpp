@@ -70,9 +70,8 @@ class Simulator {
 
   /// Writes the results of the simulation to the \p path using the \p prefix
   /// appended to the property which is output.
-  /// \param[in] prefix The prefix of the filename for the result output.
-  /// \param[in] path   The path to write the results to.
-  virtual void write_results(const char* prefix, fs::path path) const = 0;
+  /// \param[in] path   The file path (including the prefix) to write to.
+  virtual void write_results(fs::path path) const = 0;
 
 };
 

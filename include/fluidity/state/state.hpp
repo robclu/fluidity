@@ -18,6 +18,7 @@
 
 #include "state_impl.hpp"
 #include <fluidity/container/number.hpp>
+#include <cstring>
 
 namespace fluid  {
 namespace state  {
@@ -76,7 +77,7 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
       constexpr int ascii_offset = 120;
 
       std::vector<const char*> names = "density";
-      names.emplace_back(format == FormType:primitive ? "pressure" : "energy");
+      names.emplace_back(format == FormType::primitive ? "pressure" : "energy");
 
       unrolled_for<dimensions>([&names] (auto i)
       {

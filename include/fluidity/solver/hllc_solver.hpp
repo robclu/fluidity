@@ -17,11 +17,12 @@
 #define FLUIDITY_SOLVER_HLLC_SOLVER_HPP
 
 #include <fluidity/state/state_traits.hpp>
+#include <cmath>
 
 namespace fluid  {
 namespace solver {
 
-using namespace traits;
+using namespace ::fluid::state::traits;
 
 /// The HllcSolver struct defines a callable object which solves the Riemann
 /// problem between two states using the HLLC method.
@@ -43,7 +44,6 @@ struct HllcSolver {
   {
     using state_t = std::decay_t<State>;
     using value_t = typename state_t::value_t;
-    using index_t = typename state_t::index;
 
     static_assert(is_state_v<state_t>,
       "Attempt to invoke a state function on a type which is not a state");
@@ -63,16 +63,16 @@ struct HllcSolver {
     const auto p_star = 
       std::max(
         value_t{0},
-        value_t{0.5} * (p - (value_t{0.5} * (al + ar) * velocity * density))
+        value_t{0.5} * (p - (value_t{0.5} * (al + ar) * v * d))
       );
 
     // Test for far left region (outside of the star state):
-    const auto wsl   = wavespeed(pl, p_star, -al, adi, mat, dim);
+    const auto wsl   = wavespeed(pl, p_star, -al, adi, material, dim);
     const auto fluxl = cl.flux(material, dim);
     if (value_t{0} <= wsl) { return fluxl; }
 
     // Test for far right region (outside of the star state):
-    const auto wsr   = wavespeed(pr, p_star, ar, adi, mat, dim);
+    const auto wsr   = wavespeed(pr, p_star, ar, adi, material, dim);
     const auto fluxr = cr.flux(material, dim);
     if (0 >= wsr) { return fluxr; }
 
@@ -80,7 +80,6 @@ struct HllcSolver {
     const auto ws_star = star_speed(pl, pr, wsl, wsr, material, dim);
 
     // Left star region, return FL*
-    const auto ws_star = star_speed(pl, pr, wsl, wsr, material, dim);
     if (value_t{0} <= ws_star)
     {
       const auto ul_star = star_state(pl, wsl, ws_star, material, dim);
@@ -140,12 +139,13 @@ struct HllcSolver {
                                           Dimension<Value> /*dim*/   )
   {
     using state_t = std::decay_t<State>;
-    static_assert(state_t::format == state::FormType::primtive,
+    static_assert(state_t::format == state::FormType::primitive,
                   "Wavespeed computation requires primitive state vector.");
 
     // Define the dimension to ensure constexpr functionality:
     constexpr auto dim = Dimension<Value>{};
 
+    const auto sound_speed = material.sound_speed(state);
     // Rarefaction wave:
     if (pstar <= state.pressure(material))
     {
@@ -189,16 +189,15 @@ struct HllcSolver {
     constexpr auto dim = Dimension<Value>{};
 
     // Compute the factor: $\rho * (S-k - u_k)
-    const auto factorl = statel.density() * (wavespeedl - state.velocity(dim));
-    const auto factorr = stater.density() * (wavespeedr - state.velocity(dim));
+    const auto factorl = statel.density() * (wavespeedl - statel.velocity(dim));
+    const auto factorr = stater.density() * (wavespeedr - stater.velocity(dim));
 
     // The computation is the following (dX = Density x):
     //    pR - pL + dL * vL(SL - vL) - dR * vR(SR - vR)
     //    ---------------------------------------------
     //              dL(SL - vL) - dR(SR - vR)
-    return ((stater.pressure(mat) - statel.pressure(mat)) +
-            (statel.velocity(dim) * factorl)              -
-            (stater.velocity(dim) * factorr)              )
+    return ((stater.pressure(material) - statel.pressure(material))            +
+            (statel.velocity(dim) * factorl) - (stater.velocity(dim) * factorr))
            / (factorl - factorr);  
   }
 
