@@ -50,6 +50,9 @@ class GenericSimulator final : public Simulator<typename Traits::state_t> {
   /// \param[in] fillers A container of fillers for filling the data.
   virtual void fill_data(fillinfo_container_t&& fillers) override;
 
+  /// Prints the results of the simulation to the standard output stream.
+  void print_results() const override;
+
   /// Writes the results of the simulation to the \p path using the \p prefix
   /// appended to the property which is output. If \p path = "", then the
   /// current working directory is used as the path.
@@ -62,18 +65,24 @@ class GenericSimulator final : public Simulator<typename Traits::state_t> {
   using state_t   = typename traits_t::state_t;
   /// Defines the type of the container used to store the state state.
   using storage_t = HostTensor<state_t, state_t::dimensions>;
-  /// 
 
   storage_t _initial_states;  //!< States at the start of an iteration.
   storage_t _updated_states;  //!< States at the end of an iteration.
 
-
   /// Returns the dimension information for the simulator.
   DimInfo dimension_info() const;
 
+  /// Implementation of the outputting functionality. The \p stream parameter
+  /// is used to determine if the output is written to a file or if it is
+  /// sent to the standard output stream.
+  /// \param[in] stream   The stream to output the results to.
+  /// \tparam    Stream   The type of the output stream.
+  template <typename Stream>
+  void stream_output(Stream&& stream) const ;
 };
 
 //==--- Implementation -----------------------------------------------------==//
+//===== Public ----------------------------------------------------------=====//
 
 template <typename Traits>
 void GenericSimulator<Traits>::simulate()
@@ -123,32 +132,21 @@ void GenericSimulator<Traits>::fill_data(fillinfo_container_t&& fillers)
 }
 
 template <typename Traits>
-void GenericSimulator<Traits>::write_results(const char* prefix,
-                                             fs::path    path  ) const
+void GenericSimulator<Traits>::print_results() const
 {
-  constexpr auto start = dimensions <= 2 ? 0 : 3;
-  constexpr auto iters = dimensions <= 2 : 1 : dimensions - 2;
-
-  auto dim_info = dimension_info();
-  unrolled_for<iters>([this] (auto i)
-  {
-    constexpr auto d = start + i;
-    fs::path f = path + prefix + prop + std::to_string(d) + ".txt";
-
-    const auto batch_size = dim_info.size()
-                          * (dimensions == 1 ? 1 : dim_info.size(1));
-
-    for (const auto outer_idx : range(dim_info.size(i)))
-    {
-      const auto offset = outer_idx * dim_info.offset(Dimension<i>{});
-      for (const auto inner_idx : range(batch_size))
-      {
-        f << _output_states[offset + idx]
-          << inner_idx % dim_info.size(0) == 0 ? "\n" : " ";
-      }
-    }
-  });
+  std::ostream stream(nullptr);
+  stream.rdbuf(std::cout.rdbuf());
+  stream_output(stream);
 }
+
+
+template <typename Traits>
+void GenericSimulator<Traits>::write_results(fs::path file_path) const
+{
+  stream_output(file_path);
+}
+
+//===== Private ---------------------------------------------------------=====//
 
 template <typename Traits>
 DimInfo GenericSimulator<Traits>::dimension_info() const
@@ -159,6 +157,57 @@ DimInfo GenericSimulator<Traits>::dimension_info() const
     dim_info.push_back(_input_states.size(i));
   });
   return dim_info;
+}
+
+template <typename Traits> template <typename Stream>
+void GenericSimulator<Traits>::stream_output(Stream&& stream) const
+{
+  using index_t = state_t::index;
+
+  // If the data is 1 or 2 dimensional, then there is no offset, otherwise
+  // an offset is created for the page of 2D data which is being output.
+  constexpr auto page_number = dimensions <= 2 ? 0 : 3;
+
+  // We iterate over all dimensions past the first 2, and then output 2D pages
+  // for each of that data.
+  constexpr auto iterations = dimensions <= 2 : 1 : dimensions - 2;
+
+  auto dim_info = dimension_info();
+  unrolled_for<iterations>([&, this] (auto dim)
+  {
+    const auto batch_size = dim_info.size(dim_x)
+                          * (dimensions == 1 ? 1 : dim_info.size(dim_y));
+
+    // For each of the state elements:
+    const auto elements = index_t::element_names();
+    for (const auto element_idx : range(elements.size()))
+    {
+      for (const auto outer_idx : range(dim_info.size(dim)))
+      {
+        // Create the filename / header, which has the form:
+        // <element_name>_<page_number+dim>_<index in dimension>;
+        std::string output = elements[element_idx]             + "_"
+                           + std::to_string(page_number + dim) + "_"
+                           + std::to_string(outer_idx);
+
+        if constexpr (std::is_same_v<fs::path, std::decay_t<Stream>>)
+        {
+          stream /= output + ".txt";
+        }
+        else
+        {
+          steam << output << ":\n\n";
+        }
+
+        const auto offset = outer_idx * dim_info.offset(Dimension<dim>{});
+        for (const auto inner_idx : range(batch_size))
+        {
+          stream << _output_states[offset + inner_idx]
+                 << inner_idx % dim_info.size(dim_x) == 0 ? "\n" : " ";
+        }
+      }
+    }
+  }); 
 }
 
 }} // namespace fluid::sim

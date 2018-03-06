@@ -62,9 +62,15 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
     /// Defines the offset to the first additional element.
     static constexpr int a_offset = v_offset + dimensions;
 
-    /// Defines the type of map used to store offsets and their named
-    /// equivalents.
-    static constexpr int from_name(const char* name)
+    /// Creates an array of names where the index in the array of the name
+    /// defines the position of the named element in the state, i.e
+    /// 
+    /// ~~~
+    ///   [ "density", "pressure", "v_x", "v_y", "add_0" ]
+    /// ~~~
+    /// 
+    /// describes the layout of the state data elements.
+    static constexpr auto element_names()
     {
       // ASCII offst to char code x:
       constexpr int ascii_offset = 120;
@@ -82,7 +88,14 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
         std::string s = "add_" + std::to_string(i);
         names.emplace_back(s.c_str());
       });
+      return names;
+    }
 
+    /// Defines the type of map used to store offsets and their named
+    /// equivalents.
+    static constexpr int from_name(const char* name)
+    {
+      auto names = element_names();
       for (int i = 0; i < names.size(); ++i)
       {
         if (std::strcmp(name, names[i]) == 0)

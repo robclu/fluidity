@@ -27,12 +27,14 @@ namespace sim   {
 namespace fs = std::experimental::filesystem;
 
 /// The Simulator class defines the interface for simulation objects.
-/// \tparam State The type of the state which is simulated.
-template <typename State>
+/// \tparam Traits The traits of the simulator.
+template <typename Traits>
 class Simulator {
  public:
+  /// Defines the traits of the simulation.
+  using traits_t = std::decay_t<Traits>;
   /// Defines the type of the state which is used for the simulation.
-  using state_t  = std::decay_t<State>;
+  using state_t  = typename traits_t::state_t;
   /// Defines the type of the data used by the state.
   using value_t  = typename state_t::value_t;
   /// Defines the type of the functor which can be used to fill elements.
@@ -60,6 +62,11 @@ class Simulator {
   /// space.
   /// \param[in] fillers A container of fillers for filling the data.
   virtual void fill_data(fillinfo_container_t&& fillers) = 0;
+
+
+  /// Prints the results of the simulation to the standard output stream so that
+  /// they can be viewed.
+  virtual void print_results() const = 0;
 
   /// Writes the results of the simulation to the \p path using the \p prefix
   /// appended to the property which is output.
