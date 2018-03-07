@@ -31,6 +31,8 @@ namespace fs = std::experimental::filesystem;
 template <typename Traits>
 class Simulator {
  public:
+  /// Defines the type of this simulator.
+  using self_t   = Simulator<Traits>;
   /// Defines the traits of the simulation.
   using traits_t = std::decay_t<Traits>;
   /// Defines the type of the state which is used for the simulation.
@@ -46,6 +48,17 @@ class Simulator {
     filler_t    filler;     //!< Callable object to get a value to fill with.
   };
 
+  /// Defines the specification for each of the simulation dimensions.
+  struct DimSpec {
+    double resolution;
+    double size;
+
+    std::size_t elements() const
+    {
+      return static_cast<std::size_t>(size / resolution);
+    }
+  };
+
   /// Defines the type of the container used to store filling information.
   using fillinfo_container_t = std::vector<FillInfo>;
 
@@ -56,13 +69,17 @@ class Simulator {
   /// Runs the simulation.
   virtual void simulate() = 0;
 
+  /// Configures the simulator to set size and resolution of a dimension \p dim.
+  /// \param[in] dim  The dimension to specify.
+  /// \param[in] spec The specification of the dimension.
+  virtual self_t* configure_dimension(std::size_t dim, DimSpec spec) = 0;
+
   /// Fills the simulator with simulation data for a simulator, where each of
   /// the fillers store the name of the property which they are filling, and 
   /// a function object which can fill values based on their position in the
   /// space.
   /// \param[in] fillers A container of fillers for filling the data.
   virtual void fill_data(fillinfo_container_t&& fillers) = 0;
-
 
   /// Prints the results of the simulation to the standard output stream so that
   /// they can be viewed.

@@ -18,12 +18,18 @@
 
 #include "simulation_traits.hpp"
 #include "simulator.hpp"
+#include <fluidity/algorithm/fill.hpp>
 #include <fluidity/container/host_tensor.hpp>
 #include <fluidity/dimension/dimension_info.hpp>
+#include <fstream>
+#include <iomanip>
 #include <iostream>
+#include <experimental/filesystem>
 
 namespace fluid {
 namespace sim   {
+
+namespace fs = std::experimental::filesystem;
 
 /// The GenericSimulator class implements the simulation interface.
 /// \tparam Traits The traits which define the simulation paramters.
@@ -36,6 +42,8 @@ class GenericSimulator final : public Simulator<Traits> {
   using base_t               = Simulator<traits_t>;
   /// Defines the type of the filler container .
   using fillinfo_container_t = typename base_t::fillinfo_container_t;
+  /// Defines the type used for dimension information specification.
+  using dim_spec_t           = typename base_t::DimSpec;
 
  private:
   /// Defines the type of the state data to store.
@@ -61,7 +69,12 @@ class GenericSimulator final : public Simulator<Traits> {
   /// a function object which can fill values based on their position in the
   /// space.
   /// \param[in] fillers A container of fillers for filling the data.
-  virtual void fill_data(fillinfo_container_t&& fillers) override;
+  void fill_data(fillinfo_container_t&& fillers) override;
+
+  /// Configures the simulator to set size and resolution of a dimension \p dim.
+  /// \param[in] dim  The dimension to specify.
+  /// \param[in] spec The specification of the dimension.
+  base_t* configure_dimension(std::size_t dim, dim_spec_t spec) override; 
 
   /// Prints the results of the simulation to the standard output stream.
   void print_results() const override;
@@ -98,6 +111,15 @@ void GenericSimulator<Traits>::simulate()
 }
 
 template <typename Traits>
+Simulator<Traits>*
+GenericSimulator<Traits>::configure_dimension(std::size_t dim, dim_spec_t spec)
+{
+  _initial_states.resize(spec.elements());
+  _updated_states.resize(spec.elements());
+  return this;
+}
+
+template <typename Traits>
 void GenericSimulator<Traits>::fill_data(fillinfo_container_t&& fillers)
 {
   using index_t = typename state_t::index;
@@ -118,7 +140,7 @@ void GenericSimulator<Traits>::fill_data(fillinfo_container_t&& fillers)
   /// Go over each of the dimensions and fill the data:
   auto pos      = Array<float, 3>();
   auto dim_info = dimension_info();
-  for (int i = 0; i < _initial_states.size(); ++i)
+  for (std::size_t i = 0; i < _initial_states.total_size(); ++i)
   {
     unrolled_for<dimensions>([&] (auto d)
     {
@@ -127,12 +149,11 @@ void GenericSimulator<Traits>::fill_data(fillinfo_container_t&& fillers)
     });
 
     // Invoke each of the fillers on the each state data property:
+    std::size_t prop_index = 0;
     for (const auto& filler : fillers)
     {
-      for (auto prop_index : indices)
-      {
-        _initial_states[i][prop_index] = filler.filler(pos);
-      }
+      _initial_states[i][prop_index]   = filler.filler(pos);
+      _updated_states[i][prop_index++] = filler.filler(pos);
     }
   }
 }
@@ -170,10 +191,6 @@ void GenericSimulator<Traits>::stream_output(Stream&& stream) const
 {
   using index_t = typename state_t::index;
 
-  // If the data is 1 or 2 dimensional, then there is no offset, otherwise
-  // an offset is created for the page of 2D data which is being output.
-  constexpr auto page_number = dimensions <= 2 ? 0 : 3;
-
   // We iterate over all dimensions past the first 2, and then output 2D pages
   // for each of that data.
   constexpr auto iterations = dimensions <= 2 ? 1 : dimensions - 2;
@@ -188,28 +205,59 @@ void GenericSimulator<Traits>::stream_output(Stream&& stream) const
     const auto elements = index_t::element_names();
     for (const auto element_idx : range(elements.size()))
     {
-      for (const auto outer_idx : range(dim_info.size(dim)))
+      constexpr auto dim_iterations = dimensions <= 2 ? 1 : dim_info.size(dim);
+      for (const auto outer_idx : range(dim_iterations))
       {
+        // If the data is 1 or 2 dimensional, then there is no offset, otherwise
+        // an offset is created for the page of 2D data which is being output.
+        constexpr auto page_number = dimensions <= 2 ? 0 : 3;
+
+        constexpr auto is_path = std::is_same_v<fs::path, std::decay_t<Stream>>;
+
+        std::string left  = "_<";
+        std::string comma = ",";
+        std::string right = ">";
+
         // Create the filename / header, which has the form:
         // <element_name>_<page_number+dim>_<index in dimension>;
-        std::string output = elements[element_idx]             + "_"
-                           + std::to_string(page_number + dim) + "_"
-                           + std::to_string(outer_idx);
-
-        if constexpr (std::is_same_v<fs::path, std::decay_t<Stream>>)
-        {
-          stream /= output + ".txt";
-        }
-        else
-        {
-          stream << output << ":\n\n";
-        }
+        std::string output = elements[element_idx]             + left
+                           + std::to_string(page_number + dim) + comma
+                           + std::to_string(outer_idx)         + right;
 
         const auto offset = outer_idx * dim_info.offset(Dimension<dim>{});
+
+        if constexpr (std::is_same_v<std::decay_t<Stream>, std::ostream>)
+        {
+          stream << output << "\n";
+        }
+
         for (const auto inner_idx : range(batch_size))
         {
-          stream << _updated_states[offset + inner_idx]
-                 << inner_idx % dim_info.size(dim_x) == 0 ? "\n" : " ";
+          auto output_to_stream = [&] (auto& s)
+          {
+            s << std::setw(8) << std::right
+              << std::fixed   << std::showpoint << std::setprecision(4)
+              << _updated_states[offset + inner_idx][element_idx]
+              << ((inner_idx % dim_info.size(dim_x) == 0 && inner_idx != 0)
+                  ? "\n" : " ");
+          };
+
+          if constexpr (is_path)
+          {
+            std::ofstream output_file;
+            output_file.open(output += ".txt", std::fstream::app);
+            output_to_stream(output_file);
+            output_file.close();
+          }
+          else
+          {
+            output_to_stream(stream);
+          }
+        }
+
+        if constexpr (std::is_same_v<std::decay_t<Stream>, std::ostream>)
+        {
+          stream << "\n";
         }
       }
     }

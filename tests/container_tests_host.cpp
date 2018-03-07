@@ -56,6 +56,23 @@ TEST(container_host_tensor, can_fill_tensor_with_functor)
   }
 }
 
+TEST(container_host_tensor, can_resize_tensor)
+{
+  host_tensor1d<int> t;
+  t.resize(30);
+  std::size_t count = 0;
+  fluid::fill(t.begin(), t.end(), [&count] (auto iterator)
+  {
+    *iterator = count++;
+  });
+
+  count = 0;
+  for (const auto& element : t) 
+  {
+    EXPECT_EQ(element, count++);
+  }
+}
+
 TEST(container_array, can_create_array)
 {
   array_t a{2};

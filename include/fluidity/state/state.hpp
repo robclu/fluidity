@@ -18,7 +18,6 @@
 
 #include "state_impl.hpp"
 #include <fluidity/container/number.hpp>
-#include <cstring>
 
 namespace fluid  {
 namespace state  {
@@ -76,18 +75,18 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
       // ASCII offst to char code x:
       constexpr int ascii_offset = 120;
 
-      std::vector<const char*> names = "density";
+      std::vector<std::string> names = { "density" };
       names.emplace_back(format == FormType::primitive ? "pressure" : "energy");
 
       unrolled_for<dimensions>([&names] (auto i)
       {
         std::string s = std::string("v_") + char(ascii_offset + i);
-        names.emplace_back(s.c_str());
+        names.push_back(s);
       });
       unrolled_for<additional_components>([&names] (auto i)
       {
         std::string s = "add_" + std::to_string(i);
-        names.emplace_back(s.c_str());
+        names.emplace_back(s);
       });
       return names;
     }
@@ -97,9 +96,9 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
     static constexpr int from_name(const char* name)
     {
       auto names = element_names();
-      for (int i = 0; i < names.size(); ++i)
+      for (std::size_t i = 0; i < names.size(); ++i)
       {
-        if (std::strcmp(name, names[i]) == 0)
+        if (name ==  names[i])
           return i;
       }
       return -1;

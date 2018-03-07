@@ -44,15 +44,23 @@ class HostTensor<T, 1> : public BaseTensor<T, 1> {
   /// Defines the type of the tensor.
   using self_t           = HostTensor;
   /// Defines an alias for the base tensor class.
-  using base_t           = BaseTensor<T, 1>;
+  using base_t            = BaseTensor<T, 1>;
   /// Defines the type of the elements in the tensor.
-  using value_t          = typename base_t::value_t;
+  using value_t           = typename base_t::value_t;
   /// Defines the type of the pointer to the data to store.
-  using pointer_t        = typename base_t::pointer_t;
+  using pointer_t         = typename base_t::pointer_t;
+  /// Defines the type of a reference to the data type.
+  using reference_t       = value_t&;
+  /// Defines the type of a const reference to the data type.
+  using const_reference_t = const value_t&; 
   /// Defines the type of a non const iterator.
-  using iterator_t       = TensorIterator<self_t, false>;
+  using iterator_t        = TensorIterator<self_t, false>;
   /// Defines the type of a const iterator.
-  using const_iterator_t = TensorIterator<self_t, true>;
+  using const_iterator_t  = TensorIterator<self_t, true>;
+
+  /// Creates a host tensor with no elements. This requires the tensor to be
+  /// resized before using it.
+  HostTensor() = default;
 
   /// Initializes the size of each of the dimensions in the tensor, and the
   /// total number of elements in the tensor.
@@ -73,6 +81,15 @@ class HostTensor<T, 1> : public BaseTensor<T, 1> {
   {
     return iterator_t{this->_data + this->_size};
   }
+
+  /// Resizes the tensor to contain \p num_elements elements.
+  /// \param[in] num_elements The number of elements to resize the tensor to.
+  void resize(std::size_t num_elements);
+
+  /// Returns the size of the tensor for dimenison \p i. For this tensor
+  /// implementation the dimension is ignored.
+  /// \param[in] dim The dimension to get the size of.
+  std::size_t size(std::size_t /*dim*/) const;
 
  private:
   /// Allocates memory for the array.
@@ -97,6 +114,20 @@ template <typename T>
 HostTensor<T, 1>::~HostTensor()
 {
   cleanup();
+}
+
+template <typename T>
+void HostTensor<T, 1>::resize(std::size_t num_elements)
+{
+  cleanup();
+  this->_size = num_elements;
+  allocate();
+}
+
+template <typename T>
+std::size_t HostTensor<T, 1>::size(std::size_t /*dim*/) const
+{
+  return this->_size;
 }
 
 //===== Private ---------------------------------------------------------=====//

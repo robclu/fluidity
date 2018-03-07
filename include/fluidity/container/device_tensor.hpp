@@ -59,6 +59,15 @@ class DeviceTensor<T, 1> : public BaseTensor<T, 1> {
   /// Cleans up any memory allocated for the tensor.
   fluidity_host_device ~DeviceTensor();
 
+  /// Resizes the tensor to contain \p num_elements elements.
+  /// \param[in] num_elements The number of elements to resize the tensor to.
+  fluidity_host_device void resize(std::size_t num_elements);
+
+  /// Returns the size of the tensor for dimenison \p i. For this tensor
+  /// implementation the dimension is ignored.
+  /// \param[in] dim The dimension to get the size of.
+  fluidity_host_device std::size_t size(std::size_t /*dim*/) const;
+
  private:
   bool _must_free = true; //!< Sets if the memory must be freed.
 
@@ -84,6 +93,20 @@ template <typename T>
 DeviceTensor<T, 1>::~DeviceTensor()
 {
   cleanup();
+}
+
+template <typename T>
+void DeviceTensor<T, 1>::resize(std::size_t num_elements)
+{
+  cleanup();
+  this->_size = num_elements;
+  allocate();
+}
+
+template <typename T>
+std::size_t DeviceTensor<T, 1>::size(std::size_t /*dim*/) const
+{
+  return this->_size;
 }
 
 //===== Private ---------------------------------------------------------=====//

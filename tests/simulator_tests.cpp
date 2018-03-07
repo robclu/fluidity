@@ -57,6 +57,7 @@ TEST(generic_simulator_tests, can_create_and_output_1d_data)
   using simulator_t = fluid::sim::GenericSimulator<simulator1d_props_t>;
 
   auto simulator = std::make_unique<simulator_t>();
+  simulator->configure_dimension(fluid::dim_x, { 0.05, 1.0 });
 
   simulator->fill_data({
     {
@@ -74,7 +75,7 @@ TEST(generic_simulator_tests, can_create_and_output_1d_data)
     {
       "v_x", [] (const auto& pos)
       {
-        return 0;
+        return pos[0] < 0.25 ? 1.0 : 0;
       }
     }
   });
