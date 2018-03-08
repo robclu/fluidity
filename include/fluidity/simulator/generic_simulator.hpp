@@ -92,6 +92,21 @@ class GenericSimulator final : public Simulator<Traits> {
   /// Returns the dimension information for the simulator.
   DimInfo dimension_info() const;
 
+  /// Outputs a batch of 1D or 2D data to the \p stream where the batch contains
+  /// \p batch_size number of total elements. The \p offset defines the offset
+  /// into the state container in 1D (flattened) form, and the element which is
+  /// output is the element at position \p element_index in the state vector.
+  /// \param[in] stream        The stream to output the element to.
+  /// \param[in] offset        The offset of the first element in the batch into
+  ///            the state container.
+  /// \param[in] batch_size    The size of the batch to output.
+  /// \param[in] element_index The index of the element in the state container.
+  template <typename Stream>
+  void output_batch(Stream&&    stream       ,
+                    std::size_t offset       ,
+                    std::size_t batch_size   ,
+                    std::size_t element_index) const;
+
   /// Implementation of the outputting functionality. The \p stream parameter
   /// is used to determine if the output is written to a file or if it is
   /// sent to the standard output stream.
@@ -152,8 +167,9 @@ void GenericSimulator<Traits>::fill_data(fillinfo_container_t&& fillers)
     std::size_t prop_index = 0;
     for (const auto& filler : fillers)
     {
-      _initial_states[i][prop_index]   = filler.filler(pos);
-      _updated_states[i][prop_index++] = filler.filler(pos);
+      const auto value = filler.filler(pos);
+      _initial_states[i][prop_index]   = value;
+      _updated_states[i][prop_index++] = value;
     }
   }
 }
@@ -187,6 +203,22 @@ DimInfo GenericSimulator<Traits>::dimension_info() const
 }
 
 template <typename Traits> template <typename Stream>
+void GenericSimulator<Traits>::output_batch(Stream&&    stream       ,
+                                            std::size_t offset       ,
+                                            std::size_t batch_size   ,
+                                            std::size_t element_index) const
+{
+  auto dim_info = dimension_info();
+  for (const auto index : range(batch_size))
+  {
+    stream << std::setw(8) << std::right
+           << std::fixed   << std::showpoint << std::setprecision(4)
+           << _updated_states[offset + index][element_index]
+           << ((index % dim_info.size(dim_x) == 0 && index != 0) ? "\n" : " ");
+  }
+}
+
+template <typename Traits> template <typename Stream>
 void GenericSimulator<Traits>::stream_output(Stream&& stream) const
 {
   using index_t = typename state_t::index;
@@ -196,67 +228,46 @@ void GenericSimulator<Traits>::stream_output(Stream&& stream) const
   constexpr auto iterations = dimensions <= 2 ? 1 : dimensions - 2;
 
   auto dim_info = dimension_info();
+
+  // Iterate over the dimensions after the first 2 dimensions, size we only want
+  // to output pages of 2D data ...
   unrolled_for<iterations>([&, this] (auto dim)
   {
-    const auto batch_size = dim_info.size(dim_x)
-                          * (dimensions == 1 ? 1 : dim_info.size(dim_y));
+    const auto element_names = index_t::element_names();
+    const auto batch_size    = dim_info.size(dim_x)
+                             * (dimensions == 1 ? 1 : dim_info.size(dim_y));
 
-    // For each of the state elements:
-    const auto elements = index_t::element_names();
-    for (const auto element_idx : range(elements.size()))
+    for (const auto element_idx : range(element_names.size()))
     {
       constexpr auto dim_iterations = dimensions <= 2 ? 1 : dim_info.size(dim);
-      for (const auto outer_idx : range(dim_iterations))
+
+      // Iterate over the elements in the dimension, and output a page (2D)
+      // matrix of data for that portion of data ...
+      for (const auto dim_idx : range(dim_iterations))
       {
         // If the data is 1 or 2 dimensional, then there is no offset, otherwise
         // an offset is created for the page of 2D data which is being output.
         constexpr auto page_number = dimensions <= 2 ? 0 : 3;
 
-        constexpr auto is_path = std::is_same_v<fs::path, std::decay_t<Stream>>;
-
-        std::string left  = "_<";
-        std::string comma = ",";
-        std::string right = ">";
-
         // Create the filename / header, which has the form:
         // <element_name>_<page_number+dim>_<index in dimension>;
-        std::string output = elements[element_idx]             + left
+        std::string left   = "_<", comma = ",", right = ">";
+        std::string output = element_names[element_idx]        + left
                            + std::to_string(page_number + dim) + comma
-                           + std::to_string(outer_idx)         + right;
+                           + std::to_string(dim_idx)           + right;
 
-        const auto offset = outer_idx * dim_info.offset(Dimension<dim>{});
-
-        if constexpr (std::is_same_v<std::decay_t<Stream>, std::ostream>)
+        const auto offset = dim_idx * dim_info.offset(Dimension<dim>{});
+        if constexpr (std::is_same_v<fs::path, std::decay_t<Stream>>)
+        {
+          std::ofstream output_file;
+          output_file.open(output += ".txt", std::fstream::app);
+          output_batch(output_file, offset, batch_size, element_idx);
+          output_file.close();         
+        }
+        else
         {
           stream << output << "\n";
-        }
-
-        for (const auto inner_idx : range(batch_size))
-        {
-          auto output_to_stream = [&] (auto& s)
-          {
-            s << std::setw(8) << std::right
-              << std::fixed   << std::showpoint << std::setprecision(4)
-              << _updated_states[offset + inner_idx][element_idx]
-              << ((inner_idx % dim_info.size(dim_x) == 0 && inner_idx != 0)
-                  ? "\n" : " ");
-          };
-
-          if constexpr (is_path)
-          {
-            std::ofstream output_file;
-            output_file.open(output += ".txt", std::fstream::app);
-            output_to_stream(output_file);
-            output_file.close();
-          }
-          else
-          {
-            output_to_stream(stream);
-          }
-        }
-
-        if constexpr (std::is_same_v<std::decay_t<Stream>, std::ostream>)
-        {
+          output_batch(stream, offset, batch_size, element_idx);
           stream << "\n";
         }
       }
