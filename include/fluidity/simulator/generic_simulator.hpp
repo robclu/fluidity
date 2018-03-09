@@ -47,9 +47,15 @@ class GenericSimulator final : public Simulator<Traits> {
 
  private:
   /// Defines the type of the state data to store.
-  using state_t   = typename traits_t::state_t;
+  using state_t     = typename traits_t::state_t;
+  /// Defines the data type used in the state vector.
+  using value_t     = typename state_t::value_t;
   /// Defines the type of the container used to store the state state.
-  using storage_t = HostTensor<state_t, state_t::dimensions>;
+  using storage_t   = HostTensor<state_t, state_t::dimensions>;
+  /// Defines the type of the container used for storing wavespeed data.
+  using wavespeed_t = HostTensor<value_t, 1>;
+  /// Defines the type of the parameter container.
+  using params_t    = Parameters<value_t>;
 
  public:
   /// Defines the number of spacial dimensions in the simulation.
@@ -86,8 +92,10 @@ class GenericSimulator final : public Simulator<Traits> {
   void write_results(fs::path file_path) const override;
 
  private:
-  storage_t _initial_states;  //!< States at the start of an iteration.
-  storage_t _updated_states;  //!< States at the end of an iteration.
+  storage_t   _initial_states;  //!< States at the start of an iteration.
+  storage_t   _updated_states;  //!< States at the end of an iteration.
+  wavespeed_t _wavespeeds;      //!< Wavespeeds for the simulation.
+  params_t    _params;          //!< The parameters for the simulation.
 
   /// Returns the dimension information for the simulator.
   DimInfo dimension_info() const;
@@ -122,6 +130,23 @@ class GenericSimulator final : public Simulator<Traits> {
 template <typename Traits>
 void GenericSimulator<Traits>::simulate()
 {
+  using namespace std::chrono;
+  double time  = 0.0;
+  auto   iters = 0;
+
+  auto start = high_resolution_clock::now();
+  auto end   = high_resolution_clock::end();
+
+  while (time < _params.run_time && iters < _params.max_iters)
+  {
+    _params.update(max_element(_wavespeeds.begin(), _wavespeeds.end()));
+
+    // Set ghost cells ...
+    // Update the simulation ...
+
+    time += _params.dt();
+    std::swap(_initial_states, _updated_states);
+  }
 
 }
 

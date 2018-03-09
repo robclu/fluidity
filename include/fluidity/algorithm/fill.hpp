@@ -37,7 +37,8 @@ fill(Iterator begin, Iterator end, P&& pred, Args&&... args) noexcept
 {
   using it_value_t   = std::decay_t<decltype(*begin)>;
   using pred_value_t = std::decay_t<P>;
-  while (end - begin > 0) {
+  while (end - begin > 0)
+  {
     if constexpr (std::is_same<it_value_t, pred_value_t>::value)
     {
       *begin = pred;
