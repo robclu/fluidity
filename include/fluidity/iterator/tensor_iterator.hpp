@@ -26,7 +26,7 @@ namespace fluid {
 /// is a class which can iterate over tensors of 1, 2 and 3 dimensions.
 /// \tparam T       The type of the tensor to iterator over.
 /// \tparam IsConst If the iterator is a const iterator.
-template <typename T, bool IsConst = false>
+template <typename T, bool IsConst = false, typename Exec = exec::default_type>
 struct TensorIterator {
   /// Defines the type of the TensorIterator.
   using self_t       = TensorIterator;
@@ -39,6 +39,8 @@ struct TensorIterator {
   using pointer_t    = std::conditional_t<IsConst, const value_t*, value_t*>;
   /// Defines the type of the difference between two iterators.
   using difference_t = int;
+  /// Defines the type of the execution policy for the iterator.
+  using exec_policy  = Exec;
 
   /// Sets the element the iterator points to, and the offset to the next 
   fluidity_host_device TensorIterator(pointer_t ptr) : _ptr{ptr} {}

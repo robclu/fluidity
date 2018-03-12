@@ -16,6 +16,7 @@
 #ifndef FLUIDITY_UTILITY_PORTABILITY_HPP
 #define FLUIDITY_UTILITY_PORTABILITY_HPP
 
+#include <fluidity/execution/execution_policy.hpp>
 #include <cuda.h>
 #include <cuda_runtime.h>
 
@@ -30,5 +31,32 @@
   #define fluidity_device_only
   #define fluidity_host_device
 #endif
+
+namespace fluid {
+namespace exec  {
+
+// If the compilation system has cuda functionality then set the default
+// execution policy to use the GPU.
+#if defined(FLUIDITY_CUDA_AVAILABLE)
+
+/// Defines the default type of execution to use.
+using default_type = gpu_type;
+
+/// If the compilation system has cuda functionality then set the default
+/// execution policy to use the GPU.
+static constexpr auto default_policy = gpu_policy;
+
+#else
+
+/// Defines the default type of execution to use.
+using default_type = cpu_type;
+
+/// If the compilation system has no cuda functionality then set the default
+/// execution policy to use the CPU.
+static constexpr auto default_policy = cpu_policy;
+
+#endif // FLUIDITY_CUDA_AVAILABLE
+
+}} // namespace fluid::exec
 
 #endif // FLUIDITY_UTILITY_PORTABILITY_HPP

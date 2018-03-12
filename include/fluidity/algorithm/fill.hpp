@@ -16,7 +16,7 @@
 #ifndef FLUIDITY_ALGORITHM_FILL_HPP
 #define FLUIDITY_ALGORITHM_FILL_HPP
 
-#include <fluidity/iterator/tensor_iterator.hpp>
+#include "fill.cuh"
 #include <type_traits>
 
 namespace fluid {
@@ -35,19 +35,29 @@ template <typename Iterator, typename P, typename... Args>
 fluidity_host_only void
 fill(Iterator begin, Iterator end, P&& pred, Args&&... args) noexcept
 {
-  using it_value_t   = std::decay_t<decltype(*begin)>;
-  using pred_value_t = std::decay_t<P>;
-  while (end - begin > 0)
+  if constexpr (exec::is_cpu_policy_v<typename Iterator::exec_policy>)
   {
-    if constexpr (std::is_same<it_value_t, pred_value_t>::value)
+    using it_value_t   = std::decay_t<decltype(*begin)>;
+    using pred_value_t = std::decay_t<P>;
+    while (end - begin > 0)
     {
-      *begin = pred;
+      if constexpr (std::is_same_v<it_value_t, pred_value_t>)
+      {
+        *begin = pred;
+      }
+      else
+      {
+        pred(begin, std::forward<Args>(args)...);
+      }
+      ++begin;
     }
-    else
-    {
-      pred(begin, std::forward<Args>(args)...);
-    }
-    ++begin;
+  }
+  else
+  {
+    detail::cuda::fill(begin                      ,
+                       end                        ,
+                       std::forward<P>(pred)      ,
+                       std::forward<Args>(args)...);
   }
 }
 

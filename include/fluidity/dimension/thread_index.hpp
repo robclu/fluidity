@@ -36,6 +36,30 @@ fluidity_device_only constexpr inline std::size_t thread_id(Dimension<Value>)
   if constexpr (Value == 2) { return threadIdx.z; }
 }
 
+/// Returns the value of the flattened thread index in a given dimension. The
+/// dimension must be one of dim_x, dim_y, dim_z, or else a compile time error
+/// will be generated.
+/// \param[in] dim    The dimension to get the thread index for.
+/// \tparam    Value  The value which defines the dimension.
+template <std::size_t Value>
+fluidity_device_only constexpr inline std::size_t flattened_id(Dimension<Value>)
+{
+  static_assert(Value <= 2, "Can only get thread id for 3 dimensions {0,1,2}.");
+
+  if constexpr (Value == 0)
+  {
+    return threadIdx.x + blockIdx.x * blockDim.x;
+  }
+  if constexpr (Value == 1)
+  {
+    return threadIdx.y + blockIdx.y * blockDim.y;
+  }
+  if constexpr (Value == 2)
+  {
+    return threadIdx.z + blockIdx.z * blockDim.z;
+  }
+}
+
 #else
 
 /// Returns the value of the thread index in a given dimension. The dimension
