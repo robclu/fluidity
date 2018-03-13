@@ -17,6 +17,8 @@
 #ifndef FLUIDITY_EXECUTION_EXECUTION_POLICY_HPP
 #define FLUIDITY_EXECUTION_EXECUTION_POLICY_HPP
 
+#include <fluidity/utility/type_traits.hpp>
+
 namespace fluid {
 namespace exec  {
 
@@ -36,10 +38,10 @@ struct ExecutionPolicy {
 };
 
 /// Defines an alias for an execution policy type which uses a cpu.
-static constexpr auto cpu_type = ExecutionPolicy<DeviceKind::cpu>;
+using cpu_type = ExecutionPolicy<DeviceKind::cpu>;
 
 /// Defines an alias for an execution policy type which uses a gpu.
-static constexpr auto gpu_type = ExecutionPolicy<DeviceKind::gpu>;
+using gpu_type = ExecutionPolicy<DeviceKind::gpu>;
 
 /// Defines an execution policy instance which uses a cpu.
 static constexpr auto cpu_policy = cpu_type{};
@@ -52,14 +54,14 @@ static constexpr auto gpu_policy = gpu_type{};
 /// \tparam T The type to check if is a CPU execution policy.
 template <typename T>
 static constexpr auto is_cpu_policy_v = 
-  std::is_same_v<std::decay_t<T>, cpu_type>;
+  is_same_v<std::decay_t<T>, cpu_type>;
 
 /// Returns true if the template parameter type is a ``gpu_policy`` and
 /// specifies that the GPU should be used for execution.
 /// \tparam T The type to check if is a GPU execution policy.
 template <typename T>
 static constexpr auto is_gpu_policy_v = 
-  std::is_same_v<std::decay_t<T>, gpu_type>;
+  is_same_v<std::decay_t<T>, gpu_type>;
 
 }} // namespace fluid::exec
 

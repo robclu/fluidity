@@ -29,18 +29,18 @@ namespace fluid {
 template <typename T, bool IsConst = false, typename Exec = exec::default_type>
 struct TensorIterator {
   /// Defines the type of the TensorIterator.
-  using self_t       = TensorIterator;
+  using self_t        = TensorIterator;
   /// Defines the type of the elements the tensor holds, and which are iterated
   /// over.
-  using value_t      = typename T::value_t;
+  using value_t       = typename T::value_t;
   /// Defines the type of a reference to an element.
-  using reference_t  = std::conditional_t<IsConst, const value_t&, value_t&>;
+  using reference_t   = std::conditional_t<IsConst, const value_t&, value_t&>;
   /// Defines the type of the pointer for the iterator.
-  using pointer_t    = std::conditional_t<IsConst, const value_t*, value_t*>;
+  using pointer_t     = std::conditional_t<IsConst, const value_t*, value_t*>;
   /// Defines the type of the difference between two iterators.
-  using difference_t = int;
+  using difference_t  = int;
   /// Defines the type of the execution policy for the iterator.
-  using exec_policy  = Exec;
+  using exec_policy_t = Exec;
 
   /// Sets the element the iterator points to, and the offset to the next 
   fluidity_host_device TensorIterator(pointer_t ptr) : _ptr{ptr} {}

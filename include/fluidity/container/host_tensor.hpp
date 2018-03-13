@@ -19,20 +19,11 @@
 #define FLUIDITY_CONTAINER_HOST_TENSOR_HPP
 
 #include "base_tensor.hpp"
+#include "tensor_fwrd.hpp"
 #include <fluidity/iterator/tensor_iterator.hpp>
 #include <cstddef>
 
 namespace fluid {
-
-/// Implementation of a host tensor class which specializes the components of
-/// the tensor implementation which are specific to the host side.
-/// \tparam T          The type of the data to store in the tensor.
-/// \tparam Dimensions The number of dimensions for the tensor.
-template <typename T, std::size_t Dimensions>
-class HostTensor {
- public:
-
-};
 
 //==--- HostTensor 1D Specialization ---------------------------------------==//
 
@@ -40,9 +31,14 @@ class HostTensor {
 /// \tparam T The type of the data to store in the tensor.
 template <typename T>
 class HostTensor<T, 1> : public BaseTensor<T, 1> {
+ private:
+  /// Defines the device version of the tensor to be a friend of this class.
+  template <typename TT, std::size_t D>
+  friend class DeviceTensor;
+
  public:
   /// Defines the type of the tensor.
-  using self_t           = HostTensor;
+  using self_t            = HostTensor;
   /// Defines an alias for the base tensor class.
   using base_t            = BaseTensor<T, 1>;
   /// Defines the type of the elements in the tensor.
@@ -70,6 +66,10 @@ class HostTensor<T, 1> : public BaseTensor<T, 1> {
   /// Cleans up any memory allocated for the tensor.
   ~HostTensor();
 
+  /// Constructor to create a host tensor from a device tensor.
+  /// \param[in] dev_tensor The device tensor to create the host tensor from.
+  HostTensor(const DeviceTensor<T, 1>& dev_tensor);
+
   /// Returns an iterator to the first element in the tensor.
   iterator_t begin()
   {
@@ -89,7 +89,7 @@ class HostTensor<T, 1> : public BaseTensor<T, 1> {
   /// Returns the size of the tensor for dimenison \p i. For this tensor
   /// implementation the dimension is ignored.
   /// \param[in] dim The dimension to get the size of.
-  std::size_t size(std::size_t /*dim*/) const;
+  std::size_t size(std::size_t dim = 0) const;
 
  private:
   /// Allocates memory for the array.
@@ -114,6 +114,14 @@ template <typename T>
 HostTensor<T, 1>::~HostTensor()
 {
   cleanup();
+}
+
+template <typename T>
+HostTensor<T, 1>::HostTensor(const DeviceTensor<T, 1>& dev_tensor)
+: BaseTensor<T, 1>(dev_tensor.size())
+{
+  allocate();
+  util::cuda::memcpy_device_to_host(dev_tensor._data, this->_data, this->_size);
 }
 
 template <typename T>

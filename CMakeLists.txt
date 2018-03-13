@@ -40,6 +40,7 @@ message("-- CUDA INCLUDE DIR: ${CMAKE_CUDA_TOOLKIT_INCLUDE_DIRECTORIES}")
 
 # Gtest does not currently build without this flag!
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-function")
+set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -gencode arch=compute_35,code=sm_35")
 
 if (EXISTS ${fluidity_SOURCE_DIR}/googletest)
   add_subdirectory(googletest)

@@ -19,35 +19,40 @@
 #define FLUIDITY_CONTAINER_DEVICE_TENSOR_HPP
 
 #include "base_tensor.hpp"
-#include <fluidity/utility/debug.hpp>
+#include "tensor_fwrd.hpp"
+#include <fluidity/execution/execution_policy.hpp>
+#include <fluidity/iterator/tensor_iterator.hpp>
+#include <fluidity/utility/cuda.hpp>
 
 namespace fluid {
 
-/// Implementation of a device tensor class which specializes the components of
-/// the tensor implementation which are specific to the device side.
-/// \tparam T          The type of the data to store in the tensor.
-/// \tparam Dimensions The number of dimensions for the tensor.
-template <typename T, std::size_t Dimensions>
-class DeviceTensor {
- public:
-
-};
-
 //==--- HostTensor 1D Specialization ---------------------------------------==//
-
-template <typename T>
 
 /// Specialization for the case that the tensor is 1 Dimensional.
 /// \tparam T The type of the data to store in the tensor.
 template <typename T>
 class DeviceTensor<T, 1> : public BaseTensor<T, 1> {
+ private:
+  /// Defines the host version of the tensor to be a friend of this class.
+  template <typename TT, std::size_t D>
+  friend class HostTensor;
+
+  /// Defines the type of the executor for the iterator to be a GPU executor.
+  using exec_t = exec::gpu_type;
+
  public:
+  /// Defines the type of the tensor.
+  using self_t            = DeviceTensor;
   /// Defines the type of the elements in the tensor.
-  using element_t = T;
+  using element_t         = T;
   /// Defines an alias for the base tensor class.
-  using base_t    = BaseTensor<T, 1>;
+  using base_t            = BaseTensor<T, 1>;
   /// Defines the type of the pointer to the data to store.
-  using pointer_t = typename base_t::pointer_t;
+  using pointer_t         = typename base_t::pointer_t;
+  /// Defines the type of a non const iterator.
+  using iterator_t        = TensorIterator<self_t, false, exec_t>;
+  /// Defines the type of a const iterator.
+  using const_iterator_t  = TensorIterator<self_t, true, exec_t>;
 
   /// Defines the number of dimensions in the tensor
 
@@ -59,6 +64,18 @@ class DeviceTensor<T, 1> : public BaseTensor<T, 1> {
   /// Cleans up any memory allocated for the tensor.
   fluidity_host_device ~DeviceTensor();
 
+  /// Returns an iterator to the first element in the tensor.
+  iterator_t begin()
+  {
+    return iterator_t{this->_data};
+  }
+
+  /// Returns an iterator to the last element in the tensor.
+  iterator_t end()
+  {
+    return iterator_t{this->_data + this->_size};
+  }
+
   /// Resizes the tensor to contain \p num_elements elements.
   /// \param[in] num_elements The number of elements to resize the tensor to.
   fluidity_host_device void resize(std::size_t num_elements);
@@ -66,16 +83,16 @@ class DeviceTensor<T, 1> : public BaseTensor<T, 1> {
   /// Returns the size of the tensor for dimenison \p i. For this tensor
   /// implementation the dimension is ignored.
   /// \param[in] dim The dimension to get the size of.
-  fluidity_host_device std::size_t size(std::size_t /*dim*/) const;
+  fluidity_host_device std::size_t size(std::size_t dim = 0) const;
 
  private:
   bool _must_free = true; //!< Sets if the memory must be freed.
 
   /// Allocates memory for the array.
-  fluidity_host_device void allocate();
+  fluidity_host_only void allocate();
 
   /// Cleans up the memory allocated for the tensor.
-  fluidity_host_device void cleanup();
+  fluidity_host_only void cleanup();
 };
 
 //==--- DeviceTensor 1D Implementation -------------------------------------==//
@@ -117,10 +134,8 @@ void DeviceTensor<T, 1>::allocate()
   // TODO: Add an implementation for aligned allocation...
   if (this->_data == nullptr) 
   {
-    fluidity_check_cuda_result(
-      cudaMalloc(reinterpret_cast<void**>(&this->_data), 
-                 this->mem_requirement())
-    );
+    util::cuda::allocate(reinterpret_cast<void**>(&this->_data),
+                         this->mem_requirement());
   }
 }
 
@@ -129,7 +144,7 @@ void DeviceTensor<T, 1>::cleanup()
 {
   if (this->_data != nullptr && this->_must_free)
   {
-    fluidity_check_cuda_result(cudaFree(this->_data));
+    util::cuda::free(this->_data);
   }
 }
 

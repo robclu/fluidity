@@ -17,7 +17,9 @@
 #define FLUIDITY_ALGORITHM_FILL_HPP
 
 #include "fill.cuh"
-#include <type_traits>
+#include <fluidity/execution/execution_policy.hpp>
+#include <fluidity/utility/type_traits.hpp>
+#include <utility>
 
 namespace fluid {
 
@@ -33,21 +35,21 @@ namespace fluid {
 /// \tparam    Args     The type of arguments for a callable predicate.
 template <typename Iterator, typename P, typename... Args>
 fluidity_host_only void
-fill(Iterator begin, Iterator end, P&& pred, Args&&... args) noexcept
+fill(Iterator begin, Iterator end, P&& pred, Args&&... args)
 {
-  if constexpr (exec::is_cpu_policy_v<typename Iterator::exec_policy>)
+  if /*constexpr*/ (exec::is_cpu_policy_v<typename Iterator::exec_policy_t>)
   {
     using it_value_t   = std::decay_t<decltype(*begin)>;
     using pred_value_t = std::decay_t<P>;
     while (end - begin > 0)
     {
-      if constexpr (std::is_same_v<it_value_t, pred_value_t>)
+      if /*constexpr*/ (is_same_v<it_value_t, pred_value_t>)
       {
         *begin = pred;
       }
       else
       {
-        pred(begin, std::forward<Args>(args)...);
+        pred(*begin, std::forward<Args>(args)...);
       }
       ++begin;
     }

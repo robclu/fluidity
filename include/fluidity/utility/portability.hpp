@@ -26,10 +26,12 @@
   #define fluidity_host_only   __host__
   #define fluidity_device_only __device__
   #define fluidity_host_device __host__ __device__ 
+  #define fluidity_global      __global__
 #else
   #define fluidity_host_only
   #define fluidity_device_only
   #define fluidity_host_device
+  #define fluidity_global
 #endif
 
 namespace fluid {
