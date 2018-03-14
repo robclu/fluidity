@@ -19,6 +19,7 @@
 
 #if defined(__CUDACC__)
 
+#include "if_constexpr.hpp"
 #include <fluidity/dimension/dimension.hpp>
 #include <fluidity/utility/debug.hpp>
 #include <fluidity/utility/portability.hpp>
@@ -28,34 +29,6 @@ namespace fluid  {
 namespace detail {
 namespace cuda   {
 
-template <bool True>
-struct IfConstexpr;
-
-struct IfConstexpr<true> {
-  template <typename P1, typename P2>
-  fluidity_host_only decltype(auto)
-  operator()(P1&& p1, P2&& p2) const
-  {
-    p1();
-  }
-};
-
-struct IfConstexpr<false> {
-  template <typename P1, typename P2>
-  fluidity_host_only decltype(auto)
-  operator()(P1&& p1, P2&& p2) const
-  {
-    p2();
-  }
-};
-
-template <bool Condition, typename P1, typename P2>
-fluidity_host_device inline constexpr decltype(auto)
-if_constexpr(P1&& p1, P2&& p2)
-{
-  IfConstexpr<Condition>()(std::forward<P1>(p1), std::forward<P2>(p2));
-}
-
 template <typename Iterator, typename P, typename... Args>
 fluidity_device_only void fill_impl(Iterator begin, P&& pred, Args&&... args)
 {
@@ -63,7 +36,7 @@ fluidity_device_only void fill_impl(Iterator begin, P&& pred, Args&&... args)
   using pred_value_t = std::decay_t<P>;
 
   const auto offset = flattened_id(dim_x);
-  if_constexpr<is_same_v<it_value_t, pred_value_t>
+  if_constexpr<is_same_v<it_value_t, pred_value_t>>
   (
     [&]
     {
