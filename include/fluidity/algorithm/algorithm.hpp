@@ -16,6 +16,7 @@
 #ifndef FLUIDITY_ALGORITHM_ALGORITHM_HPP
 #define FLUIDITY_ALGORITHM_ALGORITHM_HPP
 
+#include "if_constexpr.hpp"
 #include "fill.hpp"
 #include "unrolled_for.hpp"
 

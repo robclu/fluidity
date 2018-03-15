@@ -18,6 +18,8 @@
 #ifndef FLUIDITY_ALGORITHM_IF_CONSTEXPR_HPP
 #define FLUIDITY_ALGORITHM_IF_CONSTEXPR_HPP
 
+#include <fluidity/utility/portability.hpp>
+
 namespace fluid  {
 namespace detail {
 
@@ -32,24 +34,38 @@ namespace detail {
 ///                    determines if the nth predicate passed to the constructor
 ///                    must be executed.
 template <bool... Conditions>
-struct IfConstexpr {};
+struct IfConstexpr {
+  /// Does nothing, this is the termination case.
+  /// \param[in] ps The predicates assosciated with the other conditions.
+  /// \tparam    Ps The types of the rest of the predicates.
+  template <typename... Ps>
+  fluidity_host_device constexpr IfConstexpr(Ps&&...) {}
+
+  /// Invokes the predicate \p p, as this is the case where there are no
+  /// conditions but there is a predicate remaining, which is the case when
+  /// only 
+  /// \param[in] ps The predicates assosciated with the other conditions.
+  /// \tparam    Ps The types of the rest of the predicates.
+  template <typename P>
+  fluidity_host_device constexpr IfConstexpr(P&& p) { p(); }
+};
 
 /// Specialization for the case that a condition is true which invokes the 
 /// predicate assosciated with the condition.
 /// \tparam Conditions The remaining conditions to check.
 template <bool...Conditions>
 struct IfConstexpr<true, Conditions...> : public IfConstexpr<Conditions...> {
-    /// Invokes the \p predicate since this is the true case.
-    /// \param[in] p  The tredicate assosciated with the true condition.
-    /// \param[in] ps The predicates assosciated with the other conditions.
-    /// \tparam    P  The type of the predicate.
-    /// \tparam    Ps The types of the rest of the predicates.
-    template <typename P, typename... Ps>
-    fluidity_host_device constexpr IfConstexpr(P&& p, Ps&&... ps)
-    : IfConstexpr<Conditions...>(std::forward<Ps>(ps)...)
-    {
-      p();
-    }
+  /// Invokes the \p predicate since this is the true case.
+  /// \param[in] p  The tredicate assosciated with the true condition.
+  /// \param[in] ps The predicates assosciated with the other conditions.
+  /// \tparam    P  The type of the predicate.
+  /// \tparam    Ps The types of the rest of the predicates.
+  template <typename P, typename... Ps>
+  fluidity_host_device constexpr IfConstexpr(P&& p, Ps&&... ps)
+  : IfConstexpr<Conditions...>(std::forward<Ps>(ps)...)
+  {
+    p();
+  }
 };
 
 
@@ -58,26 +74,24 @@ struct IfConstexpr<true, Conditions...> : public IfConstexpr<Conditions...> {
 /// \tparam Conditions The remaining conditions to check.
 template <bool...Conditions>
 struct IfConstexpr<false, Conditions...> : public IfConstexpr<Conditions...> {
-    /// Invokes the \p predicate since this is the true case.
-    /// \param[in] p  The tredicate assosciated with the true condition.
-    /// \param[in] ps The predicates assosciated with the other conditions.
-    /// \tparam    P  The type of the predicate.
-    /// \tparam    Ps The types of the rest of the predicates.
-    template <typename P, typename... Ps>
-    fluidity_host_device constexpr IfConstexpr(P&& p, Ps&&... ps)
-    : IfConstexpr<Conditions...>(std::forward<Ps>(ps)...) {}
+  /// Does nothing since this is the false case.
+  /// \param[in] p  The tredicate assosciated with the true condition.
+  /// \param[in] ps The predicates assosciated with the other conditions.
+  /// \tparam    P  The type of the predicate.
+  /// \tparam    Ps The types of the rest of the predicates.
+  template <typename P, typename... Ps>
+  fluidity_host_device constexpr IfConstexpr(P&& /*p*/, Ps&&... ps)
+  : IfConstexpr<Conditions...>(std::forward<Ps>(ps)...) {}
+
+  /// Does nothing since this is the false case.
+  /// \param[in] p  The tredicate assosciated with the true condition.
+  /// \param[in] ps The predicates assosciated with the other conditions.
+  /// \tparam    P  The type of the predicate.
+  /// \tparam    Ps The types of the rest of the predicates.
+  fluidity_host_device constexpr IfConstexpr() {}
 };
 
-} // namespace detail
-
-/// Wrapper 
-template <bool Condition, typename P1, typename P2>
-fluidity_host_device inline constexpr decltype(auto)
-if_constexpr(P1&& p1, P2&& p2)
-{
-  IfConstexpr<Condition>()(std::forward<P1>(p1), std::forward<P2>(p2));
-}
-
+} // namespace detaild
 
 /// Invokes one of the predicates if the corresponding compile time condtion
 /// is true, otherwise does nothing. Supplying only a single condition will
@@ -91,10 +105,9 @@ if_constexpr(P1&& p1, P2&& p2)
 template <bool Condition, bool... Conditions, typename P, typename... Ps>
 fluidity_host_device inline constexpr void if_constexpr(P&& p, Ps&&... ps)
 {
-  detail::IfConstexpr
-  <
-    Condition, sizeof...(Conditions) == 0 ? !Condition : Conditions...
-  >(std::forward<P>(p), std::forward<Ps>(ps)...);
+  detail::IfConstexpr<Condition, !Condition>(
+    std::forward<P>(p), std::forward<Ps>(ps)...
+  );
 }
 
 } // namespace fluid

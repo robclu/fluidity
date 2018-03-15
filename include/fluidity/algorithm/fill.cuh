@@ -17,8 +17,6 @@
 #ifndef FLUIDITY_ALGORITHM_FILL_CUH
 #define FLUIDITY_ALGORITHM_FILL_CUH
 
-#if defined(__CUDACC__)
-
 #include "if_constexpr.hpp"
 #include <fluidity/dimension/dimension.hpp>
 #include <fluidity/utility/debug.hpp>
@@ -32,6 +30,7 @@ namespace cuda   {
 template <typename Iterator, typename P, typename... Args>
 fluidity_device_only void fill_impl(Iterator begin, P&& pred, Args&&... args)
 {
+#if defined(__CUDACC__)
   using it_value_t   = std::decay_t<decltype(*begin)>;
   using pred_value_t = std::decay_t<P>;
 
@@ -47,6 +46,7 @@ fluidity_device_only void fill_impl(Iterator begin, P&& pred, Args&&... args)
       pred(begin[offset], std::forward<Args>(args)...);
     }
   );
+#endif // __CUDACC__
 }
 
 /// Fills the range of values defined by { end - begin } using \p pred to set
@@ -63,6 +63,7 @@ template <typename Iterator, typename P, typename... Args>
 fluidity_global void
 fill(Iterator begin, Iterator end, P pred, Args... args)
 {
+#if defined(__CUDACC__)
   const int      elements    = end - begin;
   constexpr auto max_threads = 256;
 
@@ -71,9 +72,9 @@ fill(Iterator begin, Iterator end, P pred, Args... args)
 
   fill_impl<<<num_blocks, threads_per_block>>>(begin, pred, args...);
   fluidity_check_cuda_result(cudaDeviceSynchronize());
+#endif // __CUDACC__
 }
 
 }}} // namespace fluid::detail::cuda
 
-#endif // __CUDACC__
 #endif // FLUIDITY_ALGORITHM_FILL_CUH
