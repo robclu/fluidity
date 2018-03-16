@@ -22,18 +22,43 @@ namespace fluid {
 
 #if defined(__CUDACC__)
 
+namespace detail {
+
+/// Implementation for the x dimension case for the thread index.
+template <std::size_t V>
+fluidity_device_only std::size_t thread_id_impl(Dimension<V>);
+
+/*
+/// Implementation for the x dimension case for the thread index.
+fluidity_device_only std::size_t thread_id(dim_y);
+
+/// Implementation for the x dimension case for the thread index.
+fluidity_device_only std::size_t thread_id(dim_z);
+*/
+
+/// Implementation for the x dimension case for the flattened index.
+template <std::size_t V>
+fluidity_device_only std::size_t flattened_id_impl(Dimension<V>);
+
+/*
+/// Implementation for the y dimension case for the flattened index.
+fluidity_device_only std::size_t flattened_id_impl(dim_y);
+
+/// Implementation for the z dimension case for the flattened index.
+fluidity_device_only std::size_t flattened_id_impl(dim_z);
+*/
+} // namespace detail
+
 /// Returns the value of the thread index in a given dimension. The dimension
 /// must be one of dim_x, dim_y, dim_z, or else a compile time error will be
 /// generated.
 /// \param[in] dim    The dimension to get the thread index for.
 /// \tparam    Value  The value which defines the dimension.
 template <std::size_t Value>
-fluidity_device_only constexpr inline std::size_t thread_id(Dimension<Value>)
+fluidity_device_only inline std::size_t thread_id(Dimension<Value>)
 {
   static_assert(Value <= 2, "Can only get thread id for 3 dimensions {0,1,2}.");
-  if constexpr (Value == 0) { return threadIdx.x; }
-  if constexpr (Value == 1) { return threadIdx.y; }
-  if constexpr (Value == 2) { return threadIdx.z; }
+  return detail::thread_id_impl(Dimension<Value>{});
 }
 
 /// Returns the value of the flattened thread index in a given dimension. The
@@ -42,22 +67,10 @@ fluidity_device_only constexpr inline std::size_t thread_id(Dimension<Value>)
 /// \param[in] dim    The dimension to get the thread index for.
 /// \tparam    Value  The value which defines the dimension.
 template <std::size_t Value>
-fluidity_device_only constexpr inline std::size_t flattened_id(Dimension<Value>)
+fluidity_device_only inline std::size_t flattened_id(Dimension<Value>)
 {
   static_assert(Value <= 2, "Can only get thread id for 3 dimensions {0,1,2}.");
-
-  if constexpr (Value == 0)
-  {
-    return threadIdx.x + blockIdx.x * blockDim.x;
-  }
-  if constexpr (Value == 1)
-  {
-    return threadIdx.y + blockIdx.y * blockDim.y;
-  }
-  if constexpr (Value == 2)
-  {
-    return threadIdx.z + blockIdx.z * blockDim.z;
-  }
+  return detail::flattened_id_impl(Dimension<Value>{});
 }
 
 #else

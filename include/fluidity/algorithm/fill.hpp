@@ -17,6 +17,7 @@
 #define FLUIDITY_ALGORITHM_FILL_HPP
 
 #include "fill.cuh"
+#include "if_constexpr.hpp"
 #include <fluidity/execution/execution_policy.hpp>
 #include <fluidity/utility/type_traits.hpp>
 #include <utility>
@@ -33,34 +34,25 @@ namespace fluid {
 /// \tparam    Iterator The type of the iterator.
 /// \tparam    P        The type of the predicate.
 /// \tparam    Args     The type of arguments for a callable predicate.
-template <typename Iterator, typename P, typename... Args>
+template <typename Iterator, typename T>
 fluidity_host_only void
-fill(Iterator begin, Iterator end, P&& pred, Args&&... args)
+fill(Iterator begin, Iterator end, T value)
 {
-  if /*constexpr*/ (exec::is_cpu_policy_v<typename Iterator::exec_policy_t>)
-  {
-    using it_value_t   = std::decay_t<decltype(*begin)>;
-    using pred_value_t = std::decay_t<P>;
-    while (end - begin > 0)
+  if_constexpr<exec::is_cpu_policy_v<typename Iterator::exec_policy_t>>
+  (
+    [&]
     {
-      if /*constexpr*/ (is_same_v<it_value_t, pred_value_t>)
+      while (end - begin > 0)
       {
-        *begin = pred;
+        *begin = value;
+        ++begin;
       }
-      else
-      {
-        pred(*begin, std::forward<Args>(args)...);
-      }
-      ++begin;
+    },
+    [&]
+    {
+      detail::cuda::fill(begin, end, value);
     }
-  }
-  else
-  {
-    detail::cuda::fill(begin                      ,
-                       end                        ,
-                       std::forward<P>(pred)      ,
-                       std::forward<Args>(args)...);
-  }
+  );
 }
 
 } // namespace fluid

@@ -21,6 +21,7 @@
 #include "base_tensor.hpp"
 #include "tensor_fwrd.hpp"
 #include <fluidity/iterator/tensor_iterator.hpp>
+#include <fluidity/utility/cuda.hpp>
 #include <cstddef>
 
 namespace fluid {

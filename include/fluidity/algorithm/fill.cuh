@@ -19,33 +19,35 @@
 
 #include "if_constexpr.hpp"
 #include <fluidity/dimension/dimension.hpp>
+#include <fluidity/dimension/thread_index.hpp>
 #include <fluidity/utility/debug.hpp>
 #include <fluidity/utility/portability.hpp>
 #include <fluidity/utility/type_traits.hpp>
+#include <utility>
 
 namespace fluid  {
 namespace detail {
 namespace cuda   {
 
-template <typename Iterator, typename P, typename... Args>
-fluidity_device_only void fill_impl(Iterator begin, P&& pred, Args&&... args)
+template <typename Iterator, typename T>
+fluidity_global inline void fill_impl(Iterator begin, T value)
 {
 #if defined(__CUDACC__)
-  using it_value_t   = std::decay_t<decltype(*begin)>;
-  using pred_value_t = std::decay_t<P>;
+  //using it_value_t   = std::decay_t<decltype(*begin)>;
+  //using pred_value_t = std::decay_t<P>;
 
-  const auto offset = flattened_id(dim_x);
-  if_constexpr<is_same_v<it_value_t, pred_value_t>>
-  (
-    [&]
-    {
-      begin[offset] = pred;
-    },
-    [&]
-    {
-      pred(begin[offset], std::forward<Args>(args)...);
-    }
-  );
+  //const auto offset = flattened_id(dim_x);
+  //if_constexpr<is_same_v<it_value_t, pred_value_t>>
+  //(
+  //  [&]
+  //  {
+      *begin[flattened_id(dim_x)] = value;
+  //  },
+  //  [&]
+  //  {
+  //    pred(begin[offset], std::forward<Args>(args)...);
+  //  }
+  //);
 #endif // __CUDACC__
 }
 
@@ -59,9 +61,8 @@ fluidity_device_only void fill_impl(Iterator begin, P&& pred, Args&&... args)
 /// \tparam    Iterator The type of the iterator.
 /// \tparam    P        The type of the predicate.
 /// \tparam    Args     The type of arguments for a callable predicate.
-template <typename Iterator, typename P, typename... Args>
-fluidity_global void
-fill(Iterator begin, Iterator end, P pred, Args... args)
+template <typename Iterator, typename T>
+fluidity_host_only void fill(Iterator begin, Iterator end, T value)
 {
 #if defined(__CUDACC__)
   const int      elements    = end - begin;
@@ -70,7 +71,7 @@ fill(Iterator begin, Iterator end, P pred, Args... args)
   dim3 threads_per_block(elements > max_threads ? elements : max_threads);
   dim3 num_blocks(elements / threads_per_block.x);
 
-  fill_impl<<<num_blocks, threads_per_block>>>(begin, pred, args...);
+  fill_impl<<<num_blocks, threads_per_block>>>(begin, value);
   fluidity_check_cuda_result(cudaDeviceSynchronize());
 #endif // __CUDACC__
 }
