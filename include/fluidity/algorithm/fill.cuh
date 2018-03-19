@@ -30,25 +30,9 @@ namespace detail {
 namespace cuda   {
 
 template <typename Iterator, typename T>
-fluidity_global inline void fill_impl(Iterator begin, T value)
+fluidity_global void fill_impl(Iterator begin, T value)
 {
-#if defined(__CUDACC__)
-  //using it_value_t   = std::decay_t<decltype(*begin)>;
-  //using pred_value_t = std::decay_t<P>;
-
-  //const auto offset = flattened_id(dim_x);
-  //if_constexpr<is_same_v<it_value_t, pred_value_t>>
-  //(
-  //  [&]
-  //  {
-      *begin[flattened_id(dim_x)] = value;
-  //  },
-  //  [&]
-  //  {
-  //    pred(begin[offset], std::forward<Args>(args)...);
-  //  }
-  //);
-#endif // __CUDACC__
+  *(begin[flattened_id(dim_x)]) = value;
 }
 
 /// Fills the range of values defined by { end - begin } using \p pred to set
@@ -62,16 +46,18 @@ fluidity_global inline void fill_impl(Iterator begin, T value)
 /// \tparam    P        The type of the predicate.
 /// \tparam    Args     The type of arguments for a callable predicate.
 template <typename Iterator, typename T>
-fluidity_host_only void fill(Iterator begin, Iterator end, T value)
+void fill(Iterator begin, Iterator end, T value)
 {
 #if defined(__CUDACC__)
   const int      elements    = end - begin;
   constexpr auto max_threads = 256;
 
-  dim3 threads_per_block(elements > max_threads ? elements : max_threads);
-  dim3 num_blocks(elements / threads_per_block.x);
+  dim3 threads_per_block(elements < max_threads ? elements : max_threads);
+  dim3 num_blocks(std::max(elements / threads_per_block.x,
+                           static_cast<unsigned int>(1)));
 
   fill_impl<<<num_blocks, threads_per_block>>>(begin, value);
+  cudaDeviceSynchronize();
   fluidity_check_cuda_result(cudaDeviceSynchronize());
 #endif // __CUDACC__
 }

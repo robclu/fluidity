@@ -47,11 +47,11 @@ struct TensorIterator {
 
   /// Overload of copy constructor to copy an iterator.
   /// \param[in] other The other iterator to iterate over.
-  fluidity_host_device TensorIterator(const self_t& other) : _ptr{other._ptr} {}
+  /*fluidity_host_device*/ TensorIterator(const self_t& other) = default; //: _ptr{other._ptr} {}
 
   /// Moves the pointer from other to this tensor.
   /// \param[in] other The other iterator to iterate over.
-  fluidity_host_device TensorIterator(self_t&& other) : _ptr{other._ptr} {}
+  /*fluidity_host_device*/ TensorIterator(self_t&& other)  = default; //: _ptr{other._ptr} {}
 
   /// Overload of addition operator to add a difference_t and an iterator.
   /// For example:

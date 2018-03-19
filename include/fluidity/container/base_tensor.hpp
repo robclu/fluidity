@@ -41,7 +41,7 @@ class BaseTensor {
 
   /// Creates a base tensor, with no elements or size. Calling this constructor
   /// required resizing the tensor.
-  fluidity_host_device BaseTensor() = default;
+  /*fluidity_host_device*/ BaseTensor() = default;
 
   /// Initializes the size of each of the dimensions in the tensor, and the
   /// total number of elements in the tensor.

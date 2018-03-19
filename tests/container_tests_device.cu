@@ -24,14 +24,14 @@ using device_tensor1d = fluid::DeviceTensor<T, 1>;
 template <typename T>
 using host_tensor1d = fluid::HostTensor<T, 1>;
 
-TEST(container_host_tensor, can_create_tensor)
+TEST(container_device_tensor, can_create_tensor)
 {
   device_tensor1d<float> t(20);
 
   EXPECT_EQ(t.size(), static_cast<decltype(t.size())>(20));
 }
 
-TEST(container_host_tensor, can_fill_tensor)
+TEST(container_device_tensor, can_fill_tensor)
 {
   device_tensor1d<int> t(20);
   fluid::fill(t.begin(), t.end(), 2);

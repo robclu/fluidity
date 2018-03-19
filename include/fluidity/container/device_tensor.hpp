@@ -59,26 +59,42 @@ class DeviceTensor<T, 1> : public BaseTensor<T, 1> {
   /// Initializes the size of each of the dimensions in the tensor, and the
   /// total number of elements in the tensor.
   /// \param[in] elements The number of elements in the 1D ensor.
-  fluidity_host_device DeviceTensor(std::size_t elements);
+  DeviceTensor(std::size_t elements);
 
   /// Cleans up any memory allocated for the tensor.
-  fluidity_host_device ~DeviceTensor();
+  ~DeviceTensor();
+
+  /// Constructor to create a device tensor from a host tensor.
+  /// \param[in] host_tensor The host tensor to create the device tensor from.
+  HostTensor(const HostTensor<T, 1>& host_tensor);
 
   /// Returns an iterator to the first element in the tensor.
-  iterator_t begin()
+  fluidity_host_device iterator_t begin()
   {
     return iterator_t{this->_data};
   }
 
   /// Returns an iterator to the last element in the tensor.
-  iterator_t end()
+  fluidity_host_device iterator_t end()
   {
     return iterator_t{this->_data + this->_size};
   }
 
+  /// Returns an iterator to the first element in the tensor.
+  fluidity_host_device const_iterator_t begin() const
+  {
+    return const_iterator_t{this->_data};
+  }
+
+  /// Returns an iterator to the last element in the tensor.
+  fluidity_host_device const_iterator_t end() const
+  {
+    return const_iterator_t{this->_data + this->_size};
+  }
+
   /// Resizes the tensor to contain \p num_elements elements.
   /// \param[in] num_elements The number of elements to resize the tensor to.
-  fluidity_host_device void resize(std::size_t num_elements);
+  void resize(std::size_t num_elements);
 
   /// Returns the size of the tensor for dimenison \p i. For this tensor
   /// implementation the dimension is ignored.
@@ -89,10 +105,10 @@ class DeviceTensor<T, 1> : public BaseTensor<T, 1> {
   bool _must_free = true; //!< Sets if the memory must be freed.
 
   /// Allocates memory for the array.
-  fluidity_host_only void allocate();
+  void allocate();
 
   /// Cleans up the memory allocated for the tensor.
-  fluidity_host_only void cleanup();
+  void cleanup();
 };
 
 //==--- DeviceTensor 1D Implementation -------------------------------------==//
@@ -110,6 +126,16 @@ template <typename T>
 DeviceTensor<T, 1>::~DeviceTensor()
 {
   cleanup();
+}
+
+template <typename T>
+DeviceTensor<T, 1>::DeviceTensor(const HostTensor<T, 1>& host_tensor)
+: BaseTensor<T, 1>(host_tensor.size())
+{
+  allocate();
+  util::cuda::memcpy_host_to_device(host_tensor._data      ,
+                                    this->_data            ,
+                                    this->mem_requirement());
 }
 
 template <typename T>

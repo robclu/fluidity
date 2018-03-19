@@ -83,6 +83,18 @@ class HostTensor<T, 1> : public BaseTensor<T, 1> {
     return iterator_t{this->_data + this->_size};
   }
 
+  /// Returns an iterator to the first element in the tensor.
+  const_iterator_t begin() const
+  {
+    return const_iterator_t{this->_data};
+  }
+
+  /// Returns an iterator to the last element in the tensor.
+  const iterator_t end() const
+  {
+    return const_iterator_t{this->_data + this->_size};
+  }
+
   /// Resizes the tensor to contain \p num_elements elements.
   /// \param[in] num_elements The number of elements to resize the tensor to.
   void resize(std::size_t num_elements);
@@ -122,7 +134,9 @@ HostTensor<T, 1>::HostTensor(const DeviceTensor<T, 1>& dev_tensor)
 : BaseTensor<T, 1>(dev_tensor.size())
 {
   allocate();
-  util::cuda::memcpy_device_to_host(dev_tensor._data, this->_data, this->_size);
+  util::cuda::memcpy_device_to_host(dev_tensor._data       ,
+                                    this->_data            ,
+                                    this->mem_requirement());
 }
 
 template <typename T>
