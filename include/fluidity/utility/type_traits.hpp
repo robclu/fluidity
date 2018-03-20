@@ -32,6 +32,11 @@ static constexpr bool is_same_v = std::is_same<A, B>::value;
 template <typename T>
 using decay_t = typename std::decay<T>::type;
 
+/// Wrapper for std::enable_if_t to work with c++14.
+/// \tparam B The condition to base the enable on.
+template <bool B, typename T = void>
+using enable_if_t = typename std::enable_if<B, T>::type;
+
 } // namespace fluid
 
 #endif // FLUIDITY_UTILITY_TYPE_TRAITS_HPP

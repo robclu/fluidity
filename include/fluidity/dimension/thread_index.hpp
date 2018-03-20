@@ -69,7 +69,7 @@ fluidity_host_only constexpr inline std::size_t thread_id(Dimension<Value>)
 /// \param[in] dim    The dimension to get the thread index for.
 /// \tparam    Value  The value which defines the dimension.
 template <std::size_t Value>
-fluidity_host_only constexpr inline std::size_t falttened_id(Dimension<Value>)
+fluidity_host_only constexpr inline std::size_t flattened_id(Dimension<Value>)
 {
   // \todo, add implementation ... 
   static_assert(Value <= 2, "Can only get thread id for 3 dimensions {0,1,2}.");

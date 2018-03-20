@@ -9,8 +9,8 @@
 //==------------------------------------------------------------------------==//
 //
 /// \file  fill.cuh
-/// \brief This file defines the definitions of the kernels used to fill
-///        containers.
+/// \brief This file defines the implementation of the cuda version of fill
+///        functionality.
 //
 //==------------------------------------------------------------------------==//
 
@@ -29,6 +29,12 @@ namespace fluid  {
 namespace detail {
 namespace cuda   {
 
+/// Kernel implementation which fills an iterator element \p begin with the
+/// value defined by \p value.
+/// \param[in] begin    The first iterator to fill with the \p value.
+/// \param[in] value    The value to fill the elements with.
+/// \tparam    Iterator The type of the iterator.
+/// \tparam    T        The type of the element the iterator holds.
 template <typename Iterator, typename T>
 fluidity_global void fill_impl(Iterator begin, T value)
 {
@@ -57,7 +63,6 @@ void fill(Iterator begin, Iterator end, T value)
                            static_cast<unsigned int>(1)));
 
   fill_impl<<<num_blocks, threads_per_block>>>(begin, value);
-  cudaDeviceSynchronize();
   fluidity_check_cuda_result(cudaDeviceSynchronize());
 #endif // __CUDACC__
 }

@@ -36,10 +36,8 @@ namespace fluid {
 /// \tparam    Args     The type of arguments for a callable predicate.
 template < typename Iterator
          , typename T
-         , typename std::enable_if<
-             exec::is_cpu_policy_v<typename Iterator::exec_policy_t>,
-             int
-           >::type = 0
+         , std::enable_if_t<
+             exec::is_cpu_policy_v<typename Iterator::exec_policy_t>, int> = 0
          >
 void fill(Iterator begin, Iterator end, T value)
 {
@@ -62,10 +60,8 @@ void fill(Iterator begin, Iterator end, T value)
 /// \tparam    Args     The type of arguments for a callable predicate.
 template < typename Iterator
          , typename T
-         , typename std::enable_if<
-             exec::is_gpu_policy_v<typename Iterator::exec_policy_t>,
-             int
-           >::type = 0
+         , std::enable_if_t<
+             exec::is_gpu_policy_v<typename Iterator::exec_policy_t>, int> = 0
          >
 void fill(Iterator begin, Iterator end, T value)
 {

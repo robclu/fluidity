@@ -16,6 +16,10 @@
 
 #include <gtest/gtest.h>
 #include <fluidity/algorithm/algorithm.hpp>
+#include <fluidity/container/host_tensor.hpp>
+
+template <typename T>
+using host_tensor1d = fluid::HostTensor<T, 1>;
 
 TEST(algorithm_host_tests, can_compile_time_unroll)
 {
@@ -121,6 +125,21 @@ TEST(algorithm_host_tests, if_constexpr_handles_different_semantics)
   x = 18;
   true_test.apply(it, y);
   EXPECT_EQ(y, x);
+}
+
+TEST(algorithm_host_tests, can_reduce_container)
+{
+  const auto size  = 20;
+  const int  value = 2;
+  host_tensor1d<int> t(size);
+  fluid::fill(t.begin(), t.end(), value);
+
+  auto result = fluid::reduce(t.begin(), t.end(), [] (auto& a, const auto& b)
+  {
+    a += b;
+  });
+
+  EXPECT_EQ(result,  value * size);
 }
 
 int main(int argc, char** argv)
