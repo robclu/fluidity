@@ -142,6 +142,38 @@ TEST(algorithm_host_tests, can_reduce_container)
   EXPECT_EQ(result,  value * size);
 }
 
+TEST(algorithm_host_tests, can_get_max_element)
+{
+  const auto size = 20;
+  host_tensor1d<int> t(size);
+
+  int value = 1;
+  for (auto& element : t)
+  {
+    element = value++;
+  }
+
+  auto result = fluid::max_element(t.begin(), t.end());
+
+  EXPECT_EQ(result,  size);
+}
+
+TEST(algorithm_host_tests, can_get_min_element)
+{
+  const auto size = 20;
+  host_tensor1d<int> t(size);
+
+  int value = 1;
+  for (auto& element : t)
+  {
+    element = value++;
+  }
+
+  auto result = fluid::min_element(t.begin(), t.end());
+
+  EXPECT_EQ(result, 0);
+}
+
 int main(int argc, char** argv)
 {
   ::testing::InitGoogleTest(&argc, argv);

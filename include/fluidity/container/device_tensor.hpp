@@ -54,7 +54,9 @@ class DeviceTensor<T, 1> : public BaseTensor<T, 1> {
   /// Defines the type of a const iterator.
   using const_iterator_t  = TensorIterator<self_t, true, exec_t>;
 
-  /// Defines the number of dimensions in the tensor
+  /// Creates a device tensor with no elements. This requires the tensor to be
+  /// resized before using it.
+  DeviceTensor() = default;
 
   /// Initializes the size of each of the dimensions in the tensor, and the
   /// total number of elements in the tensor.
@@ -66,7 +68,7 @@ class DeviceTensor<T, 1> : public BaseTensor<T, 1> {
 
   /// Constructor to create a device tensor from a host tensor.
   /// \param[in] host_tensor The host tensor to create the device tensor from.
-  HostTensor(const HostTensor<T, 1>& host_tensor);
+  DeviceTensor(const HostTensor<T, 1>& host_tensor);
 
   /// Returns an iterator to the first element in the tensor.
   fluidity_host_device iterator_t begin()

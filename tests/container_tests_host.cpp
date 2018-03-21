@@ -44,9 +44,9 @@ TEST(container_host_tensor, can_fill_tensor_with_functor)
 {
   host_tensor1d<int> t(20);
   std::size_t count = 0;
-  fluid::fill(t.begin(), t.end(), [&count] (auto iterator)
+  fluid::fill(t.begin(), t.end(), [&count] (auto& iterator)
   {
-    *iterator = count++;
+    iterator = count++;
   });
 
   count = 0;
@@ -61,9 +61,9 @@ TEST(container_host_tensor, can_resize_tensor)
   host_tensor1d<int> t;
   t.resize(30);
   std::size_t count = 0;
-  fluid::fill(t.begin(), t.end(), [&count] (auto iterator)
+  fluid::fill(t.begin(), t.end(), [&count] (auto& iterator)
   {
-    *iterator = count++;
+    iterator = count++;
   });
 
   count = 0;

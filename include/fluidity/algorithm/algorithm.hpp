@@ -18,6 +18,8 @@
 
 #include "if_constexpr.hpp"
 #include "fill.hpp"
+#include "max_element.hpp"
+#include "min_element.hpp"
 #include "reduce.hpp"
 #include "unrolled_for.hpp"
 

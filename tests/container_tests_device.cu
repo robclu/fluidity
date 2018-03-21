@@ -44,6 +44,40 @@ TEST(container_device_tensor, can_fill_tensor)
   }
 }
 
+struct SetPredicate {
+  fluidity_device_only void operator()(int& e)
+  {
+    e = fluid::flattened_id(fluid::dim_x);
+  }
+};
+
+TEST(container_device_tensor, can_fill_tensor_with_functor)
+{
+  device_tensor1d<int> t(20);
+  fluid::fill(t.begin(), t.end(), SetPredicate{});
+
+  auto ht    = host_tensor1d<int>(t);
+  auto count = 0;
+  for (const auto& element : ht) 
+  {
+    EXPECT_EQ(element, count++);
+  }
+}
+
+TEST(container_device_tensor, can_resize_tensor)
+{
+  device_tensor1d<int> t;
+  t.resize(30);
+  fluid::fill(t.begin(), t.end(), SetPredicate{});
+
+  auto ht    = host_tensor1d<int>(t);
+  auto count = 0;
+  for (const auto& element : t) 
+  {
+    EXPECT_EQ(element, count++);
+  }
+}
+
 int main(int argc, char** argv)
 {
   ::testing::InitGoogleTest(&argc, argv);

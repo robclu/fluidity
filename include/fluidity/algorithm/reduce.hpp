@@ -24,12 +24,18 @@ namespace fluid {
 /// 
 /// ~~~cpp
 /// auto result = reduce(data.begin(), data.end(),
-///   [] fluidity_host_device (auto&& left, auto&& right)
+///   [] fluidity_host_device (auto&& left, const auto&& right)
 ///   {
 ///     left += right;
 ///   }
 /// );
 /// ~~~
+/// 
+/// The type of the first argument to the predicate must be a non-const
+/// reference (l or r value) and the second argument can be either const or
+/// non-const and can be l or rvalue.
+/// 
+/// This is implementation for when the iterator is a CPU type iterator.
 /// 
 /// The algorithm will handle any number of elements (incuding random odd sizes)
 /// and will also reduce a multidimensional container (see the test). When the
@@ -46,8 +52,6 @@ namespace fluid {
 /// 
 /// \note Predicates must use ``fluidity_host_device`` so that they can execute
 ///       on the GPU.
-///       
-/// \todo   Change __syncthreads() to sync() to support CPU and GPU block sync.
 ///
 /// \param[in]  begin     An iterator to the beginning of the data.
 /// \param[in]  end       An iterator to the end of the data.
@@ -84,6 +88,12 @@ reduce(Iterator&& begin, Iterator&& end, Pred&& pred, Args&&... args)
 ///   }
 /// );
 /// ~~~
+/// 
+/// The type of the first argument to the predicate must be a non-const
+/// reference (l or r value) and the second argument can be either const or
+/// non-const and can be l or rvalue.
+/// 
+/// This is implementation for when the iterator is a GPU type iterator.
 /// 
 /// The algorithm will handle any number of elements (incuding random odd sizes)
 /// and will also reduce a multidimensional container (see the test). When the
@@ -124,8 +134,6 @@ reduce(Iterator&& begin, Iterator&& end, Pred&& pred, Args&&... args)
                        std::forward<Pred>(pred)     ,
                        std::forward<Args>(args)...  );
 }
-
-
 
 } // namespace fluid
 

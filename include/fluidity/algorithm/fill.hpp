@@ -34,18 +34,31 @@ namespace fluid {
 /// \tparam    Iterator The type of the iterator.
 /// \tparam    P        The type of the predicate.
 /// \tparam    Args     The type of arguments for a callable predicate.
-template < typename Iterator
-         , typename T
+template < typename    Iterator
+         , typename    T
+         , typename... Args
          , std::enable_if_t<
              exec::is_cpu_policy_v<typename Iterator::exec_policy_t>, int> = 0
          >
-void fill(Iterator begin, Iterator end, T value)
+void fill(Iterator begin, Iterator end, T value, Args&&... args)
 {
+#if !defined(__CUDACC__)
+  constexpr bool not_predicate = 
+    std::is_convertible<typename Iterator::value_t, T>::value;
+
   while (end - begin > 0)
   {
-    *begin = value;
+    if constexpr (not_predicate)
+    {
+      *begin = value;
+    }
+    else
+    {
+      value(*begin, std::forward<Args>(args)...);
+    }
     ++begin;
   }
+#endif // __CUDACC__
 }
 
 /// Fills the range of values defined by { end - begin } using \p pred to set
