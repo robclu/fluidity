@@ -83,6 +83,35 @@ class DeviceTensor<T, 1> : public BaseTensor<T, 1> {
   }
 
   /// Returns an iterator to the first element in the tensor.
+  /// Calling this with a range-based-for will result in a segfault, 
+  /// for example:
+  /// 
+  /// ~~~{.cpp}
+  /// DeviceTensor<int, 1> t(20);
+  /// for (const auto& device_element : DeviceTensor<int, 1>(20))
+  /// {
+  ///   // Do something
+  /// }
+  /// ~~~
+  /// 
+  /// This is designed to be used by the algorithms in the fluid:: namespace,
+  /// for example:
+  /// 
+  /// ~~~{.cpp}
+  /// auto tensor = DeviceTensor<int, 1>(50);
+  /// auto result = fluid::reduce(tensor.begin(), tensor.end(), fluid::sum);
+  /// ~~~
+  /// 
+  /// If you are wanting to use the tensor in a range-based-for loop, then the
+  /// tensor needs to be converted to a host version of the tensor, for example:
+  /// 
+  /// ~~~{.cpp}
+  /// auto tensor = DeviceTensor<int, 1>(50);
+  /// for (const auto& e : tensor.as_host())
+  /// {
+  ///   // Do something with element ...
+  /// }
+  /// ~~~
   fluidity_host_device const_iterator_t begin() const
   {
     return const_iterator_t{this->_data};

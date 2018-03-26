@@ -72,7 +72,7 @@ TEST(container_device_tensor, can_resize_tensor)
 
   auto ht    = host_tensor1d<int>(t);
   auto count = 0;
-  for (const auto& element : t) 
+  for (const auto& element : ht) 
   {
     EXPECT_EQ(element, count++);
   }
