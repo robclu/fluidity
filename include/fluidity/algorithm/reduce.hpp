@@ -17,6 +17,7 @@
 #define FLUIDITY_ALGORITHM_REDUCE_HPP
 
 #include "reduce.cuh"
+#include <fluidity/utility/type_traits.hpp>
 
 namespace fluid {
 

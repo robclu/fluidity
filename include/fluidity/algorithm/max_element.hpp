@@ -21,24 +21,28 @@
 
 namespace fluid {
 
+
+
 /// Returns the maximum element between the \p begin and \p end elements.
 /// \param[in] begin    The first element to find the max element from.
 /// \param[in] end      The last element to find the max element from.
 /// \tparam    Iterator The type of the iterator.
 template <typename Iterator>
-fluidity_host_device typename Iterator::value_t
-max_element(Iterator&& begin, Iterator&& end)
+typename Iterator::value_t max_element(Iterator&& begin, Iterator&& end)
 {
   using value_t = typename Iterator::value_t;
-  return 
-    reduce(
-      std::forward<Iterator>(begin),
-      std::forward<Iterator>(end)  ,
-      [] fluidity_host_device (value_t& a, const value_t& b)
-      {
-        a = std::max(a, b);
-      }
-    );
+
+  // Because of cuda only supporting c++14, this can't be a lambda, so we need
+  // to create a separate functor for the max predicate ...
+  struct Max {
+    fluidity_host_device void operator()(value_t& a, const value_t& b) const
+    {
+      a = std::max(a, b);
+    }
+  };
+
+  return
+    reduce(std::forward<Iterator>(begin), std::forward<Iterator>(end), Max{});
 }
 
 } // namespace fluid

@@ -61,10 +61,20 @@ TEST(algorithm_host_tests, can_get_max_element)
   device_tensor1d<element_t> t(size);
 
   fluid::fill(t.begin(), t.end(), SetPredicate{});
-
   auto result = fluid::max_element(t.begin(), t.end());
 
   EXPECT_EQ(result, size - 1);
+}
+
+TEST(algorithm_host_tests, can_get_min_element)
+{
+  const auto size = 20;
+  device_tensor1d<int> t(size);
+
+  fluid::fill(t.begin(), t.end(), SetPredicate{});
+  auto result = fluid::min_element(t.begin(), t.end());
+
+  EXPECT_EQ(result, 0);
 }
 
 int main(int argc, char** argv)

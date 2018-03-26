@@ -20,6 +20,7 @@
 #include <fluidity/dimension/dimension_info.hpp>
 #include <fluidity/dimension/thread_index.hpp>
 #include <fluidity/utility/debug.hpp>
+#include <fluidity/utility/type_traits.hpp>
 
 namespace fluid {
 
@@ -218,10 +219,7 @@ struct MultidimIterator {
 template <typename T, typename DimInfo>
 fluidity_device_only constexpr auto make_multidim_iterator()
 {
-  using iter_t = MultidimIterator<T, DimInfo>
-  static_assert(std::is_same_v<DimInfo, DimInfoCt>,
-                "DimInfo must be DimInfoCt type to make a multidim iterator!");
-
+  using iter_t = MultidimIterator<T, DimInfo>;
   __shared__ T buffer[DimInfo::total_size()];
   iter_t iter{buffer};
 

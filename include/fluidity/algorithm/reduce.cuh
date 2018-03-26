@@ -17,6 +17,9 @@
 #ifndef FLUIDITY_ALGORITHM_REDUCE_CUH
 #define FLUIDITY_ALGORITHM_REDUCE_CUH
 
+#include <fluidity/container/device_tensor.hpp>
+#include <fluidity/container/host_tensor.hpp>
+#include <fluidity/iterator/multidim_iterator.hpp>
 #include <fluidity/utility/debug.hpp>
 #include <fluidity/utility/portability.hpp>
 #include <cstddef>
@@ -46,14 +49,15 @@ fluidity_global void reduce_impl(Iterator    begin  ,
                                  Pred        pred   ,
                                  Args...     args   )
 {
+#if defined(__CUDACC__)
   const auto index = flattened_id(dim_x);
-  if (index < offset)
+  if (index < size)
   {
     // Create a shared memory multidimensional iterator:
     auto iter = make_multidim_iterator<typename Iterator::value_t, BlockInfo>();
 
     // Load the data into shared memory:
-    *iter = *begin[index]
+    *iter = *begin[index];
     __syncthreads();
 
     const auto block_start = flattened_block_id(dim_x) * block_size(dim_x);
@@ -74,6 +78,7 @@ fluidity_global void reduce_impl(Iterator    begin  ,
       *(results[flattened_block_id(dim_x)]) = *iter;
     }
   }
+#endif // __CUDACC__
 }
 
 /// Wrapper function which invokes the cuda reduction kernel.
@@ -96,10 +101,10 @@ reduce(Iterator&& begin, Iterator&& end, Pred&& pred, Args&&... args)
   dim3 num_blocks(std::max(elements / threads_per_block.x,
                            static_cast<unsigned int>(1)));
 
-  using dim_info_t     = DimInfoCx<max_threads, 1, 1>;
-  using value_t        = decay_t<Iterator>::value_t;
-  using host_results_t = HostTensor<decay_t<value_t, 1>>;
-  using dev_results_t  = DeviceTensor<decay_t<value_t, 1>>;
+  using dim_info_t     = DimInfoCt<max_threads, 1, 1>;
+  using value_t        = typename decay_t<Iterator>::value_t;
+  using host_results_t = HostTensor<value_t, 1>;
+  using dev_results_t  = DeviceTensor<value_t, 1>;
 
   dev_results_t dev_results(num_blocks.x);
   reduce_impl<dim_info_t><<<num_blocks, threads_per_block>>>(

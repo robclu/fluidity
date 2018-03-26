@@ -18,9 +18,37 @@
 #define FLUIDITY_DIMENSION_DIMENSION_INFO_CT_HPP
 
 #include "dimension.hpp"
+#include <fluidity/algorithm/if_constexpr.hpp>
+#include <fluidity/algorithm/fold.hpp>
 #include <vector>
 
 namespace fluid {
+
+/// Defines the type of operation for the accumulation.
+enum class AccumulationOp {
+  Sum  = 0,
+  Sub  = 1,
+  Mult = 2,
+  Div  = 3
+};
+
+template <AccumulationOp Op, typename... Values> struct Accumulator;
+
+template <typename First, typename... Rest>
+struct Accumulator<AccumulationOp::Mult, First, Rest...> {
+  fluidity_host_device static constexpr decltype(auto) apply()
+  {
+    static_assert(std::is_integral<First>::value, "Must accumulate numeric types");
+    using accum_t = Accumulator<AccumulationOp::Mult, Rest...>;
+    return First{} * (sizeof...(Rest) > 0 ? accum_t::apply() : 1);
+  }
+};
+
+template <AccumulationOp Op, typename... Values>
+fluidity_host_device decltype(auto) accumulate()
+{
+  return Accumulator<Op, Values...>::apply();
+}
 
 /// The DimInfoCt struct defines dimension information which is known at compile
 /// time, where the dimension sizes are built into the type via the template
@@ -55,9 +83,9 @@ struct DimInfoCt {
 
   /// Returns the total size of the N dimensional space i.e the total number of
   /// elements in the space. This is the product sum of the dimension 
-  fluidity_host_device static constexpr auto total_size()
+  fluidity_host_device static constexpr decltype(auto) total_size()
   {
-    return (1 * ... * Sizes);
+    return accumulate<AccumulationOp::Mult, Sizes...>();
   }
 
  private:
@@ -85,14 +113,13 @@ struct DimInfoCt {
   fluidity_host_device static constexpr std::size_t
   offset(Dimension<Value> /*dim*/)
   {
-    if constexpr (Value == 0)
+    std::size_t result = 1;
+    if_constexpr<Value != 0>([&] 
     {
-      return 1;
-    }
-    else
-    {
-      return detail::offset(Dimension<Value>{}, offset(Dimension<Value - 1>{}));
-    }
+      result = detail::offset(Dimension<Value>{}            ,
+                              offset(Dimension<Value - 1>{}));
+    });
+    return result;
   }
 
   /// Returns the index of an element in dimension Dim if \p index is the index
@@ -110,7 +137,8 @@ struct DimInfoCt {
 /// The DimInfo struct defines dimension information which is known not known
 /// at compile time.
 struct DimInfo {
-  fluidity_host_device DimInfo() = default;
+  /// Default constructor -- enables creation of empty dimension information.
+  DimInfo() = default;
 
   /// Sets the sizes of the dimensions.
   /// \param[in] sizes  The sizes of the dimensions. 
@@ -145,7 +173,7 @@ struct DimInfo {
   /// elements in the space. This is the product sum of the dimension 
   fluidity_host_device std::size_t total_size() const
   {
-    auto prod_sum = 1;
+    std::size_t prod_sum = 1;
     for (const auto& value : _sizes)
     {
       prod_sum *= value;
@@ -185,16 +213,14 @@ struct DimInfo {
   template <std::size_t Value> 
   fluidity_host_device std::size_t offset(Dimension<Value> /*dim*/) const
   {
-    if constexpr (Value == 0)
+    std::size_t result = 1;
+    if_constexpr<Value != 0>([&]
     {
-      return 1;
-    }
-    else
-    {
-      return detail::offset(Dimension<Value>{}            ,
-                            offset(Dimension<Value - 1>{}),
-                            *this                         );
-    }
+      result =  detail::offset(Dimension<Value>{}            ,
+                               offset(Dimension<Value - 1>{}),
+                               *this                         );
+    });
+    return result;
   }
 
   /// Returns the index of an element in dimension Dim if \p index is the index

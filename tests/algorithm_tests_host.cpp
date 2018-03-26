@@ -163,7 +163,8 @@ TEST(algorithm_host_tests, can_get_min_element)
   const auto size = 20;
   host_tensor1d<int> t(size);
 
-  int value = 1;
+  int min_value = 1;
+  int value     = min_value;
   for (auto& element : t)
   {
     element = value++;
@@ -171,7 +172,7 @@ TEST(algorithm_host_tests, can_get_min_element)
 
   auto result = fluid::min_element(t.begin(), t.end());
 
-  EXPECT_EQ(result, 0);
+  EXPECT_EQ(result, min_value);
 }
 
 int main(int argc, char** argv)

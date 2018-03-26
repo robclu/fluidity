@@ -25,15 +25,21 @@ namespace fluid {
 /// \param[in] end      The last element to find the min element from.
 /// \tparam    Iterator The type of the iterator.
 template <typename Iterator>
-fluidity_host_device decltype(auto)
-min_element(Iterator&& begin, Iterator&& end)
+typename Iterator::value_t min_element(Iterator&& begin, Iterator&& end)
 {
-  return 
-    reduce(
-      std::forward<Iterator>(begin),
-      std::forward<Iterator>(end)  ,
-      [] fluidity_host_device (auto& a, const auto& b) { a = std::min(a, b); }
-    );
+  using value_t = typename Iterator::value_t;
+
+  // Because of cuda only supporting c++14, this can't be a lambda, so we need
+  // to create a separate functor for the max predicate ...
+  struct Min {
+    fluidity_host_device void operator()(value_t& a, const value_t& b) const
+    {
+      a = std::min(a, b);
+    }
+  };
+
+  return
+    reduce(std::forward<Iterator>(begin), std::forward<Iterator>(end), Min{});
 }
 
 } // namespace fluid

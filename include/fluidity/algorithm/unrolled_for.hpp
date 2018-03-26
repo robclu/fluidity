@@ -17,6 +17,7 @@
 #ifndef FLUIDITY_ALGORITHM_UNROLLED_FOR_HPP
 #define FLUIDITY_ALGORITHM_UNROLLED_FOR_HPP
 
+#include "if_constexpr.hpp"
 #include "unrolled_for_impl.hpp"
 #include <fluidity/iterator/range.hpp>
 
@@ -89,18 +90,17 @@ template <std::size_t Amount, typename Functor, typename... Args>
 fluidity_host_device constexpr inline auto
 unrolled_for_bounded(Functor&& functor, Args&&... args)
 {
-  if constexpr (Amount <= max_unroll_depth)
+  if_constexpr<Amount <= max_unroll_depth>([&]
   {
     unrolled_for<Amount>(std::forward<Functor>(functor),
                          std::forward<Args>(args)...   );
-  }
-  else
+  }, [&]
   {
     for (const auto i : range(Amount))
     {
       functor(i, std::forward<Args>(args)...);
     }
-  }
+  });
 }
 
 
