@@ -36,7 +36,7 @@ struct SumPredicate {
   }
 };
 
-TEST(algorithm_host_tests, can_reduce_container)
+TEST(algorithm_device_tests, can_reduce_container)
 {
   const auto size  = 20;
   const int  value = 2;
@@ -55,7 +55,7 @@ struct SetPredicate {
   }
 };
 
-TEST(algorithm_host_tests, can_get_max_element)
+TEST(algorithm_device_tests, can_get_max_element)
 {
   const auto size = 20;
   device_tensor1d<element_t> t(size);
@@ -66,7 +66,7 @@ TEST(algorithm_host_tests, can_get_max_element)
   EXPECT_EQ(result, size - 1);
 }
 
-TEST(algorithm_host_tests, can_get_min_element)
+TEST(algorithm_device_tests, can_get_min_element)
 {
   const auto size = 20;
   device_tensor1d<int> t(size);
