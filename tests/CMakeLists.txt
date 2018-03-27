@@ -12,13 +12,11 @@
 
 # Define the google test libraries to link against:
 set(GTEST_BOTH_LIBRARIES gtest gtest_main)
+set(CUDA_LIBRARIES -lcudart_static -lrt -lcudadevrt)
 
 #==--- Tests ----------------------------------------------------------------==#
 
 add_executable(algorithm_host_tests algorithm_tests_host.cpp)
-set_target_properties(
-  algorithm_host_tests PROPERTIES CUDA_SEPARABLE_COMPILATION ON
-)
 target_link_libraries(algorithm_host_tests ${GTEST_BOTH_LIBRARIES})
 
 add_executable(algorithm_device_tests algorithm_tests_device.cu)
@@ -33,8 +31,15 @@ set_target_properties(
 )
 target_link_libraries(container_device_tests ${GTEST_BOTH_LIBRARIES})
 
-add_executable(container_host_tests container_tests_host.cpp)
+add_executable(container_host_tests container_tests_host.cu)
+set_target_properties(
+  container_host_tests PROPERTIES CUDA_SEPARABLE_COMPILATION ON
+)
 target_link_libraries(container_host_tests ${GTEST_BOTH_LIBRARIES})
+#set_property(
+# TARGET container_host_tests
+#  PROPERTY BUILD_RPATH ${CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES}
+#)
 
 add_executable(dimension_host_tests dimension_tests_host.cpp)
 target_link_libraries(dimension_host_tests ${GTEST_BOTH_LIBRARIES})

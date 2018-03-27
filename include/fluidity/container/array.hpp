@@ -43,7 +43,7 @@ class Array {
   using const_iterator_t  = TensorIterator<self_t, true>;
 
   /// The default constructor uses the default initialization.
-  fluidity_host_device constexpr Array() = default;
+  constexpr Array() = default;
 
   /// Initializes each of the elements in the array to have the value \p value.
   /// \param[in] value The value to set the array elements to.
@@ -54,19 +54,19 @@ class Array {
 
   /// Copies the contents of the \p other array into a new array.
   /// \param[in] other The other array to copy from.
-  fluidity_host_device constexpr Array(const self_t& other) = default;
+  constexpr Array(const self_t& other) = default;
 
   /// Moves the \p other array into this one.
   /// \param[in] other The other array to move from.
-  fluidity_host_device constexpr Array(self_t&& other) = default;
+  constexpr Array(self_t&& other) = default;
 
   /// Copies the contents of the \p other array into a new array.
   /// \param[in] other The other array to copy from.
-  fluidity_host_device constexpr self_t& operator=(const self_t&) = default;
+  constexpr self_t& operator=(const self_t&) = default;
 
   /// Moves the \p other array into this one.
   /// \param[in] other The other array to move from.
-  fluidity_host_device constexpr self_t& operator=(self_t&&) = default;
+  constexpr self_t& operator=(self_t&&) = default;
 
   /// Overload of access operator to access an element. __Note:__
   /// this does not check that the value of \p i is in range.

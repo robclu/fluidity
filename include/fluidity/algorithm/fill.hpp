@@ -22,7 +22,43 @@
 #include <fluidity/utility/type_traits.hpp>
 #include <utility>
 
-namespace fluid {
+namespace fluid  {
+namespace detail {
+
+/// Struct which implements filling based on whether or not a predicate is used.
+/// This implementation is for when a predicate is not used.
+/// \tparam UsesPredicate If a predicate is used. 
+template <bool UsesPredicate = false>
+struct FillImpl {
+  /// Implements the filling, setting the iterator to the value.
+  /// \param[in] it       The iterator to set the value for.
+  /// \param[in] value    The value to set the iterator to.
+  /// \tparam    Iterator The type of the iterator.
+  /// \tparam    T        The type of the value.
+  template <typename Iterator, typename T>
+  static constexpr void apply(Iterator&& it, T value)
+  {
+    *it = value;
+  }
+};
+
+template <>
+struct FillImpl<true> {
+  /// Implements the filling, setting the iterator using the predicate.
+  /// \param[in] it       The iterator to set the value for.
+  /// \param[in] pred     The predicate to use to set the iterator.
+  /// \param[in] args     Additional arguments for the predicate.
+  /// \tparam    Iterator The type of the iterator.
+  /// \tparam    Pred     The type of the predicate.
+  /// \tparam    Args     The types of additional predicate arguments.
+  template <typename Iterator, typename Pred, typename... Args>
+  static constexpr void apply(Iterator&& it, Pred&& pred, Args&&... args)
+  {
+    pred(*it, std::forward<Args>(args)...);
+  }
+};
+
+} // namespace detail
 
 /// Fills the range of values defined by { end - begin } using \p pred to set
 /// the value of the elements. The \p pred can either be a value or a callable
@@ -42,23 +78,25 @@ template < typename    Iterator
          >
 void fill(Iterator begin, Iterator end, T value, Args&&... args)
 {
-#if !defined(__CUDACC__)
-  constexpr bool not_predicate = 
-    std::is_convertible<typename Iterator::value_t, T>::value;
+  constexpr bool is_predicate = 
+    !std::is_convertible<typename Iterator::value_t, T>::value;
 
   while (end - begin > 0)
   {
-    if constexpr (not_predicate)
+    detail::FillImpl<is_predicate>::apply(begin                      ,
+                                          std::forward<T>(value)     ,
+                                          std::forward<Args>(args)...);
+/*
+    if_constexpr<not_predicate>([&]
     {
       *begin = value;
-    }
-    else
+    }, [&]
     {
       value(*begin, std::forward<Args>(args)...);
-    }
+    });
+*/
     ++begin;
   }
-#endif // __CUDACC__
 }
 
 /// Fills the range of values defined by { end - begin } using \p pred to set
