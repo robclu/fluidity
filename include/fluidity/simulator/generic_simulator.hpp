@@ -16,9 +16,11 @@
 #ifndef FLUIDITY_SIMULATOR_GENERIC_SIMULATOR_HPP
 #define FLUIDITY_SIMULATOR_GENERIC_SIMULATOR_HPP
 
+#include "parameters.hpp"
 #include "simulation_traits.hpp"
 #include "simulator.hpp"
 #include <fluidity/algorithm/fill.hpp>
+#include <fluidity/algorithm/max_element.hpp>
 #include <fluidity/container/host_tensor.hpp>
 #include <fluidity/dimension/dimension_info.hpp>
 #include <fstream>
@@ -135,7 +137,7 @@ void GenericSimulator<Traits>::simulate()
   auto   iters = 0;
 
   auto start = high_resolution_clock::now();
-  auto end   = high_resolution_clock::end();
+  auto end   = high_resolution_clock::now();
 
   while (time < _params.run_time && iters < _params.max_iters)
   {
@@ -152,7 +154,8 @@ void GenericSimulator<Traits>::simulate()
 
 template <typename Traits>
 Simulator<Traits>*
-GenericSimulator<Traits>::configure_dimension(std::size_t dim, dim_spec_t spec)
+GenericSimulator<Traits>::configure_dimension(std::size_t /*dim*/, 
+                                              dim_spec_t  spec   )
 {
   _initial_states.resize(spec.elements());
   _updated_states.resize(spec.elements());

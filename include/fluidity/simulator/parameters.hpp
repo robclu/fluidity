@@ -46,26 +46,26 @@ struct Parameters {
   /// Updates the parameter values based on the \p max_wavespeed in the
   /// simulation domain.
   /// \param[in] max_wavespeed The maximum wavespeed in the simulation domain.
-  fluidity_host_device update(value_t max_wavespeed)
+  void update(value_t max_wavespeed)
   {
-    dt = cfl * resolution / max_wavespeed;
+    _dt = cfl * resolution / max_wavespeed;
   }
 
   /// Returns the value of the time delta for each iteration.
   fluidity_host_device value_t dt() const
   {
-    return dt;
+    return _dt;
   }
 
   /// Returns the value of the timestep divided by the resolution, which is
   /// commonly referred to as ($\lambda$) in the literature.
   fluidity_host_device value_t dt_dh() const
   {
-    return dt / resolution;
+    return _dt / resolution;
   }
 
  private:
-  value_t dt = 0; //!< Time delta for the simulation.
+  value_t _dt = 0; //!< Time delta for the simulation.
 };
 
 }} // namespace fluid::sim

@@ -20,6 +20,7 @@
 #include "dimension.hpp"
 #include <fluidity/algorithm/if_constexpr.hpp>
 #include <fluidity/algorithm/fold.hpp>
+#include <fluidity/utility/type_traits.hpp>
 #include <vector>
 
 namespace fluid {
@@ -109,17 +110,23 @@ struct DimInfoCt {
   /// offset in the 0 dimension (Value = 0) is always taken to be one.
   /// \param[in] dim    The dimension to get the offset for.
   /// \tparam    Value  The value which defines the dimension.
-  template <std::size_t Value> 
+  template <std::size_t Value, std::enable_if_t<(Value > 0), int> = 0> 
   fluidity_host_device static constexpr std::size_t
   offset(Dimension<Value> /*dim*/)
   {
-    std::size_t result = 1;
-    if_constexpr<Value != 0>([&] 
-    {
-      result = detail::offset(Dimension<Value>{}            ,
-                              offset(Dimension<Value - 1>{}));
-    });
-    return result;
+    return detail::offset(Dimension<Value>{}            ,
+                          offset(Dimension<Value - 1>{}));
+  }
+
+  /// Returns amount of offset required to iterate in dimension \p dim. The
+  /// offset in the 0 dimension (Value = 0) is always taken to be one.
+  /// \param[in] dim    The dimension to get the offset for.
+  /// \tparam    Value  The value which defines the dimension.
+  template <std::size_t Value, std::enable_if_t<(Value <= 0), int> = 0> 
+  fluidity_host_device static constexpr std::size_t
+  offset(Dimension<Value> /*dim*/)
+  {
+    return 1;
   }
 
   /// Returns the index of an element in dimension Dim if \p index is the index
@@ -210,17 +217,22 @@ struct DimInfo {
   /// offset in the 0 dimension (Value = 0) is always taken to be one.
   /// \param[in] dim    The dimension to get the offset for.
   /// \tparam    Value  The value which defines the dimension.
-  template <std::size_t Value> 
+  template <std::size_t Value, std::enable_if_t<(Value > 0), int> = 0> 
   fluidity_host_device std::size_t offset(Dimension<Value> /*dim*/) const
   {
-    std::size_t result = 1;
-    if_constexpr<Value != 0>([&]
-    {
-      result =  detail::offset(Dimension<Value>{}            ,
-                               offset(Dimension<Value - 1>{}),
-                               *this                         );
-    });
-    return result;
+    return detail::offset(Dimension<Value>{}            ,
+                          offset(Dimension<Value - 1>{}),
+                         *this                         );
+  }
+
+  /// Returns amount of offset required to iterate in dimension \p dim. The
+  /// offset in the 0 dimension (Value = 0) is always taken to be one.
+  /// \param[in] dim    The dimension to get the offset for.
+  /// \tparam    Value  The value which defines the dimension.
+  template <std::size_t Value, std::enable_if_t<(Value <= 0), int> = 0> 
+  fluidity_host_device std::size_t offset(Dimension<Value> /*dim*/) const
+  {
+    return 1;
   }
 
   /// Returns the index of an element in dimension Dim if \p index is the index

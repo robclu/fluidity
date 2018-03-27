@@ -86,15 +86,6 @@ void fill(Iterator begin, Iterator end, T value, Args&&... args)
     detail::FillImpl<is_predicate>::apply(begin                      ,
                                           std::forward<T>(value)     ,
                                           std::forward<Args>(args)...);
-/*
-    if_constexpr<not_predicate>([&]
-    {
-      *begin = value;
-    }, [&]
-    {
-      value(*begin, std::forward<Args>(args)...);
-    });
-*/
     ++begin;
   }
 }

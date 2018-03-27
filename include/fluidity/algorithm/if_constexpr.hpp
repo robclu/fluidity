@@ -69,6 +69,13 @@ struct IfConstexpr<true, Conditions...> : public IfConstexpr<Conditions...> {
   {
     p();
   }
+
+  /// Does nothing but terminates recursion.
+  /// \param[in] p  The tredicate assosciated with the true condition.
+  /// \param[in] ps The predicates assosciated with the other conditions.
+  /// \tparam    P  The type of the predicate.
+  /// \tparam    Ps The types of the rest of the predicates.
+  constexpr IfConstexpr() {}
 };
 
 /// Specialization for the case that a condition is false which does nothing
@@ -91,6 +98,16 @@ struct IfConstexpr<false, Conditions...> : public IfConstexpr<Conditions...> {
   /// \tparam    P  The type of the predicate.
   /// \tparam    Ps The types of the rest of the predicates.
   constexpr IfConstexpr() {}
+};
+
+template <>
+struct IfConstexpr<> {
+  /// Does nothing since this is the false case.
+  /// \param[in] p  The tredicate assosciated with the true condition.
+  /// \param[in] ps The predicates assosciated with the other conditions.
+  /// \tparam    P  The type of the predicate.
+  /// \tparam    Ps The types of the rest of the predicates.
+  constexpr IfConstexpr() {} 
 };
 
 } // namespace detaild
@@ -157,6 +174,13 @@ struct IfConstexpr<true, Conditions...> : public IfConstexpr<Conditions...> {
   {
     p();
   }
+
+  /// Does nothing since this is the false case.
+  /// \param[in] p  The tredicate assosciated with the true condition.
+  /// \param[in] ps The predicates assosciated with the other conditions.
+  /// \tparam    P  The type of the predicate.
+  /// \tparam    Ps The types of the rest of the predicates.
+  fluidity_device_only IfConstexpr() {}
 };
 
 /// Specialization for the case that a condition is false which does nothing
@@ -179,6 +203,16 @@ struct IfConstexpr<false, Conditions...> : public IfConstexpr<Conditions...> {
   /// \tparam    P  The type of the predicate.
   /// \tparam    Ps The types of the rest of the predicates.
   fluidity_device_only IfConstexpr() {}
+};
+
+template <>
+struct IfConstexpr<> {
+  /// Does nothing since this is the false case.
+  /// \param[in] p  The tredicate assosciated with the true condition.
+  /// \param[in] ps The predicates assosciated with the other conditions.
+  /// \tparam    P  The type of the predicate.
+  /// \tparam    Ps The types of the rest of the predicates.
+  fluidity_device_only IfConstexpr() {} 
 };
 
 } // namespace detaild
