@@ -20,6 +20,7 @@
 
 #include "base_tensor.hpp"
 #include "tensor_fwrd.hpp"
+#include "device_tensor.hpp"
 #include <fluidity/iterator/tensor_iterator.hpp>
 #include <fluidity/utility/cuda.hpp>
 #include <cstddef>
@@ -70,6 +71,9 @@ class HostTensor<T, 1> : public BaseTensor<T, 1> {
   /// Constructor to create a host tensor from a device tensor.
   /// \param[in] dev_tensor The device tensor to create the host tensor from.
   HostTensor(const DeviceTensor<T, 1>& dev_tensor);
+
+  /// Returns the HostTensor as a device tensor.
+  DeviceTensor<T, 1> as_device() const;
 
   /// Returns an iterator to the first element in the tensor.
   iterator_t begin()
@@ -137,6 +141,12 @@ HostTensor<T, 1>::HostTensor(const DeviceTensor<T, 1>& dev_tensor)
   util::cuda::memcpy_device_to_host(dev_tensor._data       ,
                                     this->_data            ,
                                     this->mem_requirement());
+}
+
+template <typename T>
+DeviceTensor<T, 1> HostTensor<T, 1>::as_device() const
+{
+  return DeviceTensor<T, 1>(*this);
 }
 
 template <typename T>

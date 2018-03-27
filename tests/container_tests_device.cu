@@ -78,6 +78,20 @@ TEST(container_device_tensor, can_resize_tensor)
   }
 }
 
+TEST(container_device_tensor, can_get_device_tensor_as_host_tensor)
+{
+  device_tensor1d<int> t;
+  t.resize(30);
+  fluid::fill(t.begin(), t.end(), SetPredicate{});
+
+  auto ht    = t.as_host();
+  auto count = 0;
+  for (const auto& element : ht) 
+  {
+    EXPECT_EQ(element, count++);
+  }
+}
+
 int main(int argc, char** argv)
 {
   ::testing::InitGoogleTest(&argc, argv);

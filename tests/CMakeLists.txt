@@ -16,6 +16,9 @@ set(GTEST_BOTH_LIBRARIES gtest gtest_main)
 #==--- Tests ----------------------------------------------------------------==#
 
 add_executable(algorithm_host_tests algorithm_tests_host.cpp)
+set_target_properties(
+  algorithm_host_tests PROPERTIES CUDA_SEPARABLE_COMPILATION ON
+)
 target_link_libraries(algorithm_host_tests ${GTEST_BOTH_LIBRARIES})
 
 add_executable(algorithm_device_tests algorithm_tests_device.cu)

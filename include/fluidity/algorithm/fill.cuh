@@ -23,6 +23,7 @@
 #include <fluidity/utility/debug.hpp>
 #include <fluidity/utility/portability.hpp>
 #include <fluidity/utility/type_traits.hpp>
+#include <algorithm>
 #include <utility>
 
 namespace fluid  {

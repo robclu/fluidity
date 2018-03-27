@@ -73,6 +73,26 @@ TEST(container_host_tensor, can_resize_tensor)
   }
 }
 
+TEST(container_host_tensor, can_convert_to_and_from_device_tensor)
+{
+  host_tensor1d<int> t;
+  t.resize(30);
+  std::size_t count = 0;
+  fluid::fill(t.begin(), t.end(), [&count] (auto& iterator)
+  {
+    iterator = count++;
+  });
+
+  auto dt = t.as_device();
+  auto ht = dt.as_host();
+
+  count = 0;
+  for (const int& element : ht) 
+  {
+    EXPECT_EQ(element, count++);
+  }
+}
+
 TEST(container_array, can_create_array)
 {
   array_t a{2};
