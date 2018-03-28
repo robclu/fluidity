@@ -222,7 +222,7 @@ struct DimInfo {
   {
     return detail::offset(Dimension<Value>{}            ,
                           offset(Dimension<Value - 1>{}),
-                         *this                         );
+                          *this                         );
   }
 
   /// Returns amount of offset required to iterate in dimension \p dim. The
