@@ -161,53 +161,151 @@ struct BoundaryLoader {
   /// With the above illustration, the technique used in the code should be
   /// relatively simple to understand.
   /// 
+  /// This implementation is for GPU iterators.
+  /// 
   /// \param[in]  state   The state iterator to use to set the boundary.
   /// \param[in]  size    The size of the dimension (number of elements)
   /// \param[in]  dim     The dimension to set the boundary in.
   /// \tparam     State   The type of the state iterator.
-  template <typename Iterator, typename Data, std::size_t Value>
-  fluidity_host_device void operator()(Iterator&&            patch_it ,
-                                       Iterator&&            global_it,
-                                       std::size_t           elements ,
-                                       Dimension<Value>      /*dim*/  ,
-                                       const BoundarySetter& setter   ) const
+  template < typename    Iterator
+           , typename    Data    ,
+           , std::size_t Value
+           , std::enable_if_t<
+               exec::is_gpu_policy_v<typename Iterator::exec_policy_t>, int> = 0
+           >>
+  static fluidity_host_device void boundary(Iterator&&            data     ,
+                                            Iterator&&            patch    ,
+                                            std::size_t           elements ,
+                                            Dimension<Value>      /*dim*/  ,
+                                            const BoundarySetter& setter   )
   {
     constexpr auto dim = Dimension<Value>{};
 
     // The global index is used to load additional data at the boundaries of
     // the domain, and the local index is used to load extra data which is
     // inside the domain.
-    auto global_id = global_id(dim), local_id = thread_id(dim);
-
-    if (global_id < padding)
+    auto shift = global_id(dim)
+    if (shift < padding)
     {
-      setter(*patch_it                           ,
-             *patch_it.offset(-2 * global_id - 1),
-             dim                                 ,
-             BoundaryIndex::first                );
-    }
-    else if (local_id < padding)
-    {
-      const auto shift = -2 * local_id - 1;
-      *patch_it.offset(shift) = *global_it.offset(shift);
+      setter(*data.offset(2 * shift + 1  , dim),
+             *patch.offset(-2 * shift - 1, dim),
+             dim                               ,
+             BoundaryIndex::first              );
     }
 
     // Move id values to end end of the block:
-    global_id = static_cast<int>(elements) - global_id - 1;
-    local_id  = static_cast<int>(block_size(dim)) - local_id - 1;
+    shift = elements - global_id(dim) - 1;
+    if (shift < padding)
+    {
+      setter(*data.offset(elements - 2 * shift - 1, dim),
+             *patch.offset(2 * shift + 1, dim)          ,
+             dim                                        ,
+             BoundaryIndex::second                      );
+    }
+  }
 
-    if (global_id < padding)
+  /// This sets the boundaries relative to \p state in all of the dimensions. 
+  /// The \p state should be a shared memory iterator to the data which can
+  /// iterate over the given dimension (i.e MultidimIterator). For each
+  /// dimension, loading is done in the following manner:
+  /// 
+  /// Memory block layout for a single dimension:
+  /// 
+  /// b = boundary element to set
+  /// s = valid state data to use to set the element
+  /// 
+  ///    ____________________________          ___________________________
+  ///    |           ______         |          |          ______         |
+  ///    |           |    |         |          |          |    |         |
+  ///    V           V    |         |          |          |    V         V
+  /// =======================================================================
+  /// | b-n | b-1 | b0 | s0 | s1 | sn | ... | s-n | s-1 | s0 | b0 | b1 | bn |
+  /// =======================================================================
+  ///          ^              |                      |              ^
+  ///          |______________|                      |______________|
+  ///          
+  /// With the above illustration, the technique used in the code should be
+  /// relatively simple to understand.
+  /// 
+  /// This implementation is for CPU iterators.
+  /// 
+  /// \param[in]  state   The state iterator to use to set the boundary.
+  /// \param[in]  size    The size of the dimension (number of elements)
+  /// \param[in]  dim     The dimension to set the boundary in.
+  /// \tparam     State   The type of the state iterator.
+  template < typename    Iterator
+           , typename    Data
+           , std::size_t Value
+           , std::enable_if_t<
+               exec::is_gpu_policy_v<typename Iterator::exec_policy_t>, int> = 0
+           >>
+  static fluidity_host_device void load(Iterator&&       data     ,
+                                        std::size_t      elements ,
+                                        Dimension<Value> /*dim*/  )
+  {
+    constexpr auto dim = Dimension<Value>{};
+    if (thread_id(dim) < padding)
     {
-      setter(*patch_it                          ,
-             *patch_it.offset(2 * global_id + 1),
-             dim                                ,
-             BoundaryIndex::second                    );
+      *data = *data.offset(-2 * thread_id(dim) - 1, dim);
     }
-    else if (local_id < padding)
+    else if (thread_id(dim) > elements - padding)
     {
-      const auto shift = 2 * local_id + 1;
-      *patch_it.offset(shift) = *global_it.offset(shift);
+      *data = *data.offset(2 * thread_id(dim) + 1, dim);
     }
+  }
+
+  /// This sets the boundaries relative to \p state in all of the dimensions. 
+  /// The \p state should be a shared memory iterator to the data which can
+  /// iterate over the given dimension (i.e MultidimIterator). For each
+  /// dimension, loading is done in the following manner:
+  /// 
+  /// Memory block layout for a single dimension:
+  /// 
+  /// b = boundary element to set
+  /// s = valid state data to use to set the element
+  /// 
+  ///    ____________________________          ___________________________
+  ///    |           ______         |          |          ______         |
+  ///    |           |    |         |          |          |    |         |
+  ///    V           V    |         |          |          |    V         V
+  /// =======================================================================
+  /// | b-n | b-1 | b0 | s0 | s1 | sn | ... | s-n | s-1 | s0 | b0 | b1 | bn |
+  /// =======================================================================
+  ///          ^              |                      |              ^
+  ///          |______________|                      |______________|
+  ///          
+  /// With the above illustration, the technique used in the code should be
+  /// relatively simple to understand.
+  /// 
+  /// This implementation is for CPU iterators.
+  /// 
+  /// \param[in]  state   The state iterator to use to set the boundary.
+  /// \param[in]  size    The size of the dimension (number of elements)
+  /// \param[in]  dim     The dimension to set the boundary in.
+  /// \tparam     State   The type of the state iterator.
+  template < typename    Iterator
+           , typename    Data
+           , std::size_t Value
+           , std::enable_if_t<
+               exec::is_cpu_policy_v<typename Iterator::exec_policy_t>, int> = 0
+           >>
+  static fluidity_host_device void load(Iterator&&       data     ,
+                                        std::size_t      elements ,
+                                        Dimension<Value> /*dim*/  )
+  {
+    auto front = data + padding;
+    auto back  = data + elements - padding;
+
+    unrolled_for<padding>([&] (auto i)
+    {
+      constexpr auto dim   = Dimension<Value>{};
+      constexpr auto shift = -2 * i - 1;
+
+      *front                   = *front.offset(shift, dim);
+      *back.offset(shift, dim) = *back;
+
+      front++: back++;
+    });
   }
 };
 
