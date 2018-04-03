@@ -18,6 +18,8 @@
 
 #include "state_impl.hpp"
 #include <fluidity/container/number.hpp>
+#include <string>
+#include <vector>
 
 namespace fluid  {
 namespace state  {

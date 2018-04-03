@@ -18,15 +18,25 @@
 #include <fluidity/container/array.hpp>
 #include <gtest/gtest.h>
 
-template <typename T>
-using host_tensor1d = fluid::HostTensor<T, 1>;
 using array_t       = fluid::Array<int, 3>;
+using namespace fluid;
 
 TEST(container_host_tensor, can_create_tensor)
 {
   host_tensor1d<float> t(20);
 
   EXPECT_EQ(t.size(), static_cast<decltype(t.size())>(20));
+}
+
+TEST(container_host_tensor, can_create_and_initialize_tensor)
+{
+  const float v = 3.0f;
+  host_tensor1d<float> t(20, v);
+
+  for (const auto& e : t)
+  {
+    EXPECT_EQ(e, v);
+  }
 }
 
 TEST(container_host_tensor, can_fill_tensor)

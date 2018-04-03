@@ -78,6 +78,38 @@ class DeviceTensor;
 template <typename T, std::size_t Dimensions>
 class HostTensor;
 
+//==--- ALiases ------------------------------------------------------------==//
+
+/// Alias for a 1-dimensional host side tensor.
+/// \tparam T The type of the data for the tensor.
+template <typename T>
+using host_tensor1d = HostTensor<T, 1>;
+
+/// Alias for a 1-dimensional device side tensor.
+/// \tparam T The type of the data for the tensor.
+template <typename T>
+using device_tensor1d = DeviceTensor<T, 1>;
+
+/// Alias for a 2-dimensional host side tensor.
+/// \tparam T The type of the data for the tensor.
+template <typename T>
+using host_tensor2d = HostTensor<T, 2>;
+
+/// Alias for a 2-dimensional device side tensor.
+/// \tparam T The type of the data for the tensor.
+template <typename T>
+using device_tensor2d = DeviceTensor<T, 2>;
+
+/// Alias for a 3-dimensional host side tensor.
+/// \tparam T The type of the data for the tensor.
+template <typename T>
+using host_tensor3d = HostTensor<T, 3>;
+
+/// Alias for a 3-dimensional device side tensor.
+/// \tparam T The type of the data for the tensor.
+template <typename T>
+using device_tensor3d = DeviceTensor<T, 3>;
+
 } // namespace fluid
 
 #endif // FLUIDITY_CONTAINER_TENSOR_FWRD_HPP

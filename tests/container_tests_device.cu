@@ -18,17 +18,25 @@
 #include <fluidity/container/host_tensor.hpp>
 #include <gtest/gtest.h>
 
-template <typename T>
-using device_tensor1d = fluid::DeviceTensor<T, 1>;
-
-template <typename T>
-using host_tensor1d = fluid::HostTensor<T, 1>;
+using namespace fluid;
 
 TEST(container_device_tensor, can_create_tensor)
 {
   device_tensor1d<float> t(20);
 
   EXPECT_EQ(t.size(), static_cast<decltype(t.size())>(20));
+}
+
+TEST(container_host_tensor, can_create_and_initialize_tensor)
+{
+  const float v = 3.0f;
+  device_tensor1d<float> t(20, v);
+
+  auto ht = host_tensor1d<float>(t);
+  for (const auto& e : ht)
+  {
+    EXPECT_EQ(e, v);
+  }
 }
 
 TEST(container_device_tensor, can_fill_tensor)

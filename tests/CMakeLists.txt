@@ -50,6 +50,9 @@ target_link_libraries(iterator_host_tests ${GTEST_BOTH_LIBRARIES})
 add_executable(simulator_tests simulator_tests.cpp)
 target_link_libraries(simulator_tests ${GTEST_BOTH_LIBRARIES})
 
+add_executable(solver_host_tests solver_tests_host.cpp)
+target_link_libraries(solver_host_tests ${GTEST_BOTH_LIBRARIES})
+
 add_executable(state_host_tests state_tests_host.cpp)
 target_link_libraries(state_host_tests ${GTEST_BOTH_LIBRARIES})
 
