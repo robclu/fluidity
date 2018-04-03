@@ -63,6 +63,44 @@ TEST(boundry_loader, can_load_transmissive_boundaries_1d)
   EXPECT_EQ((data.end() - 4)->velocity(dim_x), 4.0f);
 }
 
+TEST(boundry_loader, can_load_reflective_boundaries_1d)
+{
+  host_tensor1d<primitive1d_t> data(8);
+  float c   = 0.0f;
+  float inc = 1.0f;
+  fill(data.begin(), data.end(), [&c, inc] (auto& e)
+  {
+    e.set_density(1);
+    e.set_velocity(c, dim_x);
+    c += inc;
+  });
+
+  BoundarySetter setter;
+  setter.configure(dim_x, BoundaryIndex::first , BoundaryKind::reflective);
+  setter.configure(dim_x, BoundaryIndex::second, BoundaryKind::reflective);
+
+  setter(*(data.begin() + 3), *(data.begin())    , dim_x, BoundaryIndex::first);
+  setter(*(data.begin() + 2), *(data.begin() + 1), dim_x, BoundaryIndex::first);
+
+  setter(*(data.end() - 4), *(data.end() - 1), dim_x, BoundaryIndex::second);
+  setter(*(data.end() - 3), *(data.end() - 2), dim_x, BoundaryIndex::second);
+
+  for (const auto& e : data)
+  {
+    EXPECT_EQ(e.density(), 1);
+  }
+
+  EXPECT_EQ(data.begin()->velocity(dim_x)      , -3.0f);
+  EXPECT_EQ((data.begin() + 1)->velocity(dim_x), -2.0f);
+  EXPECT_EQ((data.begin() + 2)->velocity(dim_x),  2.0f);
+  EXPECT_EQ((data.begin() + 3)->velocity(dim_x),  3.0f);
+
+  EXPECT_EQ((data.end() - 1)->velocity(dim_x), -4.0f);
+  EXPECT_EQ((data.end() - 2)->velocity(dim_x), -5.0f);
+  EXPECT_EQ((data.end() - 3)->velocity(dim_x),  5.0f);
+  EXPECT_EQ((data.end() - 4)->velocity(dim_x),  4.0f);
+}
+
 int main(int argc, char** argv)
 {
   ::testing::InitGoogleTest(&argc, argv);
