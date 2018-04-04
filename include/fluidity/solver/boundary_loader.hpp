@@ -128,25 +128,26 @@ struct BoundarySetter {
 /// end of a dimensions the "extra" cells need to be set based on the type of
 /// boundary in the computational domain, while for other blocks (i.e if the
 /// domain is split into patches) then the values comes from inside the domain.
+/// 
+/// The loader functionality is thus split into boundary loading and internal
+/// loading functionality.
 ///
-/// For GPU computation for example, padding elements need to be loaded into
-/// shared memory, while for a CPU implementation the extra elements need to be
-/// copied across to other cores being used in the computation.
 /// \tparam Padding The width of the padding (per edge).
 template <std::size_t Padding>
 struct BoundaryLoader {
   /// Defines the amount of padding used by the loader.
   static constexpr std::size_t padding = Padding;
 
-  /// This sets the boundaries relative to \p state in all of the dimensions. 
-  /// The \p state should be a shared memory iterator to the data which can
-  /// iterate over the given dimension (i.e MultidimIterator). For each
-  /// dimension, loading is done in the following manner:
+  /// This sets the boundary elements in a specific dimension for a \p patch,
+  /// where the \p patch is an iterator which can iterate over the given
+  /// dimension.
+  /// 
+  /// Loading is done in the following manner:
   /// 
   /// Memory block layout for a single dimension:
   /// 
-  /// b = boundary element to set
-  /// s = valid state data to use to set the element
+  /// b = boundary element to set in the patch
+  /// s = valid global data to use to set the element
   /// 
   ///    ____________________________          ___________________________
   ///    |           ______         |          |          ______         |
@@ -161,23 +162,26 @@ struct BoundaryLoader {
   /// With the above illustration, the technique used in the code should be
   /// relatively simple to understand.
   /// 
-  /// This implementation is for GPU iterators.
+  /// This implementation is only enabled when the iterator is a GPU iterator.
   /// 
-  /// \param[in]  state   The state iterator to use to set the boundary.
-  /// \param[in]  size    The size of the dimension (number of elements)
-  /// \param[in]  dim     The dimension to set the boundary in.
-  /// \tparam     State   The type of the state iterator.
+  /// \param[in]  data     An iterator to global data.
+  /// \param[in]  patch    An iterator to the patch data.
+  /// \param[in]  elements The number of elements in the data for the dim.
+  /// \param[in]  dim      The dimension to set the boundary in.
+  /// \param[in]  setter   The object which is used to set the elements.
+  /// \tparam     Iterator The type of the iterators.
+  /// \tparam     Value    The value which defines the dimension.
   template < typename    Iterator
-           , typename    Data    ,
            , std::size_t Value
            , std::enable_if_t<
                exec::is_gpu_policy_v<typename Iterator::exec_policy_t>, int> = 0
            >>
-  static fluidity_host_device void boundary(Iterator&&            data     ,
-                                            Iterator&&            patch    ,
-                                            std::size_t           elements ,
-                                            Dimension<Value>      /*dim*/  ,
-                                            const BoundarySetter& setter   )
+  static fluidity_host_device void
+  load_boundary(Iterator&&            data     ,
+                Iterator&&            patch    ,
+                std::size_t           elements ,
+                Dimension<Value>      /*dim*/  ,
+                const BoundarySetter& setter   )
   {
     constexpr auto dim = Dimension<Value>{};
 
@@ -187,32 +191,31 @@ struct BoundaryLoader {
     auto shift = global_id(dim)
     if (shift < padding)
     {
-      setter(*data.offset(2 * shift + 1  , dim),
-             *patch.offset(-2 * shift - 1, dim),
-             dim                               ,
-             BoundaryIndex::first              );
+      const auto elem_to_use = *data.offset(2 * shift + 1  , dim);
+      const auto elem_to_set = *patch.offset(-2 * shift - 1, dim);
+      setter(elem_to_use, elem_to_set, dim, BoundaryIndex::first);
     }
 
     // Move id values to end end of the block:
     shift = elements - global_id(dim) - 1;
     if (shift < padding)
     {
-      setter(*data.offset(elements - 2 * shift - 1, dim),
-             *patch.offset(2 * shift + 1, dim)          ,
-             dim                                        ,
-             BoundaryIndex::second                      );
+      const auto elem_to_use = *data.offset(elements - 2 * shift - 1, dim);
+      const auto elem_to_set = *patch.offset(2 * shift + 1, dim);
+      setter(elem_to_use, elem_to_set, dim, BoundaryIndex::second);
     }
   }
 
-  /// This sets the boundaries relative to \p state in all of the dimensions. 
-  /// The \p state should be a shared memory iterator to the data which can
-  /// iterate over the given dimension (i.e MultidimIterator). For each
-  /// dimension, loading is done in the following manner:
+  /// This sets the boundary elements in a specific dimension for a \p patch,
+  /// where the \p patch is an iterator which can iterate over the given
+  /// dimension.
+  /// 
+  /// Loading is done in the following manner:
   /// 
   /// Memory block layout for a single dimension:
   /// 
-  /// b = boundary element to set
-  /// s = valid state data to use to set the element
+  /// b = boundary element to set in the patch
+  /// s = valid global data to use to set the element
   /// 
   ///    ____________________________          ___________________________
   ///    |           ______         |          |          ______         |
@@ -227,21 +230,73 @@ struct BoundaryLoader {
   /// With the above illustration, the technique used in the code should be
   /// relatively simple to understand.
   /// 
-  /// This implementation is for CPU iterators.
+  /// This implementation is only enabled when the iterator is a CPU iterator.
   /// 
-  /// \param[in]  state   The state iterator to use to set the boundary.
-  /// \param[in]  size    The size of the dimension (number of elements)
-  /// \param[in]  dim     The dimension to set the boundary in.
-  /// \tparam     State   The type of the state iterator.
+  /// \param[in]  data     An iterator to global data.
+  /// \param[in]  patch    An iterator to the patch data.
+  /// \param[in]  elements The number of elements in the data for the dim.
+  /// \param[in]  dim      The dimension to set the boundary in.
+  /// \param[in]  setter   The object which is used to set the elements.
+  /// \tparam     Iterator The type of the iterators.
+  /// \tparam     Value    The value which defines the dimension.
   template < typename    Iterator
-           , typename    Data
+           , std::size_t Value
+           , std::enable_if_t<
+               exec::is_cpu_policy_v<typename Iterator::exec_policy_t>, int> = 0
+           >>
+  static fluidity_host_device void
+  load_boundary(Iterator&&            data     ,
+                Iterator&&            patch    ,
+                std::size_t           elements ,
+                Dimension<Value>      /*dim*/  ,
+                const BoundarySetter& setter   )
+  {
+    constexpr auto dim = Dimension<Value>{};
+
+    auto front = data + padding;
+    auto back  = data + elements - padding;
+
+    unrolled_for<padding>([&] (auto i)
+    {
+
+    });
+  }
+
+  /// This sets the padding elements in a specific dimension for a \p patch,
+  /// where the \p patch is an iterator which can iterate over the given
+  /// dimension.
+  /// 
+  /// Loading is done in the following manner:
+  /// 
+  /// Memory block layout for a single dimension:
+  /// 
+  /// p = padding element to set in the patch
+  /// s = data element to use to set the element
+  /// 
+  ///    ____________________________          ___________________________
+  ///    |           ______         |          |          ______         |
+  ///    |           |    |         |          |          |    |         |
+  ///    V           V    |         |          |          |    V         V
+  /// =======================================================================
+  /// | p-n | p-1 | p0 | s0 | s1 | sn | ... | s-n | s-1 | s0 | p0 | p1 | pn |
+  /// =======================================================================
+  ///          ^              |                      |              ^
+  ///          |______________|                      |______________|
+  ///          
+  /// This implementation is only enabled when the iterator is a GPU iterator.
+  /// 
+  /// \param[in]  patch    An iterator to the patch data.
+  /// \param[in]  elements The number of elements in the patch.
+  /// \param[in]  dim      The dimension to set the boundary in.
+  /// \tparam     Iterator The type of the iterators.
+  /// \tparam     Value    The value which defines the dimension.
+  template < typename    Iterator
            , std::size_t Value
            , std::enable_if_t<
                exec::is_gpu_policy_v<typename Iterator::exec_policy_t>, int> = 0
            >>
-  static fluidity_host_device void load(Iterator&&       data     ,
-                                        std::size_t      elements ,
-                                        Dimension<Value> /*dim*/  )
+  static fluidity_host_device void
+  load_patch(Iterator&& patch, std::size_t elements, Dimension<Value> /*dim*/)
   {
     constexpr auto dim = Dimension<Value>{};
     if (thread_id(dim) < padding)
@@ -254,35 +309,34 @@ struct BoundaryLoader {
     }
   }
 
-  /// This sets the boundaries relative to \p state in all of the dimensions. 
-  /// The \p state should be a shared memory iterator to the data which can
-  /// iterate over the given dimension (i.e MultidimIterator). For each
-  /// dimension, loading is done in the following manner:
+  /// This sets the padding elements in a specific dimension for a \p patch,
+  /// where the \p patch is an iterator which can iterate over the given
+  /// dimension.
+  /// 
+  /// Loading is done in the following manner:
   /// 
   /// Memory block layout for a single dimension:
   /// 
-  /// b = boundary element to set
-  /// s = valid state data to use to set the element
+  /// p = padding element to set in the patch
+  /// s = data element to use to set the element
   /// 
   ///    ____________________________          ___________________________
   ///    |           ______         |          |          ______         |
   ///    |           |    |         |          |          |    |         |
   ///    V           V    |         |          |          |    V         V
   /// =======================================================================
-  /// | b-n | b-1 | b0 | s0 | s1 | sn | ... | s-n | s-1 | s0 | b0 | b1 | bn |
+  /// | p-n | p-1 | p0 | s0 | s1 | sn | ... | s-n | s-1 | s0 | p0 | p1 | pn |
   /// =======================================================================
   ///          ^              |                      |              ^
   ///          |______________|                      |______________|
   ///          
-  /// With the above illustration, the technique used in the code should be
-  /// relatively simple to understand.
+  /// This implementation is only enabled when the iterator is a CPU iterator.
   /// 
-  /// This implementation is for CPU iterators.
-  /// 
-  /// \param[in]  state   The state iterator to use to set the boundary.
-  /// \param[in]  size    The size of the dimension (number of elements)
-  /// \param[in]  dim     The dimension to set the boundary in.
-  /// \tparam     State   The type of the state iterator.
+  /// \param[in]  patch    An iterator to the patch data.
+  /// \param[in]  elements The number of elements in the patch.
+  /// \param[in]  dim      The dimension to set the boundary in.
+  /// \tparam     Iterator The type of the iterators.
+  /// \tparam     Value    The value which defines the dimension.
   template < typename    Iterator
            , typename    Data
            , std::size_t Value

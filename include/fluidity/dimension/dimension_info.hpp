@@ -25,32 +25,6 @@
 
 namespace fluid {
 
-/// Defines the type of operation for the accumulation.
-enum class AccumulationOp {
-  Sum  = 0,
-  Sub  = 1,
-  Mult = 2,
-  Div  = 3
-};
-
-template <AccumulationOp Op, typename... Values> struct Accumulator;
-
-template <typename First, typename... Rest>
-struct Accumulator<AccumulationOp::Mult, First, Rest...> {
-  fluidity_host_device static constexpr decltype(auto) apply()
-  {
-    static_assert(std::is_integral<First>::value, "Must accumulate numeric types");
-    using accum_t = Accumulator<AccumulationOp::Mult, Rest...>;
-    return First{} * (sizeof...(Rest) > 0 ? accum_t::apply() : 1);
-  }
-};
-
-template <AccumulationOp Op, typename... Values>
-fluidity_host_device decltype(auto) accumulate()
-{
-  return Accumulator<Op, Values...>::apply();
-}
-
 /// The DimInfoCt struct defines dimension information which is known at compile
 /// time, where the dimension sizes are built into the type via the template
 /// parameters. All functions are also compile-time computed.

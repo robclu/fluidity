@@ -26,11 +26,11 @@ namespace state  {
 
 /// Defines a class to represent a state.
 /// \tparam T The type of data used by the state.
-template <typename T,
-          FormType      Form,         
-          std::size_t   Dimensions,
-          std::size_t   Components,
-          StorageFormat Format    >
+template < typename      T
+         , FormType      Form         
+         , std::size_t   Dimensions
+         , std::size_t   Components
+         , StorageFormat Format>
 class State : public traits::storage_t<T, Dimensions, Components, Format> {
  public:
   /// Defines an alias for the type of storage;
@@ -348,18 +348,18 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
 };
 
 /// Alias for a primitive state.
-template <typename T,
-          std::size_t   Dimensions,
-          std::size_t   Components = 0,
-          StorageFormat Format     = StorageFormat::row_major>
+template < typename      T
+         , std::size_t   Dimensions
+         , std::size_t   Components = 0
+         , StorageFormat Format     = StorageFormat::row_major>
 using primitive_t =
   State<T, FormType::primitive, Dimensions, Components, Format>;
 
 /// Alias for a conservative state.
-template <typename T,
-          std::size_t   Dimensions,
-          std::size_t   Components = 0,
-          StorageFormat Format     = StorageFormat::row_major>
+template <typename       T
+         , std::size_t   Dimensions
+         , std::size_t   Components = 0
+         , StorageFormat Format     = StorageFormat::row_major>
 using conservative_t =
   State<T, FormType::conservative, Dimensions, Components, Format>;
 

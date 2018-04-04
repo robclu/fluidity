@@ -23,6 +23,7 @@
 #include <fluidity/algorithm/max_element.hpp>
 #include <fluidity/container/host_tensor.hpp>
 #include <fluidity/dimension/dimension_info.hpp>
+#include <fluidity/execution/execution_policy.hpp>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -32,6 +33,49 @@ namespace fluid {
 namespace sim   {
 
 namespace fs = std::experimental::filesystem;
+
+/// The SimulationStorage struct stores the state data for a simulation.
+/// This is the default implementation for when the ExecutionPolicy does not
+/// intend to use the GPU.
+/// 
+/// \tparam State           The type of the state data.
+/// \tparam ExecutionPolicy The type of execution for the simulation.
+template <typename State, typename ExecutionPolicy>
+struct SimulationStorage {
+  using state_t     = std::decay_t<State>;
+  using value_t     = state_t::value_t;
+  using storage_t   = HostTensor<state_t, state_t::dimensions>
+  using wavespeed_t = HostTensor<value_t, 1>;
+
+  template <std::size_t Value>
+  void resize_storage(std::size_t elements, Dimension<Value> /*dim*/)
+  {
+    initial_states_host.resize(elements);
+    updated_states_host.resize(elements);
+  }
+
+  storage_t& initial_states()
+  {
+    return _initial_states;
+  }
+
+  storage_t& updated_states()
+  {
+    return _updated_states;
+  }
+
+  wavespeed_t& wavespeeds()
+  {
+    return _wavespeeds;
+  }
+
+ private:
+  storage_t   _initial_states_host;
+  storage_t   _updated_states_host;
+  wavespeed_t _wavespeeds;
+};
+
+
 
 /// The GenericSimulator class implements the simulation interface.
 /// \tparam Traits The traits which define the simulation paramters.
@@ -58,6 +102,8 @@ class GenericSimulator final : public Simulator<Traits> {
   using wavespeed_t = HostTensor<value_t, 1>;
   /// Defines the type of the parameter container.
   using params_t    = Parameters<value_t>;
+  /// Defines execution policy for the simulator.
+  using execution_t = typename traits_t::execution_t;
 
  public:
   /// Defines the number of spacial dimensions in the simulation.
@@ -135,12 +181,13 @@ template <typename Traits>
 void GenericSimulator<Traits>::simulate()
 {
   using namespace std::chrono;
-  double time  = 0.0;
-  auto   iters = 0;
-
+  auto time  = double{0.0};
+  auto iters = std::size_t{0};
   auto start = high_resolution_clock::now();
   auto end   = high_resolution_clock::now();
 
+  auto updater = updater_t(_initial_states, _updated_states, _wavespeeds);
+  
   while (time < _params.run_time && iters < _params.max_iters)
   {
     _params.update(max_element(_wavespeeds.begin(), _wavespeeds.end()));
@@ -149,6 +196,8 @@ void GenericSimulator<Traits>::simulate()
     // Set patch ghost cells ...
     
     // Update the simulation ...
+    updater
+
 
     time += _params.dt();
     std::swap(_initial_states, _updated_states);

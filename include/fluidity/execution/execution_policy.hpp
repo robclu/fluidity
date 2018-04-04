@@ -63,6 +63,9 @@ template <typename T>
 static constexpr auto is_gpu_policy_v = 
   is_same_v<std::decay_t<T>, gpu_type>;
 
+/// Defines the default number of threads per block.
+static constexpr std::size_t default_threads_per_block = 256;
+
 }} // namespace fluid::exec
 
 #endif // FLUIDITY_EXECUTION_EXECUTION_POLICY_HPP

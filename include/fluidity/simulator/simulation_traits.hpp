@@ -13,6 +13,8 @@
 //
 //==------------------------------------------------------------------------==//
 
+#include <fluidity/utility/portability.hpp>
+
 namespace fluid {
 namespace sim   {
 
@@ -21,6 +23,7 @@ template < typename State
          , typename Material
          , typename Reconstructor
          , typename Solver
+         , typename ExecutionPolicy = default_type
          >
 struct SimulationTraits {
   /// Defines the type of the state used for the simulation.
@@ -31,12 +34,16 @@ struct SimulationTraits {
   using reconstructor_t = std::decay_t<Reconstructor>;
   /// Defines the type of the solver used for the simulation.
   using solver_t        = std::decay_t<Solver>;
+  /// Defines the type of the execution policty for the simulation.
+  using execution_t     = ExecutionPolicy;
 
   /// Defines the type of the data used by the state.
   using value_t         = typename state_t::value_t;
 
   /// Defines the number of spacial dimensions in the simulation.
-  static constexpr auto spacial_dims = state_t::dimensions;
+  static constexpr auto spacial_dims     = state_t::dimensions;
+  /// Defines and instance of the execution policty.
+  static constexpr auto execution_policy = execution_t{};
 };
 
 }} // namespace fluid::dim
