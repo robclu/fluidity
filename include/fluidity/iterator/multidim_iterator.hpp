@@ -65,7 +65,7 @@ struct MultidimIterator {
   /// \tparam    Value  The value which defines the dimension.
   template <std::size_t Value> 
   fluidity_host_device static constexpr std::size_t
-  offset(Dimension<Value> dim = default_dim)
+  offset(Dimension<Value> /*dim*/)
   {
     return dim_info_t::offset(Dimension<Value>{});
   }
@@ -117,7 +117,16 @@ struct MultidimIterator {
   {
     return self_t{_ptr + amount * offset(Dimension<Value>{})};
   }
-  
+
+  /// Offsets the iterator by \p amount in the dimension defined by dim_x, and
+  /// returns a new iterator to the offset element.
+  /// \param[in]  amount  The amount of offset from this iterator.
+  /// \tparam     Value   The value which defines the dimension.
+  fluidity_host_device constexpr self_t offset(int amount) const
+  {
+    return self_t{_ptr + amount * offset(default_dim)};
+  }
+    
   /// Shifts the iterator by \p amount in dimension \p dim, modifying this
   /// iterator. This can shift the iterator forward and backward in the given
   /// dimension based on the sign of \p amount (+ = forward).
