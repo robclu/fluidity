@@ -41,8 +41,15 @@ struct MultidimIterator {
   /// Defines the type of the information for the dimensions.
   using dim_info_t      = std::decay_t<DimInfo>;
 
+  /// Defines the number of dimensions for the iterator.
+  static constexpr std::size_t dimensions = dim_info_t::num_dimensions();
+
  private:
   pointer_t _ptr; //!< A pointer to the data to iterate over.
+
+  /// Defines the default dimension, so that the iterator behaves like a
+  /// ContiguousIterator in the base case.
+  static constexpr auto default_dim = dim_x;
 
  public:
   /// Initializes the pointer to data to iterate over.
@@ -58,7 +65,7 @@ struct MultidimIterator {
   /// \tparam    Value  The value which defines the dimension.
   template <std::size_t Value> 
   fluidity_host_device static constexpr std::size_t
-  offset(Dimension<Value> /*dim*/)
+  offset(Dimension<Value> dim = default_dim)
   {
     return dim_info_t::offset(Dimension<Value>{});
   }
@@ -69,7 +76,7 @@ struct MultidimIterator {
   /// \tparam    Value  The value which defines the dimension.
   template <std::size_t Value>
   fluidity_host_device constexpr auto
-  operator()(int amount, Dimension<Value> /*dim*/) const
+  operator()(int amount, Dimension<Value> dim = default_dim) const
   {
     return self_t{_ptr + amount * offset(Dimension<Value>{})};
   }
@@ -106,7 +113,7 @@ struct MultidimIterator {
   /// \tparam     Value   The value which defines the dimension.
   template <std::size_t Value>
   fluidity_host_device constexpr self_t
-  offset(int amount, Dimension<Value> /*dim*/) const
+  offset(int amount, Dimension<Value> dim = default_dim) const
   {
     return self_t{_ptr + amount * offset(Dimension<Value>{})};
   }
@@ -222,6 +229,26 @@ fluidity_device_only constexpr auto make_multidim_iterator()
   using iter_t = MultidimIterator<T, DimInfo>;
   __shared__ T buffer[DimInfo::total_size()];
   iter_t iter{buffer};
+
+  // Move the iterator to the current thread.
+  iter.shift(dim_x, thread_id(dim_x))
+      .shift(dim_y, thread_id(dim_y))
+      .shift(dim_z, thread_id(dim_z));
+  return iter;
+}
+
+/// Makes a multidimensional iterator over a multidimensional space, where the
+/// properties of the space are defined by the DimInfo parameter. The DimInfo
+/// template parameter must be of DimInfoCt type, otherwise a compiler error is
+/// generated.
+/// \param[in] ptr     A pointer to the start of data to iterate over.      
+/// \tparam    T       The type of the data to iterate over.
+/// \tparam    DimInfo The information which defines the multi dimensional space.
+template <typename T, typename DimInfo>
+fluidity_device_only constexpr auto make_multidim_iterator(T* ptr)
+{
+  using iter_t = MultidimIterator<T, DimInfo>;
+  iter_t iter{ptr};
 
   // Move the iterator to the current thread.
   iter.shift(dim_x, thread_id(dim_x))

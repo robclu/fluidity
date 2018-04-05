@@ -175,6 +175,24 @@ TEST(algorithm_host_tests, can_get_min_element)
   EXPECT_EQ(result, min_value);
 }
 
+TEST(algorithm_host_tests, can_fold_correctly)
+{
+  using namespace fluid;
+  auto result = fold<FoldOp::add,   1, 2, 3, 4>();
+  EXPECT_EQ(result, 1 + 2 + 3 + 4); 
+
+  result = fold<FoldOp::mult,  10, 2, 6, 4>();
+  EXPECT_EQ(result, 10 * 2 * 6 * 4);
+
+  // Fix ...
+  result = fold<FoldOp::sub,  -1, 2, 3, 4>();
+  EXPECT_EQ(result, -1 - 2 - 3 - 4);
+
+  // Fix ...
+  result = fold<FoldOp::div , 100, 2, 6, 3>();
+  EXPECT_EQ(result, 100 / 2 / 6 / 3);
+}
+
 int main(int argc, char** argv)
 {
   ::testing::InitGoogleTest(&argc, argv);

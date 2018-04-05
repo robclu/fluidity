@@ -60,7 +60,7 @@ struct DimInfoCt {
   /// elements in the space. This is the product sum of the dimension 
   fluidity_host_device static constexpr decltype(auto) total_size()
   {
-    return accumulate<AccumulationOp::Mult, Sizes...>();
+    return fold<FoldOp::mult, Sizes...>();
   }
 
  private:

@@ -13,6 +13,7 @@
 //
 //==------------------------------------------------------------------------==//
 
+#include <fluidity/container/host_tensor.hpp>
 #include <fluidity/iterator/range.hpp>
 #include <fluidity/iterator/multidim_iterator.hpp>
 #include <gtest/gtest.h>
@@ -166,6 +167,8 @@ TEST(multidim_iter_host_tests, can_compute_iterator_differences)
   EXPECT_EQ(iter.forward_diff(fluid::dim_z) , 22 - 13); 
   EXPECT_EQ(iter.central_diff(fluid::dim_z) , 22 - 4 ); 
 }
+
+
 
 int main(int argc, char** argv) 
 {

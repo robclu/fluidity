@@ -42,16 +42,19 @@ struct TensorIterator {
   /// Defines the type of the execution policy for the iterator.
   using exec_policy_t = Exec;
 
+  /// Defines the number of dimensions for the iterator.
+  static constexpr std::size_t dimensions = 1;
+
   /// Sets the element the iterator points to, and the offset to the next 
   fluidity_host_device TensorIterator(pointer_t ptr) : _ptr{ptr} {}
 
   /// Overload of copy constructor to copy an iterator.
   /// \param[in] other The other iterator to iterate over.
-  /*fluidity_host_device*/ TensorIterator(const self_t& other) = default; //: _ptr{other._ptr} {}
+  TensorIterator(const self_t& other) = default;
 
   /// Moves the pointer from other to this tensor.
   /// \param[in] other The other iterator to iterate over.
-  /*fluidity_host_device*/ TensorIterator(self_t&& other)  = default; //: _ptr{other._ptr} {}
+  TensorIterator(self_t&& other)  = default;
 
   /// Overload of addition operator to add a difference_t and an iterator.
   /// For example:
