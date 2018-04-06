@@ -22,7 +22,7 @@
 #include "tensor_fwrd.hpp"
 #include "host_tensor.hpp"
 #include <fluidity/execution/execution_policy.hpp>
-#include <fluidity/iterator/tensor_iterator.hpp>
+#include <fluidity/iterator/strided_iterator.hpp>
 #include <fluidity/utility/cuda.hpp>
 
 namespace fluid {
@@ -51,9 +51,9 @@ class DeviceTensor<T, 1> : public BaseTensor<T, 1> {
   /// Defines the type of the pointer to the data to store.
   using pointer_t         = typename base_t::pointer_t;
   /// Defines the type of a non const iterator.
-  using iterator_t        = TensorIterator<self_t, false, exec_t>;
+  using iterator_t        = StridedIterator<self_t, false, exec_t>;
   /// Defines the type of a const iterator.
-  using const_iterator_t  = TensorIterator<self_t, true, exec_t>;
+  using const_iterator_t  = StridedIterator<self_t, true, exec_t>;
 
   /// Creates a device tensor with no elements. This requires the tensor to be
   /// resized before using it.

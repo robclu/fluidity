@@ -21,7 +21,7 @@
 #include "base_tensor.hpp"
 #include "tensor_fwrd.hpp"
 #include "device_tensor.hpp"
-#include <fluidity/iterator/tensor_iterator.hpp>
+#include <fluidity/iterator/strided_iterator.hpp>
 #include <fluidity/utility/cuda.hpp>
 #include <cstddef>
 
@@ -38,6 +38,9 @@ class HostTensor<T, 1> : public BaseTensor<T, 1> {
   template <typename TT, std::size_t D>
   friend class DeviceTensor;
 
+  /// Defines the type of the executor for the iterator to be a GPU executor.
+  using exec_t = exec::cpu_type;
+
  public:
   /// Defines the type of the tensor.
   using self_t            = HostTensor;
@@ -52,9 +55,9 @@ class HostTensor<T, 1> : public BaseTensor<T, 1> {
   /// Defines the type of a const reference to the data type.
   using const_reference_t = const value_t&; 
   /// Defines the type of a non const iterator.
-  using iterator_t        = TensorIterator<self_t, false>;
+  using iterator_t        = StridedIterator<self_t, false, exec_t>;
   /// Defines the type of a const iterator.
-  using const_iterator_t  = TensorIterator<self_t, true>;
+  using const_iterator_t  = StridedIterator<self_t, true, exec_t>;
 
   /// Creates a host tensor with no elements. This requires the tensor to be
   /// resized before using it.

@@ -17,6 +17,7 @@
 #ifndef FLUIDITY_ITERATOR_MULTIDIM_ITERATOR_HPP
 #define FLUIDITY_ITERATOR_MULTIDIM_ITERATOR_HPP
 
+#include "strided_iterator.hpp"
 #include <fluidity/dimension/dimension_info.hpp>
 #include <fluidity/dimension/thread_index.hpp>
 #include <fluidity/utility/debug.hpp>
@@ -28,7 +29,7 @@ namespace fluid {
 /// the different dimensions in a multi dimensional space.
 /// \tparam T         The type of the data to iterate over.
 /// \tparam DimInfo   Information for the dimensions.
-template <typename T, typename DimInfo>
+template <typename T, typename DimInfo, typename Exec = exec::default_type>
 struct MultidimIterator {
   /// Defines the type of this iterator.
   using self_t          = MultidimIterator;
@@ -40,6 +41,8 @@ struct MultidimIterator {
   using const_pointer_t = const value_t*;
   /// Defines the type of the information for the dimensions.
   using dim_info_t      = std::decay_t<DimInfo>;
+  /// Defines the type of the execution policy for the iterator.
+  using exec_t          = Exec;
 
   /// Defines the number of dimensions for the iterator.
   static constexpr std::size_t dimensions = dim_info_t::num_dimensions();
@@ -47,6 +50,11 @@ struct MultidimIterator {
  private:
   pointer_t _ptr; //!< A pointer to the data to iterate over.
 
+  /// Defines the type of a non-const strided iterator to create.
+  using strided_iter_t       = StridedIterator<value_t, false, exec_t>;
+  /// Defines the type of a const strided iterator to create.
+  using const_strided_iter_t = StridedIterator<value_t, true, exec_t>;
+  
   /// Defines the default dimension, so that the iterator behaves like a
   /// ContiguousIterator in the base case.
   static constexpr auto default_dim = dim_x;
@@ -93,6 +101,16 @@ struct MultidimIterator {
   fluidity_host_device constexpr const_pointer_t operator->() const
   {
     return _ptr;
+  }
+
+  /// Returns a strided iterator which can iterate over the \p dim dimension.
+  /// \param[in] dim   The dimension for the iterator to iterate over.
+  /// \tparam    value The value which defines the dimension.
+  template <std::size_t Value>
+  fluidity_host_device strided_iter_t
+  as_strided_iterator(Dimension<Value> /*dim*/)
+  {
+    return strided_iter_t{_ptr, stride(Dimension<Value>{})};
   }
 
   /// Returns stride required to iterate in the dimension \p dim. The stride in
