@@ -59,24 +59,13 @@ struct MultidimIterator {
     assert(_ptr != nullptr && "Cannot iterate from a nullptr!");
   }
 
-  /// Returns amount of offset required to iterate in dimension \p dim. The
-  /// offset in the 0 dimension (Value = 0) is always taken to be one.
-  /// \param[in] dim    The dimension to get the offset for.
-  /// \tparam    Value  The value which defines the dimension.
-  template <std::size_t Value> 
-  fluidity_host_device static constexpr std::size_t
-  offset(Dimension<Value> /*dim*/)
-  {
-    return dim_info_t::offset(Dimension<Value>{});
-  }
-
   /// Overload of operator() to offset the iterator in a specific dimension.
   /// \param[in] amount The amount (number of elements) to iterate over.
   /// \param[in] dim    The dimension to iterator over.
   /// \tparam    Value  The value which defines the dimension.
   template <std::size_t Value>
   fluidity_host_device constexpr auto
-  operator()(int amount, Dimension<Value> dim = default_dim) const
+  operator()(int amount, Dimension<Value> dim) const
   {
     return self_t{_ptr + amount * offset(Dimension<Value>{})};
   }
@@ -106,6 +95,17 @@ struct MultidimIterator {
     return _ptr;
   }
 
+  /// Returns stride required to iterate in the dimension \p dim. The stride in
+  /// the 0 dimension (Value = 0) is always taken to be one.
+  /// \param[in] dim    The dimension to get the offset for.
+  /// \tparam    Value  The value which defines the dimension.
+  template <std::size_t Value> 
+  fluidity_host_device static constexpr std::size_t 
+  stride(Dimension<Value> /*dim*/)
+  {
+    return dim_info_t::offset(Dimension<Value>{});
+  }
+
   /// Offsets the iterator by \p amount in the dimension defined by \p dim, and
   /// returns a new iterator to the offset element.
   /// \param[in]  amount  The amount of offset from this iterator.
@@ -113,18 +113,9 @@ struct MultidimIterator {
   /// \tparam     Value   The value which defines the dimension.
   template <std::size_t Value>
   fluidity_host_device constexpr self_t
-  offset(int amount, Dimension<Value> dim = default_dim) const
+  offset(int amount, Dimension<Value> /*dim*/) const
   {
-    return self_t{_ptr + amount * offset(Dimension<Value>{})};
-  }
-
-  /// Offsets the iterator by \p amount in the dimension defined by dim_x, and
-  /// returns a new iterator to the offset element.
-  /// \param[in]  amount  The amount of offset from this iterator.
-  /// \tparam     Value   The value which defines the dimension.
-  fluidity_host_device constexpr self_t offset(int amount) const
-  {
-    return self_t{_ptr + amount * offset(default_dim)};
+    return self_t{_ptr + amount * stride(Dimension<Value>{})};
   }
     
   /// Shifts the iterator by \p amount in dimension \p dim, modifying this
@@ -137,7 +128,7 @@ struct MultidimIterator {
   fluidity_host_device constexpr self_t&
   shift(int amount, Dimension<Value> /*dim*/)
   {
-    _ptr += amount * offset(Dimension<Value>{});
+    _ptr += amount * stride(Dimension<Value>{});
     return *this;
   }
 
@@ -163,7 +154,7 @@ struct MultidimIterator {
   fluidity_host_device constexpr value_t
   backward_diff(Dimension<Value> /*dim*/, unsigned int amount = 1) const
   {
-    return *_ptr - *(_ptr - amount * offset(Dimension<Value>{}));
+    return *_ptr - *(_ptr - amount * stride(Dimension<Value>{}));
   }
 
   /// Returns the forward difference between this iterator and the iterator \p
@@ -193,7 +184,7 @@ struct MultidimIterator {
   fluidity_host_device constexpr value_t
   forward_diff(Dimension<Value> /*dim*/, unsigned int amount = 1) const
   {
-    return *(_ptr + amount * offset(Dimension<Value>{})) - *_ptr;
+    return *(_ptr + amount * stride(Dimension<Value>{})) - *_ptr;
   }
 
   /// Returns the central difference between this iterator and the iterators \p
@@ -219,8 +210,8 @@ struct MultidimIterator {
   fluidity_host_device constexpr value_t
   central_diff(Dimension<Value> /*dim*/, unsigned int amount = 1) const
   {
-    constexpr auto dim = Dimension<Value>{};
-    return *(_ptr + amount * offset(dim)) - *(_ptr - amount * offset(dim));
+    const auto shift = amount * stride(Dimension<Value>{});
+    return *(_ptr + shift) - *(_ptr - shift);
   }
 };
 

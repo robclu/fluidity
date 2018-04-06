@@ -30,8 +30,7 @@ template <typename T, bool IsConst = false, typename Exec = exec::default_type>
 struct TensorIterator {
   /// Defines the type of the TensorIterator.
   using self_t        = TensorIterator;
-  /// Defines the type of the elements the tensor holds, and which are iterated
-  /// over.
+  /// Defines the type of the elements the tensor holds.
   using value_t       = typename T::value_t;
   /// Defines the type of a reference to an element.
   using reference_t   = std::conditional_t<IsConst, const value_t&, value_t&>;
@@ -39,6 +38,8 @@ struct TensorIterator {
   using pointer_t     = std::conditional_t<IsConst, const value_t*, value_t*>;
   /// Defines the type of the difference between two iterators.
   using difference_t  = int;
+  /// Defines the type of the size type for the stride.
+  using stride_t      = difference_t;
   /// Defines the type of the execution policy for the iterator.
   using exec_policy_t = Exec;
 
@@ -46,7 +47,12 @@ struct TensorIterator {
   static constexpr std::size_t dimensions = 1;
 
   /// Sets the element the iterator points to, and the offset to the next 
+  /// \param[in] ptr The pointer 
   fluidity_host_device TensorIterator(pointer_t ptr) : _ptr{ptr} {}
+
+  /// Sets the element the iterator points to, and the offset to the next 
+  fluidity_host_device TensorIterator(pointer_t ptr, stride_t stride)
+  : _ptr{ptr}, _stride{stride} {}
 
   /// Overload of copy constructor to copy an iterator.
   /// \param[in] other The other iterator to iterate over.
@@ -54,7 +60,7 @@ struct TensorIterator {
 
   /// Moves the pointer from other to this tensor.
   /// \param[in] other The other iterator to iterate over.
-  TensorIterator(self_t&& other)  = default;
+  TensorIterator(self_t&& other) = default;
 
   /// Overload of addition operator to add a difference_t and an iterator.
   /// For example:
@@ -69,7 +75,7 @@ struct TensorIterator {
   fluidity_host_device friend self_t
   operator+(difference_t offset, const self_t& self)
   {
-    return TensorIterator(self._ptr + offset);
+    return TensorIterator(self._ptr + offset * self._stride);
   }
 
   /// Overload of subtraction operator to subtract an iterator from a
@@ -85,7 +91,7 @@ struct TensorIterator {
   fluidity_host_device friend self_t
   operator-(difference_t offset, const self_t& self)
   {
-    return TensorIterator(self._ptr + offset);
+    return TensorIterator(self._ptr - offset * self._stride);
   }
 
   /// Overload of subtraction operator to compute the difference between two
@@ -94,7 +100,16 @@ struct TensorIterator {
   /// \param[in] a The iterator to subtract with.
   fluidity_host_device friend difference_t operator-(self_t b, self_t a)
   {
-    return b._ptr - a._ptr;
+    // TODO: When debug is available:
+    //  debug::log(debug::log::non_critical, [&]
+    //  {
+    //    if (a._stride != b._stride)
+    //    {
+    //      fluidity_debug_print(
+    //        "Difference between iterators with different strides!");
+    //    }
+    //  });
+    return (b._ptr - a._ptr) / a._stride;
   }
 
   /// Overload of copy assignment operator to copy the pointer the iterator
@@ -119,7 +134,7 @@ struct TensorIterator {
   /// \param[in] junk Junk value to specify postfix.
   fluidity_host_device self_t operator++(int /*junk*/)
   { 
-    self_t i = *this; move_pointer(1); return i; 
+    self_t i = *this; move_pointer(_stride); return i; 
   } 
 
   /// Overload of prefix operator to increment the iterator and return a new
@@ -127,7 +142,7 @@ struct TensorIterator {
   /// \param[in] junk Junk value to specify postfix.
   fluidity_host_device self_t operator++()
   {
-    move_pointer(1); return *this;
+    move_pointer(_stride); return *this;
   }
 
   /// Overload of postdecrement operator to iecrement the iterator and return
@@ -135,7 +150,7 @@ struct TensorIterator {
   /// \param[in] junk Junk value to specify post decrement.
   fluidity_host_device self_t operator--(int /*junk*/) 
   {
-    self_t i = *this; move_pointer(-1); return i;
+    self_t i = *this; move_pointer(-_stride); return i;
   }
 
   /// Overload of predecrement operator to decrement the iterator and return a
@@ -143,7 +158,7 @@ struct TensorIterator {
   /// \param[in] junk Junk value to specify postdecrement.
   fluidity_host_device self_t operator--()
   {
-    move_pointer(-1); return *this;
+    move_pointer(-_stride); return *this;
   }  
 
   /// Overload of add and modify operation -- adds an \p offset to the pointer
@@ -151,7 +166,7 @@ struct TensorIterator {
   /// \param offset The offset to add to the iterator.
   fluidity_host_device self_t& operator+=(difference_t offset)
   { 
-    move_pointer(offset); return *this;
+    move_pointer(offset * _stride); return *this;
   }
 
   /// Overload of subtract and modify operation -- subtracts an \p offset from
@@ -159,7 +174,7 @@ struct TensorIterator {
   /// \param offset The offset to subtract to the iterator.
   fluidity_host_device self_t& operator-=(difference_t offset)
   { 
-    move_pointer(-offset); return *this;
+    move_pointer(-(offset * _stride)); return *this;
   }
 
   /// Overload of addition operator -- adds an offset to the pointer and
@@ -168,7 +183,7 @@ struct TensorIterator {
   /// \param[in] offset The offset to add to the iterator.
   fluidity_host_device self_t operator+(difference_t offset) const
   {
-    self_t other = *this; return other += offset;
+    self_t other = *this; return other += offset * _stride;
   }
 
   /// Overload of subtraction operator -- subtracts an offset from the pointer
@@ -177,7 +192,7 @@ struct TensorIterator {
   /// \param[in] offset The offset to subtract from the iterator.
   fluidity_host_device self_t operator-(difference_t offset) const
   {
-    self_t other = *this; return other -= offset;
+    self_t other = *this; return other -= offset * _stride;
   }
 
 
@@ -211,7 +226,7 @@ struct TensorIterator {
   ///                   iterator.
   fluidity_host_device self_t operator[](difference_t offset) const
   {
-    return *this + offset;
+    return *this + offset * _stride;
   }
 
   /// Tests if one iterator is equal to another iterator (when they both point
@@ -230,12 +245,96 @@ struct TensorIterator {
     return _ptr != other._ptr;
   }
 
+  /// Offsets the iterator by \p amount and returns a new iterator to the offset
+  /// element.
+  /// \param[in]  amount  The amount of offset from this iterator.
+  /// \tparam     Value   The value which defines the dimension.
+  fluidity_host_device self_t offset(stride_t amount) const
+  {
+    return self_t{_ptr + amount * _stride};
+  }
+
+  /// Shifts the iterator by \p amount, modifying the iterator. This can shift
+  /// the iterator forward and backward based on the sign of \p amount
+  /// (+ = forward).
+  /// \param[in]  amount  The amount to advance the iterator by.
+  fluidity_host_device constexpr self_t& shift(stride_t amount)
+  {
+    _ptr += amount * _stride; return *this;
+  }
+
+  /// Returns the backward difference between this iterator and the iterator \p
+  /// amount places from from this iterator. I.e
+  /// 
+  /// \begin{equation}
+  ///   \Delta U = U_{i} - U_{i - \texrm{amount}}
+  /// \end{equation}
+  /// 
+  /// The default is that \p amount is 1, i.e:
+  /// 
+  /// ~~~cpp
+  /// // The following is the same:
+  /// auto diff = state->backward_diff();
+  /// auto diff = state->backward_diff(1);
+  /// ~~~
+  /// 
+  /// \param[in]  amount  The amount to offset the iterator by.
+  fluidity_host_device value_t backward_diff(unsigned int amount = 1) const
+  {
+    return *_ptr - *(_ptr - amount * _stride);
+  }
+
+  /// Returns the forward difference between this iterator and the iterator \p
+  /// amount places from from this iterator. I.e
+  /// 
+  /// \begin{equation}
+  ///   \Delta U = U_{i + amount} - U_{i}
+  /// \end{equation}
+  /// 
+  /// The default is that \p amount is 1, i.e:
+  /// 
+  /// ~~~cpp
+  /// // The following is the same:
+  /// auto diff = state->forward_diff();
+  /// auto diff = state->forward_diff(1);
+  /// ~~~
+  /// 
+  /// \param[in]  amount  The amount to offset the iterator by.
+  fluidity_host_device value_t forward_diff(unsigned int amount = 1) const
+  {
+    return *(_ptr + amount * _stride) - *_ptr;
+  }
+
+  /// Returns the central difference between the iterator \p amount places
+  /// forward from this iterator and the iterator \p amount places backward
+  /// from this iterator. I.e
+  /// 
+  /// \begin{equation}
+  ///   \Delta U = U_{i + amount} - U_{i - amount}
+  /// \end{equation}
+  /// 
+  /// The default is that \p amount is 1, i.e:
+  /// 
+  /// ~~~cpp
+  /// // The following is the same:
+  /// auto diff = state->central_diff();
+  /// auto diff = state->central_diff(1);
+  /// ~~~
+  /// 
+  /// \param[in]  amount  The amount to offset the iterator by.
+  fluidity_host_device value_t central_diff(unsigned int amount = 1) const
+  {
+    const auto shift = amount * _stride;
+    return *(_ptr + shift) - *(_ptr - shift);
+  }
+
  private:
-  pointer_t _ptr; //!< The element the iterator points to.
+  pointer_t   _ptr    = nullptr;  //!< The element the iterator points to.
+  std::size_t _stride = 1;        //!< The stride between elements.
 
   /// Moves the pointer to which the data points by \p amount.
   /// \param[in] amount The amount to move the data by.
-  fluidity_host_device void move_pointer(int amount) 
+  fluidity_host_device void move_pointer(stride_t amount) 
   {
     _ptr += amount;
   }
