@@ -44,7 +44,10 @@ template <>
 struct MakePatchInfo<2> { 
   /// Defines the type of compile time dimension information.
   using type = 
-    DimInfoCt<default_threads_per_block, default_threads_per_block>;
+    DimInfoCt<
+      (default_threads_per_block >> 2)
+    , (default_threads_per_block >> 2)
+    >;
 };
 
 /// Specialization for two dimensions.
@@ -53,11 +56,38 @@ struct MakePatchInfo<3> {
   /// Defines the type of compile time dimension information.
   using type = 
     DimInfoCt<
-      default_threads_per_block
-    , default_threads_per_block
-    , default_threads_per_block
+      (default_threads_per_block >> 3)
+    , (default_threads_per_block >> 3)
+    , (default_threads_per_block >> 3)
     >;
 };
+
+template < typename    Iterator,
+         , std::size_t Padding ,
+         , std::enable_if_t<Iterator::dimensions == 1, int> = 0
+         >
+void shift_for_padding(Iterator& iter)
+{
+  iter.shift(Padding, dim_x);
+}
+
+template < typename    Iterator,
+         , std::size_t Padding ,
+         , std::enable_if_t<Iterator::dimensions == 2, int> = 0
+         >
+void shift_for_padding(Iterator& iter)
+{
+  iter.shift(Padding, dim_x).shift(Padding, dim_y);
+}
+
+template < typename    Iterator,
+         , std::size_t Padding ,
+         , std::enable_if_t<Iterator::dimensions == 3, int> = 0
+         >
+void shift_for_padding(Iterator& iter)
+{
+  iter.shift(Padding, dim_x).shift(Padding, dim_y).shift(Padding, dim_z);
+}
 
 } // namespace detail
 
@@ -65,34 +95,44 @@ struct MakePatchInfo<3> {
 template <std::size_t Dims>
 using patch_info_t = typename detail::MakePatchInfo<Dims>::type;
 
-template <typename Iterator>
+template <typename Iterator, typename Loader>
 fluidity_global void update_impl(Iterator begin, Iterator end)
 {
   using patch_info_t = patch_info_t<Iterator::dimensions>;
   using state_t      = std::decay_t<decltype(*begin)>;
 
-  auto global_iter = make_multidim_iterator<state_t, dim_info_t>(&(*begin));
-  auto patch_iter  = make_multidim_iterator<state_t, dim_info_t>();
+  auto global_iter = make_multidim_iterator<state_t, patch_info_t>(&(*begin));
+  auto patch_iter  = make_multidim_iterator<state_t, patch_info_t>();
 
+  detail::shift_for_padding<Loader::padding>(global_iter);
+  detail::shift_for_padding<Loader::padding>(patch_iter);
+
+  // Move the iterators passed the padding:
   *patch_iter = *global_iter;
+
   unrolled_for<dim_info_t::num_dimensions()>([&] (auto dim_value)
   {
     constexpr auto dim      = Dimension<dim_value>();
     constexpr auto dim_size = dim_info_t::size(dim);
 
-    const auto elements = 
+    // Move the iterators:
 
-    loader.load_internal(patch_iter , dim_size, dim);
-    loader.load_boundary(global_iter, patch_iter, dim_size, dim);
+    loader.load_internal(patch_iter, dim_size, dim);
+    loader.load_boundary(global_iter, patch_iter, grid_size(dim), dim);
     __syncthreads();
   });
 }
 
-template <typename Iterator>
-void update(Iterator begin, Iterator end)
+template <typename Iterator, typename Loader>
+void update(Iterator begin, Iterator end, Loader loader)
 {
 #if defined(__CUDACC__)
+  constexpr auto padding     = Loader::padding;
   constexpr auto max_threads = default_threads_per_block;
+
+  auto threads_per_block = 
+    detail::get_threads_per_block<padding>(Dimension<Iterator::dimensions>{});
+
   dim3 threads_per_block(elements < max_threads ? elements : max_threads);
   dim3 num_blocks(std::max(elements / threads_per_block.x,
                            static_cast<unsigned int>(1)));

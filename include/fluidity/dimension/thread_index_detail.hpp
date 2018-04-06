@@ -65,6 +65,47 @@ struct BlockSizeImpl<dimz_t> {
   }
 };
 
+
+/// The GridSizeImpl struct defines a struct which can be specialized for
+/// the different dimension types.
+/// \tparam Dimension The dimension to implement to the block size computation
+///         for.
+template <typename Dimension>
+struct GridSizeImpl;
+
+/// Specialization of the grid size computation for the x dimension.
+template <>
+struct GridSizeImpl<dimx_t> {
+  /// Overload of function call operator to return the grid size in the
+  /// x dimension.
+  fluidity_device_only std::size_t operator()() const
+  {
+    return gridDim.x * BlockSizeImpl<dimx_t>()();
+  }
+};
+
+/// Specialization of the grid size computation for the y dimension.
+template <>
+struct GridSizeImpl<dimy_t> {
+  /// Overload of function call operator to return the grid size in the
+  /// y dimension.
+  fluidity_device_only std::size_t operator()() const
+  {
+    return gridDim.y * BlockSizeImpl<dimy_t>()();
+  }
+};
+
+/// Specialization of the grid size computation for the z dimension.
+template <>
+struct GridSizeImpl<dimz_t> {
+  /// Overload of function call operator to return the block size in the
+  /// z dimension.
+  fluidity_device_only std::size_t operator()() const
+  {
+    return gridDim.z * BlockSizeImpl<dimz_t>()();
+  }
+};
+
 /// The FlattenedIdImpl struct defines a struct which can be specialized for
 /// the different dimension types.
 /// \tparam Dimension The dimension to implement to the flattened index

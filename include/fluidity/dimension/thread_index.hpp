@@ -40,6 +40,24 @@ fluidity_host_device inline std::size_t block_size(Dimension<Value>)
   detail::BlockSizeImpl<Dimension<Value>>()();
 }
 
+/// Returns the size of the block in a given dimension. The dimension
+/// must be one of dim_x, dim_y, dim_z, or else a compile time error will be
+/// generated.
+/// \param[in] dim    The dimension to get the thread index for.
+/// \tparam    Value  The value which defines the dimension.
+template <std::size_t Value>
+fluidity_host_device inline std::size_t grid_size(Dimension<Value>)
+{
+  static_assert(Value <= 2, "Can only get thread id for 3 dimensions {0,1,2}.");
+  detail::GridSizeImpl<Dimension<Value>>()();
+}
+
+/// Returns the total size of the grid (total number of threads in the grid).
+fluidity_host_device inline std::size_t grid_size()
+{
+  return grid_size(dim_x) * grid_size(dim_y) * grid_size(dim_z);
+}
+
 /// Returns the value of the flattened thread index in a given dimension. The
 /// dimension must be one of dim_x, dim_y, dim_z, or else a compile time error
 /// will be generated. This returns the global flattened index.
