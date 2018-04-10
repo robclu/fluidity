@@ -51,53 +51,19 @@ TEST(multidim_iter_host_tests, can_create_and_iterate_multidim_iterator)
 {
   using namespace fluid;
 
+  constexpr auto size_x = std::size_t{4};
+  constexpr auto size_y = std::size_t{3};
+
   // Create information to define 3 x 2 x 2 dimensional space
-  using dim_info_2dt = DimInfoCt<4, 3>;
-  using dim_info_3dt = DimInfoCt<3, 2, 2>;  // 3x2x2 dimensional space
+  using dim_info_2d_ct_t = DimInfoCt<size_x, size_y>;
+  using dim_info_2d_rt_t = DimInfo;
 
-  using multi_iter_2dt = MultidimIterator<std::size_t, dim_info_2dt>;
-  using multi_iter_3dt = MultidimIterator<std::size_t, dim_info_3dt>;
+  using multi_iter_2d_ct_t = MultidimIterator<std::size_t, dim_info_2d_ct_t>;
+  using multi_iter_2d_rt_t = MultidimIterator<std::size_t, dim_info_2d_rt_t>;
 
-  EXPECT_EQ(dim_info_2dt::total_size(), dim_info_3dt::total_size());
-  constexpr auto size = dim_info_2dt::total_size();
-
+  constexpr auto size = dim_info_2d_ct_t().total_size();
   std::size_t data[size];
   for (const auto i : range(size)) { data[i] = i; }
-
-  // Create iterator over the space, the data will look like:
-  //
-  //       |- x x x -| |- x  x  x -|
-  //  ---------------------------------
-  //    y  |  0 1 2       6  7  8
-  //    y  |  3 4 5       9 10 11
-  //        |---z---|    |---z---|
-  multi_iter_3dt iter3d(data);
-
-  EXPECT_EQ(multi_iter_3dt::stride(fluid::dim_x), 1);
-  EXPECT_EQ(multi_iter_3dt::stride(fluid::dim_y), 3);
-  EXPECT_EQ(multi_iter_3dt::stride(fluid::dim_z), 6);
-
-  EXPECT_EQ(*iter3d                        , 0);
-  EXPECT_EQ(*iter3d.offset(1, fluid::dim_x), 1);
-  EXPECT_EQ(*iter3d.offset(2, fluid::dim_x), 2);
-
-  // Move to second y index:
-  iter3d.shift(1, fluid::dim_y);
-  EXPECT_EQ(*iter3d                        , 3);
-  EXPECT_EQ(*iter3d.offset(1, fluid::dim_x), 4);
-  EXPECT_EQ(*iter3d.offset(2, fluid::dim_x), 5);
-
-  // Move to z1:
-  iter3d.shift(1, fluid::dim_z).shift(-1, fluid::dim_y);
-  EXPECT_EQ(*iter3d                        , 6);
-  EXPECT_EQ(*iter3d.offset(1, fluid::dim_x), 7);
-  EXPECT_EQ(*iter3d.offset(2, fluid::dim_x), 8);
-
-  // Move to second y index:
-  iter3d.shift(1, fluid::dim_y);
-  EXPECT_EQ(*iter3d                        , 9);
-  EXPECT_EQ(*iter3d.offset(1, fluid::dim_x), 10);
-  EXPECT_EQ(*iter3d.offset(2, fluid::dim_x), 11);
 
   // Change to the 2D representation (same data):
   //
@@ -106,30 +72,53 @@ TEST(multidim_iter_host_tests, can_create_and_iterate_multidim_iterator)
   //    y  |  0 1  2  3
   //    y  |  4 5  6  7
   //    y  |  8 9 10 11
-  multi_iter_2dt iter2d(data);
+  
+  // Compile time version:
+  multi_iter_2d_ct_t iter2d_ct(data);
+  EXPECT_EQ(iter2d_ct.stride(fluid::dim_x), 1);
+  EXPECT_EQ(iter2d_ct.stride(fluid::dim_y), size_x);
 
-  EXPECT_EQ(multi_iter_2dt::stride(fluid::dim_x), 1);
-  EXPECT_EQ(multi_iter_2dt::stride(fluid::dim_y), 4);
+  EXPECT_EQ(*iter2d_ct                        , 0);
+  EXPECT_EQ(*iter2d_ct.offset(1, fluid::dim_x), 1);
+  EXPECT_EQ(*iter2d_ct.offset(2, fluid::dim_x), 2);
+  EXPECT_EQ(*iter2d_ct.offset(3, fluid::dim_x), 3);
 
-  EXPECT_EQ(*iter2d                        , 0);
-  EXPECT_EQ(*iter2d.offset(1, fluid::dim_x), 1);
-  EXPECT_EQ(*iter2d.offset(2, fluid::dim_x), 2);
-  EXPECT_EQ(*iter2d.offset(3, fluid::dim_x), 3);
+  iter2d_ct.shift(1, fluid::dim_y);
+  EXPECT_EQ(*iter2d_ct                        , 4);
+  EXPECT_EQ(*iter2d_ct.offset(1, fluid::dim_x), 5);
+  EXPECT_EQ(*iter2d_ct.offset(2, fluid::dim_x), 6);
+  EXPECT_EQ(*iter2d_ct.offset(3, fluid::dim_x), 7);
 
-  iter2d.shift(1, fluid::dim_y);
-  EXPECT_EQ(*iter2d                        , 4);
-  EXPECT_EQ(*iter2d.offset(1, fluid::dim_x), 5);
-  EXPECT_EQ(*iter2d.offset(2, fluid::dim_x), 6);
-  EXPECT_EQ(*iter2d.offset(3, fluid::dim_x), 7);
+  iter2d_ct.shift(1, fluid::dim_y);
+  EXPECT_EQ(*iter2d_ct                        , 8 );
+  EXPECT_EQ(*iter2d_ct.offset(1, fluid::dim_x), 9 );
+  EXPECT_EQ(*iter2d_ct.offset(2, fluid::dim_x), 10);
+  EXPECT_EQ(*iter2d_ct.offset(3, fluid::dim_x), 11);
 
-  iter2d.shift(1, fluid::dim_y);
-  EXPECT_EQ(*iter2d                        , 8 );
-  EXPECT_EQ(*iter2d.offset(1, fluid::dim_x), 9 );
-  EXPECT_EQ(*iter2d.offset(2, fluid::dim_x), 10);
-  EXPECT_EQ(*iter2d.offset(3, fluid::dim_x), 11);
+  // Runtime version:
+  multi_iter_2d_rt_t iter2d_rt(data, size_x, size_y);
+  EXPECT_EQ(iter2d_rt.stride(fluid::dim_x), 1);
+  EXPECT_EQ(iter2d_rt.stride(fluid::dim_y), 4);
+
+  EXPECT_EQ(*iter2d_rt                        , 0);
+  EXPECT_EQ(*iter2d_rt.offset(1, fluid::dim_x), 1);
+  EXPECT_EQ(*iter2d_rt.offset(2, fluid::dim_x), 2);
+  EXPECT_EQ(*iter2d_rt.offset(3, fluid::dim_x), 3);
+
+  iter2d_rt.shift(1, fluid::dim_y);
+  EXPECT_EQ(*iter2d_rt                        , 4);
+  EXPECT_EQ(*iter2d_rt.offset(1, fluid::dim_x), 5);
+  EXPECT_EQ(*iter2d_rt.offset(2, fluid::dim_x), 6);
+  EXPECT_EQ(*iter2d_rt.offset(3, fluid::dim_x), 7);
+
+  iter2d_rt.shift(1, fluid::dim_y);
+  EXPECT_EQ(*iter2d_rt                        , 8 );
+  EXPECT_EQ(*iter2d_rt.offset(1, fluid::dim_x), 9 );
+  EXPECT_EQ(*iter2d_rt.offset(2, fluid::dim_x), 10);
+  EXPECT_EQ(*iter2d_rt.offset(3, fluid::dim_x), 11);
 }
 
-TEST(multidim_iter_host_tests, can_compute_iterator_differences)
+TEST(multidim_iter_host_tests, modified_iter_strides_are_the_same_ct)
 {
   using namespace fluid;
 
@@ -137,8 +126,51 @@ TEST(multidim_iter_host_tests, can_compute_iterator_differences)
   using dim_info_t   = DimInfoCt<3, 3, 3>;  // 3x2x2 dimensional space
   using multi_iter_t = MultidimIterator<std::size_t, dim_info_t>;
 
-  constexpr auto size = dim_info_t::total_size();
+  constexpr auto size = dim_info_t().total_size();
+  std::size_t data[size];
+  for (const auto i : range(size)) { data[i] = i; }
 
+  auto it_1 = multi_iter_t(data);
+  auto it_2 = it_1.offset(1, dim_x);
+  auto it_3 = it_2.offset(1, dim_y);
+  auto it_4 = it_3.offset(1, dim_z);
+
+  EXPECT_EQ(it_1.stride(dim_x), it_2.stride(dim_x));
+  EXPECT_EQ(it_2.stride(dim_y), it_3.stride(dim_y));
+  EXPECT_EQ(it_3.stride(dim_z), it_4.stride(dim_z));
+}
+
+TEST(multidim_iter_host_tests, modified_iter_strides_are_the_same_rt)
+{
+  using namespace fluid;
+
+  // Create information to define 3 x 3 x 3 dimensional space
+  using multi_iter_t = MultidimIterator<std::size_t>;
+
+  constexpr auto dim_size = std::size_t{3};
+  constexpr auto size     = dim_size * dim_size * dim_size;
+  std::size_t data[size];
+  for (const auto i : range(size)) { data[i] = i; }
+
+  auto it_1 = multi_iter_t(data, dim_size, dim_size, dim_size);
+  auto it_2 = it_1.offset(1, dim_x);
+  auto it_3 = it_2.offset(1, dim_y);
+  auto it_4 = it_3.offset(1, dim_z);
+
+  EXPECT_EQ(it_1.stride(dim_x), it_2.stride(dim_x));
+  EXPECT_EQ(it_2.stride(dim_y), it_3.stride(dim_y));
+  EXPECT_EQ(it_3.stride(dim_z), it_4.stride(dim_z));
+}
+
+TEST(multidim_iter_host_tests, can_compute_iterator_differences_ct_iterator)
+{
+  using namespace fluid;
+
+  // Create information to define 3 x 3 x 3 dimensional space
+  using dim_info_t   = DimInfoCt<3, 3, 3>;  // 3x2x2 dimensional space
+  using multi_iter_t = MultidimIterator<std::size_t, dim_info_t>;
+
+  constexpr auto size = dim_info_t().total_size();
   std::size_t data[size];
   for (const auto i : range(size)) { data[i] = i; }
 
@@ -168,6 +200,42 @@ TEST(multidim_iter_host_tests, can_compute_iterator_differences)
   EXPECT_EQ(iter.central_diff(fluid::dim_z) , 22 - 4 ); 
 }
 
+TEST(multidim_iter_host_tests, can_compute_iterator_differences_rt_iterator)
+{
+  using namespace fluid;
+  using multi_iter_t = MultidimIterator<std::size_t>;
+  
+  constexpr auto dim_size = std::size_t{3};
+  constexpr auto size     = dim_size * dim_size * dim_size;
+  std::size_t data[size];
+  for (const auto i : range(size)) { data[i] = i; }
+
+  // Create iterator over the space, the data will look like:
+  //
+  //       |- x x x -| |- x  x  x -| |-  x  x  x -| 
+  //  -----------------------------------------------
+  //    y  |  0 1 2       9  10 11      18 19 20
+  //    y  |  3 4 5       12 13 14      21 22 23
+  //    y  |  6 7 8       15 16 17      24 25 26
+  //        |---z---|    |----z---|    |----z---|
+  multi_iter_t iter(data, dim_size, dim_size, dim_size);
+
+  // Move the iterator to the center of the space.
+  iter.shift(1, fluid::dim_x).shift(1, fluid::dim_y).shift(1, fluid::dim_z);
+
+  EXPECT_EQ(iter.backward_diff(fluid::dim_x), 13 - 12);
+  EXPECT_EQ(iter.forward_diff(fluid::dim_x) , 14 - 13); 
+  EXPECT_EQ(iter.central_diff(fluid::dim_x) , 14 - 12);
+
+  EXPECT_EQ(iter.backward_diff(fluid::dim_y), 13 - 10);
+  EXPECT_EQ(iter.forward_diff(fluid::dim_y) , 16 - 13); 
+  EXPECT_EQ(iter.central_diff(fluid::dim_y) , 16 - 10);
+
+  EXPECT_EQ(iter.backward_diff(fluid::dim_z), 13 - 4 );
+  EXPECT_EQ(iter.forward_diff(fluid::dim_z) , 22 - 13); 
+  EXPECT_EQ(iter.central_diff(fluid::dim_z) , 22 - 4 ); 
+}
+
 TEST(strided_iter_host_tests, iterates_correctly_for_linear_data)
 {
   using namespace fluid;
@@ -176,9 +244,9 @@ TEST(strided_iter_host_tests, iterates_correctly_for_linear_data)
   using dim_info_2dt   = DimInfoCt<4, 2>;
   using multi_iter_1dt = MultidimIterator<std::size_t, dim_info_1dt>;
 
-  EXPECT_EQ(dim_info_2dt::total_size(), dim_info_1dt::total_size());
-  constexpr auto size = dim_info_1dt::total_size();
+  EXPECT_EQ(dim_info_2dt().total_size(), dim_info_1dt().total_size());
 
+  constexpr auto size = dim_info_1dt().total_size();
   std::size_t data[size];
   for (const auto i : range(size)) { data[i] = i; }
 
@@ -188,7 +256,7 @@ TEST(strided_iter_host_tests, iterates_correctly_for_linear_data)
   //  ------------------------------------
   //    y  |  0 1 2 3 4 5 6 7 8 9 10 11
   multi_iter_1dt iter1d(data);
-  EXPECT_EQ(multi_iter_1dt::stride(fluid::dim_x), 1);
+  EXPECT_EQ(iter1d.stride(fluid::dim_x), 1);
 
   auto strided_iter = iter1d.as_strided_iterator(fluid::dim_x);
 
@@ -216,11 +284,10 @@ TEST(strided_iter_host_tests, iterates_correctly_for_2d_data)
   using namespace fluid;
 
   // Create information to define 3 x 2 x 2 dimensional space
-  using dim_info_2dt = DimInfoCt<4, 3>;
-
+  using dim_info_2dt   = DimInfoCt<4, 3>;
   using multi_iter_2dt = MultidimIterator<std::size_t, dim_info_2dt>;
 
-  constexpr auto size = dim_info_2dt::total_size();
+  constexpr auto size = dim_info_2dt().total_size();
   std::size_t data[size];
   for (const auto i : range(size)) { data[i] = i; }
 
@@ -232,8 +299,8 @@ TEST(strided_iter_host_tests, iterates_correctly_for_2d_data)
   //    y  |  8 9 10 11
   multi_iter_2dt iter2d(data);
 
-  EXPECT_EQ(multi_iter_2dt::stride(fluid::dim_x), 1);
-  EXPECT_EQ(multi_iter_2dt::stride(fluid::dim_y), 4);
+  EXPECT_EQ(iter2d.stride(fluid::dim_x), 1);
+  EXPECT_EQ(iter2d.stride(fluid::dim_y), 4);
 
 
   // Test iteration over x:
