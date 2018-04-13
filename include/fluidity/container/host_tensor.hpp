@@ -21,6 +21,7 @@
 #include "base_tensor.hpp"
 #include "tensor_fwrd.hpp"
 #include "device_tensor.hpp"
+#include <fluidity/iterator/multidim_iterator.hpp>
 #include <fluidity/iterator/strided_iterator.hpp>
 #include <fluidity/utility/cuda.hpp>
 #include <cstddef>
@@ -58,6 +59,8 @@ class HostTensor<T, 1> : public BaseTensor<T, 1> {
   using iterator_t        = StridedIterator<self_t, false, exec_t>;
   /// Defines the type of a const iterator.
   using const_iterator_t  = StridedIterator<self_t, true, exec_t>;
+  /// Defines the type of a non const iterator.
+  using multi_iterator_t  = MultidimIterator<element_t, DimInfo, exec_t>;
 
   /// Creates a host tensor with no elements. This requires the tensor to be
   /// resized before using it.
@@ -100,6 +103,14 @@ class HostTensor<T, 1> : public BaseTensor<T, 1> {
   const iterator_t end() const
   {
     return const_iterator_t{this->_data + this->_size};
+  }
+
+  /// Returns a multi dimensional iterator over the tensor data, which is
+  /// initialized to point to the start of the tensor data. For a 1D tensor the
+  /// multidimensional iterator behaves the same as a StridedIterator.
+  fluidity_host_device multi_iterator_t multi_iterator() const
+  {
+    return multi_iterator_t{this->data, this->_size};
   }
 
   /// Resizes the tensor to contain \p num_elements elements.

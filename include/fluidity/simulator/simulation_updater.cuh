@@ -123,15 +123,14 @@ fluidity_global void update_impl(Iterator begin, Iterator end)
   });
 }
 
-template <typename Iterator, typename Loader>
-void update(Iterator begin, Iterator end, Loader loader)
+template <typename Iterator, typename Loader, typename SizeInfo>
+void update(Iterator multi_iterator,
+            Loader   loader        ,
+            SizeInfo thread_sizes  ,
+            SizeInfo block_sizes   )
 {
 #if defined(__CUDACC__)
   constexpr auto padding     = Loader::padding;
-  constexpr auto max_threads = default_threads_per_block;
-
-  auto threads_per_block = 
-    detail::get_threads_per_block<padding>(Dimension<Iterator::dimensions>{});
 
   dim3 threads_per_block(elements < max_threads ? elements : max_threads);
   dim3 num_blocks(std::max(elements / threads_per_block.x,

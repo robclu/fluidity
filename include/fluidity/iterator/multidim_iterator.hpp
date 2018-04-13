@@ -57,9 +57,6 @@ struct MultidimIterator : public DimensionInfo {
   /// Defines if the strides are constexpr computed.
   static constexpr auto constexpr_strides = dim_info_t::constexpr_offsets;
 
-  /// Defines the number of dimensions for the iterator.
-  static constexpr std::size_t dimensions = dim_info_t::num_dimensions();
-
  private:
   pointer_t _ptr; //!< A pointer to the data to iterate over.
 
@@ -243,6 +240,12 @@ struct MultidimIterator : public DimensionInfo {
   forward_diff(Dimension<Value> /*dim*/, unsigned int amount = 1) const
   {
     return *(_ptr + amount * stride(Dimension<Value>{})) - *_ptr;
+  }
+
+  /// Returns the number of dimensions which can be iterated over.
+  fluidity_host_device constexpr std::size_t num_dimensions() const
+  {
+    return dim_info_t::num_dimensions();
   }
 
   /// Offsets the iterator by \p amount in the dimension defined by \p dim, and

@@ -63,8 +63,76 @@ template <typename T>
 static constexpr auto is_gpu_policy_v = 
   is_same_v<std::decay_t<T>, gpu_type>;
 
-/// Defines the default number of threads per block.
-static constexpr std::size_t default_threads_per_block = 256;
+/// Defines the default number of threads per dimension for 1d.
+static constexpr std::size_t default_threads_1d = 512;
+
+/// Defines the default number of threads per dimension for 2d in dim x.
+static constexpr std::size_t default_threads_2d_x = 32;
+/// Defines the default number of threads per dimension for 2d in dim x.
+static constexpr std::size_t default_threads_2d_y = 16;
+
+/// Defines the default number of threads per dimension for 3d in dim x.
+static constexpr std::size_t default_threads_3d_x = 16;
+/// Defines the default number of threads per dimension for 3d in dim y.
+static constexpr std::size_t default_threads_3d_y = 8;
+/// Defines the default number of threads per dimension for 3d in dim z.
+static constexpr std::size_t default_threads_3d_z = 4;
+
+#if defined(__CUDACC__)
+
+/// Returns the number of threads in each of the dimensions for a single
+/// dimension.
+/// \param[in] it       The iterator for the multi dimensional space.
+/// \tparam    Iterator The type of the iterator. 
+template <typename Iterator>
+dim3 get_threads_sizes(Iterator&& it)
+{
+  if (it.num_dimensions() == 1)
+  {
+    return dim3(it.size(dim_x) < default_threads_1d 
+                  ? it.size(dim_x) : default_threads_1d);
+  }
+  else if (it.num_dimensions() == 2)
+  {
+    return dim3(it.size(dim_x) < default_threads_2d_x 
+                  ? it.size(dim_x) : default_threads_2d_x,
+                it.size(dim_y) < default_threads_2d_y
+                  ? it.size(dim_y : default_threads_2d_y));
+  }
+  return dim3(it.size(dim_x) < default_threads_3d_x 
+                ? it.size(dim_x) : default_threads_3d_x,
+              it.size(dim_y) < default_threads_3d_y
+                ? it.size(dim_y) : default_threads_3d_y,
+              it.size(dim_z) < default_threads_3d_z
+                ? it.size(dim_z) : default_threads_3d_z);
+}
+
+/// Returns the size of the block based on the size of the space defined by the
+/// \p iterator and the thread sizes.
+/// \param[in] it           The iterator for the multi dimensional space.
+/// \param[in] thread_sizes The number of threads in each dimension.
+/// \tparam    Iterator     The type of the iterator. 
+template <typename Iterator>
+dim3 get_block_sizes(Iterator&& it, dim3 thread_sizes)
+{
+  const auto default_value = unsigned int{1};
+  if (it.num_dimensions() == 1)
+  {
+    return dim3(std::max(it.size(dim_x) / thread_sizes.x, default_value));
+  }
+  else if (it.num_dimensions() == 2)
+  {
+    return dim3(std::max(it.size(dim_x) / thread_sizes.x, default_value),
+                std::max(it.size(dim_y) / thread_sizes.y, default_value));
+  }
+  return dim3(std::max(it.size(dim_x) / thread_sizes.x, default_value),
+              std::max(it.size(dim_y) / thread_sizes.y, default_value)
+              std::max(it.size(dim_z) / thread_sizes.z, default_value));
+}
+
+#else
+
+#endif // __CUDACC__
 
 }} // namespace fluid::exec
 

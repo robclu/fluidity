@@ -186,7 +186,10 @@ void GenericSimulator<Traits>::simulate()
   auto start = high_resolution_clock::now();
   auto end   = high_resolution_clock::now();
 
-  auto updater = updater_t(_initial_states, _updated_states, _wavespeeds);
+  auto updater     = updater_t(_initial_states, _updated_states, _wavespeeds);
+  auto iterator    = _initial_states.multi_iterator();
+  auto thread_info = get_thread_sizes(iterator);
+  auto block_info  = get_block_sizes(iterator, thread_info);
   
   while (time < _params.run_time && iters < _params.max_iters)
   {
@@ -196,8 +199,7 @@ void GenericSimulator<Traits>::simulate()
     // Set patch ghost cells ...
     
     // Update the simulation ...
-    updater
-
+    updater(iterator, thread_info, block_info);
 
     time += _params.dt();
     std::swap(_initial_states, _updated_states);
