@@ -271,6 +271,17 @@ struct MultidimIterator : public DimensionInfo {
     return *this;
   }
 
+  /// Returns the size of a given dimension of iteration. This is the number of
+  /// elements which can be iterated over in the dimension.
+  /// \param[in]  dim     The dimension to advance the iterator in.
+  /// \tparam     Value   The value which defines the dimension.
+  template <std::size_t Value>
+  fluidity_host_device constexpr std::size_t
+  size(Dimension<Value> /*dim*/) const
+  {
+    return dim_info_t::size(Dimension<Value>());
+  }
+
   /// Returns stride required to iterate in the dimension \p dim. The stride in
   /// the 0 dimension (Value = 0) is always taken to be one.
   /// \param[in] dim    The dimension to get the offset for.

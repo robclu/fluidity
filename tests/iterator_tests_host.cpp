@@ -47,6 +47,32 @@ TEST(range_host_tests, range_works_with_non_integer_types)
   }
 }
 
+TEST(multidim_iter_host_tests, can_get_iterator_dimension_sizes)
+{
+  using namespace fluid;
+
+  constexpr auto size_x = std::size_t{4};
+  constexpr auto size_y = std::size_t{3};
+
+  // Create information to define 3 x 2 x 2 dimensional space
+  using dim_info_2d_ct_t = DimInfoCt<size_x, size_y>;
+  using dim_info_2d_rt_t = DimInfo;
+
+  using multi_iter_2d_ct_t = MultidimIterator<std::size_t, dim_info_2d_ct_t>;
+  using multi_iter_2d_rt_t = MultidimIterator<std::size_t, dim_info_2d_rt_t>;
+
+  constexpr auto size = dim_info_2d_ct_t().total_size();
+  std::size_t data[size];
+
+  multi_iter_2d_ct_t iter2d_ct(data);
+  EXPECT_EQ(iter2d_ct.size(dim_x), size_x);
+  EXPECT_EQ(iter2d_ct.size(dim_y), size_y);
+
+  multi_iter_2d_rt_t iter2d_rt(data, size_x, size_y);
+  EXPECT_EQ(iter2d_rt.size(dim_x), size_x);
+  EXPECT_EQ(iter2d_rt.size(dim_y), size_y);
+}
+
 TEST(multidim_iter_host_tests, can_create_and_iterate_multidim_iterator)
 {
   using namespace fluid;
