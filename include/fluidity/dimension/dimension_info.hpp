@@ -19,6 +19,7 @@
 
 #include "dimension.hpp"
 #include <fluidity/algorithm/if_constexpr.hpp>
+#include <fluidity/algorithm/unrolled_for.hpp>
 #include <fluidity/algorithm/fold.hpp>
 #include <fluidity/utility/type_traits.hpp>
 #include <vector>
@@ -121,8 +122,10 @@ struct DimInfoCt {
   }
 };
 
-/// The DimInfo struct defines dimension information which is known not known
-/// at compile time.
+/// The DimInfo struct defines dimension information where the sizes of the
+/// dimensions are not known at compile time, but the number of dimensions is.
+/// \tparam Dims The number of dimensions for which information is provided.
+template <std::size_t Dims>
 struct DimInfo {
   /// Defines that the offset computations are constexpr.
   static constexpr auto constexpr_offsets = false;
@@ -135,12 +138,16 @@ struct DimInfo {
   /// \tparam    Sizes  The type of the sizes.
   template <typename... Sizes>
   fluidity_host_device DimInfo(Sizes&&... sizes)
-  : _sizes{static_cast<std::size_t>(sizes)...} {}
+  : _sizes{static_cast<std::size_t>(sizes)...}
+  {
+    static_assert(sizeof...(Sizes) == Dims,
+                  "Size for each dimension is not provided!");
+  }
 
   /// Returns the number of dimensions in the space.
-  fluidity_host_device std::size_t num_dimensions() const
+  fluidity_host_device constexpr std::size_t num_dimensions() const
   {
-    return _sizes.size();
+    return Dims;
   }
 
   /// Returns the size of the \p nth dimension.
@@ -164,18 +171,19 @@ struct DimInfo {
   fluidity_host_device std::size_t total_size() const
   {
     std::size_t prod_sum = 1;
-    for (const auto& value : _sizes)
+
+    for (const auto i : range(num_dimensions()))
     {
-      prod_sum *= value;
+      prod_sum *= _sizes[i];
     }
     return prod_sum;
   }
 
-  /// Adds a dimension to the dimension information.
-  /// \param[in] sz The size of the new dimension to add.
-  fluidity_host_device void push_back(std::size_t sz)
+  /// Returns a reference to the size of dimension \p dim.
+  /// \param[in] dim The dimension size to get a refernece to.
+  fluidity_host_device std::size_t& operator[](std::size_t dim)
   {
-    _sizes.push_back(sz);
+    return _sizes[dim];
   }
 
  private:
@@ -230,7 +238,7 @@ struct DimInfo {
   }
 
  private:
-  std::vector<std::size_t> _sizes = {}; //!< Sizes of the dimensions.
+  std::size_t _sizes[Dims] = {}; //!< Sizes of the dimensions.
 };
 
 } // namespace fluid

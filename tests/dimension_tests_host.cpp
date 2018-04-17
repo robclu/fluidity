@@ -37,19 +37,27 @@ TEST(dimension_info_tests_host, sizes_compute_correctly)
 
 TEST(dimension_info_tests_host, sizes_compute_correctly_for_runtime_impl)
 {
-  constexpr auto size_x = 4, size_y = 5, size_z = 6;
-  using dim_info_t = fluid::DimInfo;
+  constexpr auto size_x = 4, size_y = 5, size_z = 6, dims = 3;
+  using dim_info_t = fluid::DimInfo<dims>;
 
   dim_info_t dim_info(size_x, size_y, size_z);
 
   EXPECT_EQ(dim_info.size(fluid::dim_x), size_x);
   EXPECT_EQ(dim_info.size(fluid::dim_y), size_y);
   EXPECT_EQ(dim_info.size(fluid::dim_z), size_z);
-  EXPECT_EQ(dim_info.num_dimensions()  , 3     );
+  EXPECT_EQ(dim_info.num_dimensions()  , dims  );
 
-  dim_info.push_back(4);
-  EXPECT_EQ(dim_info.size(fluid::Dimension<3>{}), 4);
-  EXPECT_EQ(dim_info.num_dimensions()           , 4);
+  EXPECT_EQ(dim_info.size(fluid::Dimension<0>{}), size_x);
+  EXPECT_EQ(dim_info.size(fluid::Dimension<1>{}), size_y);
+  EXPECT_EQ(dim_info.size(fluid::Dimension<2>{}), size_z);
+
+  dim_info[0] = size_x * size_x;
+  dim_info[1] = size_y * size_y;
+  dim_info[2] = size_z * size_z;
+
+  EXPECT_EQ(dim_info.size(fluid::Dimension<0>{}), size_x * size_x);
+  EXPECT_EQ(dim_info.size(fluid::Dimension<1>{}), size_y * size_y);
+  EXPECT_EQ(dim_info.size(fluid::Dimension<2>{}), size_z * size_z);
 }
 
 TEST(dimension_info_tests_host, total_size_computes_correctly_ct)
@@ -62,8 +70,8 @@ TEST(dimension_info_tests_host, total_size_computes_correctly_ct)
 
 TEST(dimension_info_tests_host, total_size_computes_correctly_rt)
 {
-  constexpr auto size_x = 7, size_y = 5, size_z = 6;
-  using dim_info_t = fluid::DimInfo;
+  constexpr auto size_x = 7, size_y = 5, size_z = 6, dims = 3;
+  using dim_info_t = fluid::DimInfo<dims>;
 
   dim_info_t dim_info(size_x, size_y, size_z);
 
@@ -135,8 +143,8 @@ TEST(dimension_info_tests_host, can_get_flattened_indices_ct)
 
 TEST(dimension_info_tests_host, can_get_flattened_indices_rt)
 {
-  constexpr auto size_x = 3, size_y = 3, size_z = 2;
-  using dim_info_t = fluid::DimInfo;
+  constexpr auto size_x = 3, size_y = 3, size_z = 2, dims = 3;
+  using dim_info_t = fluid::DimInfo<dims>;
 
   dim_info_t dim_info(size_x, size_y, size_z);
 
