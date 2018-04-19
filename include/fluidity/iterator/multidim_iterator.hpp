@@ -38,7 +38,7 @@ namespace fluid {
 /// \tparam DimInfo   Information for the dimensions.
 /// \tparam Exec      The execution policy for the iterator.
 template < typename T
-         , typename DimensionInfo = DimInfo
+         , typename DimensionInfo = DimInfo<2>
          , typename Exec          = exec::default_type>
 struct MultidimIterator : public DimensionInfo {
   /// Defines the type of this iterator.

@@ -46,17 +46,19 @@ class DeviceTensor<T, 1> : public BaseTensor<T, 1> {
   /// Defines the type of the tensor.
   using self_t            = DeviceTensor;
   /// Defines the type of the elements in the tensor.
-  using element_t         = T;
+  using element_t         = std::decay_t<T>;
   /// Defines an alias for the base tensor class.
-  using base_t            = BaseTensor<T, 1>;
+  using base_t            = BaseTensor<element_t, 1>;
   /// Defines the type of the pointer to the data to store.
   using pointer_t         = typename base_t::pointer_t;
   /// Defines the type of a non const iterator.
   using iterator_t        = StridedIterator<self_t, false, exec_t>;
   /// Defines the type of a const iterator.
   using const_iterator_t  = StridedIterator<self_t, true, exec_t>;
+  /// Defines the type of dimension information used for the tensor.
+  using dim_info_t        = DimInfo<1>;
   /// Defines the type of a non const iterator.
-  using multi_iterator_t  = MultidimIterator<element_t, DimInfo, exec_t>;
+  using multi_iterator_t  = MultidimIterator<element_t, dim_info_t, exec_t>;
 
   /// Creates a device tensor with no elements. This requires the tensor to be
   /// resized before using it.

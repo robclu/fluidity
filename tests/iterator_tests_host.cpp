@@ -56,7 +56,7 @@ TEST(multidim_iter_host_tests, can_get_iterator_dimension_sizes)
 
   // Create information to define 3 x 2 x 2 dimensional space
   using dim_info_2d_ct_t = DimInfoCt<size_x, size_y>;
-  using dim_info_2d_rt_t = DimInfo;
+  using dim_info_2d_rt_t = DimInfo<2>;
 
   using multi_iter_2d_ct_t = MultidimIterator<std::size_t, dim_info_2d_ct_t>;
   using multi_iter_2d_rt_t = MultidimIterator<std::size_t, dim_info_2d_rt_t>;
@@ -82,7 +82,7 @@ TEST(multidim_iter_host_tests, can_create_and_iterate_multidim_iterator)
 
   // Create information to define 3 x 2 x 2 dimensional space
   using dim_info_2d_ct_t = DimInfoCt<size_x, size_y>;
-  using dim_info_2d_rt_t = DimInfo;
+  using dim_info_2d_rt_t = DimInfo<2>;
 
   using multi_iter_2d_ct_t = MultidimIterator<std::size_t, dim_info_2d_ct_t>;
   using multi_iter_2d_rt_t = MultidimIterator<std::size_t, dim_info_2d_rt_t>;
@@ -171,7 +171,7 @@ TEST(multidim_iter_host_tests, modified_iter_strides_are_the_same_rt)
   using namespace fluid;
 
   // Create information to define 3 x 3 x 3 dimensional space
-  using multi_iter_t = MultidimIterator<std::size_t>;
+  using multi_iter_t = MultidimIterator<std::size_t, DimInfo<3>>;
 
   constexpr auto dim_size = std::size_t{3};
   constexpr auto size     = dim_size * dim_size * dim_size;
@@ -229,7 +229,7 @@ TEST(multidim_iter_host_tests, can_compute_iterator_differences_ct_iterator)
 TEST(multidim_iter_host_tests, can_compute_iterator_differences_rt_iterator)
 {
   using namespace fluid;
-  using multi_iter_t = MultidimIterator<std::size_t>;
+  using multi_iter_t = MultidimIterator<std::size_t, DimInfo<3>>;
   
   constexpr auto dim_size = std::size_t{3};
   constexpr auto size     = dim_size * dim_size * dim_size;
@@ -327,7 +327,6 @@ TEST(strided_iter_host_tests, iterates_correctly_for_2d_data)
 
   EXPECT_EQ(iter2d.stride(fluid::dim_x), 1);
   EXPECT_EQ(iter2d.stride(fluid::dim_y), 4);
-
 
   // Test iteration over x:
   auto strided_iter_x = iter2d.as_strided_iterator(fluid::dim_x);

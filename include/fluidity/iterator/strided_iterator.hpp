@@ -269,6 +269,12 @@ struct StridedIterator {
     _ptr += amount * _stride; return *this;
   }
 
+  /// Returns the number of dimensions which can be iterated over.
+  fluidity_host_device constexpr std::size_t num_dimensions() const
+  {
+    return 1;
+  }
+
   /// Returns the backward difference between this iterator and the iterator \p
   /// amount places from from this iterator. I.e
   /// 
