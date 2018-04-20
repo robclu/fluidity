@@ -313,9 +313,9 @@ fluidity_device_only constexpr auto make_multidim_iterator()
   iter_t iter{buffer};
 
   // Move the iterator to the current thread.
-  iter.shift(dim_x, thread_id(dim_x))
-      .shift(dim_y, thread_id(dim_y))
-      .shift(dim_z, thread_id(dim_z));
+  //iter.shift(dim_x, thread_id(dim_x))
+  //    .shift(dim_y, thread_id(dim_y))
+  //    .shift(dim_z, thread_id(dim_z));
   return iter;
 }
 
@@ -333,9 +333,9 @@ fluidity_device_only constexpr auto make_multidim_iterator(T* ptr)
   iter_t iter{ptr};
 
   // Move the iterator to the current thread.
-  iter.shift(dim_x, thread_id(dim_x))
-      .shift(dim_y, thread_id(dim_y))
-      .shift(dim_z, thread_id(dim_z));
+  //iter.shift(dim_x, thread_id(dim_x))
+  //    .shift(dim_y, thread_id(dim_y))
+  //    .shift(dim_z, thread_id(dim_z));
   return iter;
 }
 
