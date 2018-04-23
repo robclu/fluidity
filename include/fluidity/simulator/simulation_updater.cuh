@@ -23,120 +23,44 @@
 
 namespace fluid  {
 namespace sim    {
-namespace detail {
 
-/// Used to define the type of compile time dimension information for a patch
-/// for the update implementation. It can be specialized based on the number of
-/// dimensions.
-/// \tparam Dims  The number of dimensions.
-template <std::size_t Dims>
-struct MakePatchInfo;
-
-/// Specialization for a single dimension.
-template <>
-struct MakePatchInfo<1> { 
-  /// Defines the type of compile time dimension information.
-  using type = DimInfoCt<default_threads_per_block>;
-};
-
-/// Specialization for two dimensions.
-template <>
-struct MakePatchInfo<2> { 
-  /// Defines the type of compile time dimension information.
-  using type = 
-    DimInfoCt<
-      (default_threads_per_block >> 2)
-    , (default_threads_per_block >> 2)
-    >;
-};
-
-/// Specialization for two dimensions.
-template <>
-struct MakePatchInfo<3> { 
-  /// Defines the type of compile time dimension information.
-  using type = 
-    DimInfoCt<
-      (default_threads_per_block >> 3)
-    , (default_threads_per_block >> 3)
-    , (default_threads_per_block >> 3)
-    >;
-};
-
-template < typename    Iterator,
-         , std::size_t Padding ,
-         , std::enable_if_t<Iterator::dimensions == 1, int> = 0
-         >
-void shift_for_padding(Iterator& iter)
+/// Implementation of the updating function. This simply invokes the solving
+/// function of the solver with the input and output data and the simulation
+/// paramters.
+/// \param[in] in     The iterator over the input data for the simulation.
+/// \param[in] out    The iterator over the output data for the simulation.
+/// \param[in] dtdh   The scaling factor for state update.
+/// \param[in] solver The solver which solves and updates the simulation.
+/// \tparam    It     The type of the iterators.
+/// \tparam    T      The type of the scaling factor.
+/// \tparam    Solver The type of the solver.
+template <typename It, typename Solver, typename T>
+fluidity_global void update_impl(It in, In out, T dtdh, Solver solver)
 {
-  iter.shift(Padding, dim_x);
+  solver.solve(in, out, dtdh);
 }
 
-template < typename    Iterator,
-         , std::size_t Padding ,
-         , std::enable_if_t<Iterator::dimensions == 2, int> = 0
-         >
-void shift_for_padding(Iterator& iter)
-{
-  iter.shift(Padding, dim_x).shift(Padding, dim_y);
-}
-
-template < typename    Iterator,
-         , std::size_t Padding ,
-         , std::enable_if_t<Iterator::dimensions == 3, int> = 0
-         >
-void shift_for_padding(Iterator& iter)
-{
-  iter.shift(Padding, dim_x).shift(Padding, dim_y).shift(Padding, dim_z);
-}
-
-} // namespace detail
-
-/// Alias for the type of patch information for updating.
-template <std::size_t Dims>
-using patch_info_t = typename detail::MakePatchInfo<Dims>::type;
-
-template <typename Iterator, typename Loader>
-fluidity_global void update_impl(Iterator begin, Iterator end)
-{
-  using patch_info_t = patch_info_t<Iterator::dimensions>;
-  using state_t      = std::decay_t<decltype(*begin)>;
-
-  auto global_iter = make_multidim_iterator<state_t, patch_info_t>(&(*begin));
-  auto patch_iter  = make_multidim_iterator<state_t, patch_info_t>();
-
-  detail::shift_for_padding<Loader::padding>(global_iter);
-  detail::shift_for_padding<Loader::padding>(patch_iter);
-
-  // Move the iterators passed the padding:
-  *patch_iter = *global_iter;
-
-  unrolled_for<dim_info_t::num_dimensions()>([&] (auto dim_value)
-  {
-    constexpr auto dim      = Dimension<dim_value>();
-    constexpr auto dim_size = dim_info_t::size(dim);
-
-    // Move the iterators:
-
-    loader.load_internal(patch_iter, dim_size, dim);
-    loader.load_boundary(global_iter, patch_iter, grid_size(dim), dim);
-    __syncthreads();
-  });
-}
-
-template <typename Iterator, typename Loader, typename SizeInfo>
-void update(Iterator multi_iterator,
-            Loader   loader        ,
-            SizeInfo thread_sizes  ,
-            SizeInfo block_sizes   )
+/// Updater function for updating the simulation using the GPU.
+/// \param[in] multi_iterator_in The input data to use to update.
+/// \param[in] multi_itertor_out The output data to write to after updating.
+/// \param[in] dtdh              Scaling factor for the update.
+/// \param[in] solver            The solver which updates the states.
+/// \param[in] thread_sizes      The number of threads in each block.
+/// \param[in] block_sizes       The number of blocks in the grid.
+/// \tparam    Iterator          The type of the mulri dimensional iterator.
+/// \tparam    T                 The type of the scaling factor.
+/// \tparam    Solver            The type of the solver.
+/// \tparam    SizeInfo          The type of the size information.
+template <typename Iterator, typename T, typename Solver, typename SizeInfo>
+void update(Iterator in          ,
+            Iterator out         ,
+            T        dtdh        ,
+            Solver   solver      ,
+            SizeInfo thread_sizes,
+            SizeInfo block_sizes )
 {
 #if defined(__CUDACC__)
-  constexpr auto padding     = Loader::padding;
-
-  dim3 threads_per_block(elements < max_threads ? elements : max_threads);
-  dim3 num_blocks(std::max(elements / threads_per_block.x,
-                           static_cast<unsigned int>(1)));
-
-  update_impl<<num_blocks, threads_per_block>>>(begin, end);
+  update_impl<<block_sizes, thread_sizes>>>(in, out, dtdh, solver);
   fluidity_cuda_check_result(cudaDeviceSynchronize()); 
 #endif // __CUDACC__
 }

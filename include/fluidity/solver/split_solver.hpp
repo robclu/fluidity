@@ -22,14 +22,15 @@ namespace solver {
 
 namespace detail {
 
-enum class Input { left = 0, right = 1 };
+enum class Input { backward = 0, forward = 1 };
 template <Input Direction> struct InputSelector {};
 
-/// Alias for creating a left input state.
-using left_input_t = InputSelector<Input::left>;
-/// Aliad for creating a right input state.
-using right_input_t = InputSelector<Input::right>;
-}
+/// Alias for creating a backward input state.
+using back_input_t = InputSelector<Input::backward>;
+/// Aliad for creating a forward input state.
+using fwrd_input_t = InputSelector<Input::forward>;
+
+} // namespace detail
 
 /// The Split solver class defines a functor which updates states using a split
 /// method. It can be specialized for different systems of different dimension.
@@ -48,14 +49,14 @@ struct SplitSolver {
   using flux_solver_t   = typename traits_t::flux_solver_t;
 
   /// Alias for creating a left input state.
-  using left_input_t  = detail::InputSelector<detail::Input::left>;
+  static constexpr auto back_input = detail::back_input_t{};
   /// Aliad for creating a right input state.
-  using right_input_t = detail::InputSelector<detail::Input::right>;
+  static constexpr auto fwrd_input = detail::fwrd_input_t{};
 
   /// Defines the number of dimensions to solve over.
   static constexpr std::size_t num_dimensions = 1;
   /// Defines the amount of padding in the data loader.
-  static constexpr std::size_t padding        = Loader::padding;
+  static constexpr std::size_t padding        = loader_t::padding;
 
  public:
   /// Solve function which invokes the solver.
@@ -65,14 +66,15 @@ struct SplitSolver {
   /// \param[in] flux     An iterator which points to the flux to update. 
   /// \tparam    Iterator The type of the iterator.
   /// \tparam    Flux     The type of the flux iterator.
-  template <typename Iterator, typename Flux>
-  fluidity_device_only void solve(Iterator&& data, Flux&& flux) const
+  template <typename It, typename T>
+  fluidity_device_only void solve(It&& in, It&& out, T dtdh) const
   {
     static_assert(std::decay_t<Iterator>::num_dimensions() == num_dimensions,
                   "Dimensions of iterator do not match solver specialization");
+
     auto loader      = loader_t{};
-    auto global_iter = get_global_iterator(data);
-    auto patch_iter  = get_patch_iterator(data);
+    auto global_iter = get_global_iterator(in);
+    auto patch_iter  = get_patch_iterator(in);
     auto size        = begin.size(dim_x);
 
     // Load the global data into the shared data:
@@ -84,23 +86,30 @@ struct SplitSolver {
     __syncthreads();
 
     // Run the rest of the sovler .. =D
-    auto in_fwrd =
-      reconstructor_t{}(patch_iter, material_t{}, params.dtdh, dim_x);
-    auto in_back =
-      reconstructor_t{}(
-        patch_iter.offset(-1, dim_x), material_t{}, params.dtdh, dim_x);
+    auto in_fwrd = make_recon_input(patch_iter, dtdh, fwrd_input_t);
+    auto in_back = make_recon_input(patch_iter, dtdh, back_input_t);
 
-    auto flux_diff = 
-      flux_solver_t{}(in_fwrd.left, in_fwrd.right, material_t{}, dim_x) -
-      flux_solver_t{}(in_back.left, in_back.right, material_t{}, dim_x);
+    global_iter = get_global_iterator(out);
+    *global_iter = *patch_iter - dtdh * 
+      (flux_solver_t{}(in_fwrd.left, in_fwrd.right, material_t{}, dim_x) -
+       flux_solver_t{}(in_back.left, in_back.right, material_t{}, dim_x));
   }
 
  private:
   /// Returns a reconstructed left input for the flux solver.
-  fluidity_device_only make_recon_input(Iterator&& it, left_input_t)
+  template <typename It, typename T>
+  fluidity_device_only make_recon_input(It&& it, T dtdh, left_input_t)
   {
-    return reconstructor_t{}()
+    return reconstructor_t{}(it.offset(-1, dim_x), material_t{}, dtdh, dim_x);
   }
+
+  /// Returns a reconstructed left input for the flux solver.
+  template <typename It, typename T>
+  fluidity_device_only make_recon_input(It&& it, T dtdh, right_input_t)
+  {
+    return reconstructor_t{}(it, material_t{}, dtdh, dim_x);
+  }
+
 
   /// Returns a global multi dimensional iterator which is shifted to the global
   /// thread index in the x-dimension.
@@ -122,13 +131,13 @@ struct SplitSolver {
   /// \param[in] it       The iterator to the start of the global data.
   /// \tparam    Iterator The type of the iterator.
   template <typename Iterator>
-  fluidity_device_only get_patch_iterator(Iterator&& it) const
+  fluidity_device_only get_patch_iterator(Iterator&& it, bool pad = true) const
   {
     using state_t    = std::decay_t<decltype(*it)>;
     using dim_info_t = DimInfoCt<default_threads_per_block>;
 
     auto it = make_multidim_iterator<state_t, dim_info_t>();
-    return it.offset(padding + thread_id(dim_x), dim_x);
+    return it.offset(thread_id(dim_x) + pad ? padding : 0, dim_x);
   }
 };
 
