@@ -34,49 +34,6 @@ namespace sim   {
 
 namespace fs = std::experimental::filesystem;
 
-/// The SimulationStorage struct stores the state data for a simulation.
-/// This is the default implementation for when the ExecutionPolicy does not
-/// intend to use the GPU.
-/// 
-/// \tparam State           The type of the state data.
-/// \tparam ExecutionPolicy The type of execution for the simulation.
-template <typename State, typename ExecutionPolicy>
-struct SimulationStorage {
-  using state_t     = std::decay_t<State>;
-  using value_t     = state_t::value_t;
-  using storage_t   = HostTensor<state_t, state_t::dimensions>
-  using wavespeed_t = HostTensor<value_t, 1>;
-
-  template <std::size_t Value>
-  void resize_storage(std::size_t elements, Dimension<Value> /*dim*/)
-  {
-    initial_states_host.resize(elements);
-    updated_states_host.resize(elements);
-  }
-
-  storage_t& initial_states()
-  {
-    return _initial_states;
-  }
-
-  storage_t& updated_states()
-  {
-    return _updated_states;
-  }
-
-  wavespeed_t& wavespeeds()
-  {
-    return _wavespeeds;
-  }
-
- private:
-  storage_t   _initial_states_host;
-  storage_t   _updated_states_host;
-  wavespeed_t _wavespeeds;
-};
-
-
-
 /// The GenericSimulator class implements the simulation interface.
 /// \tparam Traits The traits which define the simulation paramters.
 template <typename Traits>
@@ -96,8 +53,12 @@ class GenericSimulator final : public Simulator<Traits> {
   using state_t     = typename traits_t::state_t;
   /// Defines the data type used in the state vector.
   using value_t     = typename state_t::value_t;
+  /// Defines the type of the material for the simulation.
+  using material_t  = typename traits_t::material_t;
   /// Defines the type of the container used to store the state state.
   using storage_t   = HostTensor<state_t, state_t::dimensions>;
+  /// Defines the type of the solver used to update the simulation.
+  using solver_t    = typename traits_t::solver_t;
   /// Defines the type of the container used for storing wavespeed data.
   using wavespeed_t = HostTensor<value_t, 1>;
   /// Defines the type of the parameter container.
@@ -146,7 +107,7 @@ class GenericSimulator final : public Simulator<Traits> {
   params_t    _params;          //!< The parameters for the simulation.
 
   /// Returns the dimension information for the simulator.
-  DimInfo dimension_info() const;
+  decltype(auto) dimension_info() const;
 
   /// Outputs a batch of 1D or 2D data to the \p stream where the batch contains
   /// \p batch_size number of total elements. The \p offset defines the offset
@@ -186,10 +147,12 @@ void GenericSimulator<Traits>::simulate()
   auto start = high_resolution_clock::now();
   auto end   = high_resolution_clock::now();
 
-  auto updater     = updater_t(_initial_states, _updated_states, _wavespeeds);
-  auto iterator    = _initial_states.multi_iterator();
-  auto thread_info = get_thread_sizes(iterator);
-  auto block_info  = get_block_sizes(iterator, thread_info);
+  //auto updater     = updater_t(_initial_states, _updated_states, _wavespeeds);
+  auto input_it    = _initial_states.multi_iterator();
+  auto output_it   = _updated_states.multi_iterator();
+  auto thread_info = get_thread_sizes(input_it);
+  auto block_info  = get_block_sizes(input_it, thread_info);
+  auto solver      = solver_t{};
   
   while (time < _params.run_time && iters < _params.max_iters)
   {
@@ -199,7 +162,13 @@ void GenericSimulator<Traits>::simulate()
     // Set patch ghost cells ...
     
     // Update the simulation ...
-    updater(iterator, thread_info, block_info);
+    update(input_it    ,
+           output_it   ,
+           solver      ,
+           material_t{},
+           _params.dtdh,
+           thread_info ,
+           block_info  );
 
     time += _params.dt();
     std::swap(_initial_states, _updated_states);
@@ -275,12 +244,12 @@ void GenericSimulator<Traits>::write_results(fs::path file_path) const
 //===== Private ---------------------------------------------------------=====//
 
 template <typename Traits>
-DimInfo GenericSimulator<Traits>::dimension_info() const
+decltype(auto) GenericSimulator<Traits>::dimension_info() const
 {
-  auto dim_info = DimInfo();
+  auto dim_info = DimInfo<dimensions>();
   unrolled_for<dimensions>([&] (auto i)
   {
-    dim_info.push_back(_initial_states.size(i));
+    dim_info[i] = _initial_states.size(i);
   });
   return dim_info;
 }

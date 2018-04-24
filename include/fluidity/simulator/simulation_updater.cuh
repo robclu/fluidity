@@ -34,10 +34,10 @@ namespace sim    {
 /// \tparam    It     The type of the iterators.
 /// \tparam    T      The type of the scaling factor.
 /// \tparam    Solver The type of the solver.
-template <typename It, typename Solver, typename T>
-fluidity_global void update_impl(It in, In out, T dtdh, Solver solver)
+template <typename It, typename Solver, typename M, typename T>
+fluidity_global void update_impl(It in, In out, M mat, T dtdh, Solver solver)
 {
-  solver.solve(in, out, dtdh);
+  solver.solve(in, out, mat, dtdh);
 }
 
 /// Updater function for updating the simulation using the GPU.
@@ -51,16 +51,21 @@ fluidity_global void update_impl(It in, In out, T dtdh, Solver solver)
 /// \tparam    T                 The type of the scaling factor.
 /// \tparam    Solver            The type of the solver.
 /// \tparam    SizeInfo          The type of the size information.
-template <typename Iterator, typename T, typename Solver, typename SizeInfo>
+template < typename Iterator,
+         , typename T
+         , typename Material
+         , typename Solver
+         , typename SizeInfo>
 void update(Iterator in          ,
             Iterator out         ,
-            T        dtdh        ,
             Solver   solver      ,
+            Material mat         ,
+            T        dtdh        ,
             SizeInfo thread_sizes,
             SizeInfo block_sizes )
 {
 #if defined(__CUDACC__)
-  update_impl<<block_sizes, thread_sizes>>>(in, out, dtdh, solver);
+  update_impl<<block_sizes, thread_sizes>>>(in, out, mat, dtdh, solver);
   fluidity_cuda_check_result(cudaDeviceSynchronize()); 
 #endif // __CUDACC__
 }

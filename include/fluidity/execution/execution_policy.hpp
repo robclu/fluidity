@@ -85,7 +85,7 @@ static constexpr std::size_t default_threads_3d_z = 4;
 /// \param[in] it       The iterator for the multi dimensional space.
 /// \tparam    Iterator The type of the iterator. 
 template <typename Iterator>
-dim3 get_threads_sizes(Iterator&& it)
+dim3 get_thread_sizes(Iterator&& it)
 {
   if (it.num_dimensions() == 1)
   {

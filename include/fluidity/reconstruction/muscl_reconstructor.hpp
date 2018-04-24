@@ -31,13 +31,13 @@ namespace recon {
 /// the MUSCL reconstructor can be composed.
 /// 
 /// \tparam SlopeLimter The type of the sloper limiter to use.
-template <typename SlopeLimiter>
+template <typename T, typename SlopeLimiter>
 struct MHReconstructor {
   /// Defines the type of the slope limiter used by the reconstructor.
   using limiter_t = SlopeLimiter;
   /// Defines the data type used by the slope limiter, and hence the
   /// reconstructor.
-  using value_t   = typename limiter_t::value_t;
+  using value_t   = std::decay_t<T>;
 
   /// Sets the number of elements which are required in the backward and forward
   /// directions during the reconstruction process.

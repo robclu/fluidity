@@ -175,7 +175,7 @@ struct BoundaryLoader {
            , std::size_t Value
            , std::enable_if_t<
                exec::is_gpu_policy_v<typename Iterator::exec_policy_t>, int> = 0
-           >>
+           >
   static fluidity_host_device void
   load_boundary(Iterator&&            data     ,
                 Iterator&&            patch    ,
@@ -188,7 +188,7 @@ struct BoundaryLoader {
     // The global index is used to load additional data at the boundaries of
     // the domain, and the local index is used to load extra data which is
     // inside the domain.
-    auto shift = global_id(dim)
+    auto shift = global_id(dim);
     if (shift < padding)
     {
       const auto elem_to_use = *data.offset(2 * shift + 1  , dim);
@@ -243,7 +243,7 @@ struct BoundaryLoader {
            , std::size_t Value
            , std::enable_if_t<
                exec::is_cpu_policy_v<typename Iterator::exec_policy_t>, int> = 0
-           >>
+           >
   static fluidity_host_device void
   load_boundary(Iterator&&            data     ,
                 Iterator&&            patch    ,
@@ -288,24 +288,24 @@ struct BoundaryLoader {
   /// \param[in]  patch    An iterator to the patch data.
   /// \param[in]  elements The number of elements in the patch.
   /// \param[in]  dim      The dimension to set the boundary in.
-  /// \tparam     Iterator The type of the iterators.
+  /// \tparam     It       The type of the iterators.
   /// \tparam     Value    The value which defines the dimension.
-  template < typename    Iterator
+  template < typename    It
            , std::size_t Value
            , std::enable_if_t<
-               exec::is_gpu_policy_v<typename Iterator::exec_policy_t>, int> = 0
-           >>
+               exec::is_gpu_policy_v<typename It::exec_policy_t>, int> = 0
+           >
   static fluidity_host_device void
-  load_patch(Iterator&& patch, std::size_t elements, Dimension<Value> /*dim*/)
+  load_patch(It&& patch_it, std::size_t elements, Dimension<Value> /*dim*/)
   {
     constexpr auto dim = Dimension<Value>{};
     if (thread_id(dim) < padding)
     {
-      *data = *data.offset(-2 * thread_id(dim) - 1, dim);
+      *patch_it = *patch_it.offset(-2 * thread_id(dim) - 1, dim);
     }
     else if (thread_id(dim) > elements - padding)
     {
-      *data = *data.offset(2 * thread_id(dim) + 1, dim);
+      *patch_it = *patch_it.offset(2 * thread_id(dim) + 1, dim);
     }
   }
 
@@ -335,20 +335,20 @@ struct BoundaryLoader {
   /// \param[in]  patch    An iterator to the patch data.
   /// \param[in]  elements The number of elements in the patch.
   /// \param[in]  dim      The dimension to set the boundary in.
-  /// \tparam     Iterator The type of the iterators.
+  /// \tparam     It       The type of the iterators.
   /// \tparam     Value    The value which defines the dimension.
-  template < typename    Iterator
+  template < typename    It
            , typename    Data
            , std::size_t Value
            , std::enable_if_t<
-               exec::is_cpu_policy_v<typename Iterator::exec_policy_t>, int> = 0
-           >>
-  static fluidity_host_device void load(Iterator&&       data     ,
-                                        std::size_t      elements ,
-                                        Dimension<Value> /*dim*/  )
+               exec::is_cpu_policy_v<typename It::exec_policy_t>, int> = 0
+           >
+  static fluidity_host_device void load(It&&             patch_it,
+                                        std::size_t      elements,
+                                        Dimension<Value> /*dim*/ )
   {
-    auto front = data + padding;
-    auto back  = data + elements - padding;
+    auto front = patch_it + padding;
+    auto back  = patch_it + elements - padding;
 
     unrolled_for<padding>([&] (auto i)
     {
@@ -358,7 +358,7 @@ struct BoundaryLoader {
       *front                   = *front.offset(shift, dim);
       *back.offset(shift, dim) = *back;
 
-      front++: back++;
+      front++; back++;
     });
   }
 };

@@ -16,7 +16,7 @@
 #ifndef FLUIDITY_CONTAINER_ARRAY_HPP
 #define FLUIDITY_CONTAINER_ARRAY_HPP
 
-#include <fluidity/iterator/tensor_iterator.hpp>
+#include <fluidity/iterator/strided_iterator.hpp>
 
 namespace fluid {
 
@@ -38,9 +38,9 @@ class Array {
   /// Defines the type of a const reference to the data type.
   using const_reference_t = const value_t&;
   /// Defines the type of a non const iterator.
-  using iterator_t        = TensorIterator<self_t, false>;
+  using iterator_t        = StridedIterator<self_t, false>;
   /// Defines the type of a const iterator.
-  using const_iterator_t  = TensorIterator<self_t, true>;
+  using const_iterator_t  = StridedIterator<self_t, true>;
 
   /// The default constructor uses the default initialization.
   fluidity_host_device constexpr Array() = default;
