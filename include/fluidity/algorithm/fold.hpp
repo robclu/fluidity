@@ -45,7 +45,7 @@ template <int First, int... Rest>
 struct Folder<FoldOp::mult, First, Rest...> {
   /// Applies the folding, returning the result of folding the compile time list
   /// of values.
-  fluidity_host_device static constexpr decltype(auto) apply()
+  static constexpr decltype(auto) apply()
   {
     using fold_t = Folder<FoldOp::mult, Rest...>;
     return First * fold_t::apply();
@@ -57,7 +57,7 @@ template <>
 struct Folder<FoldOp::mult> {
   /// Applies the folding, returning the result of folding the compile time list
   /// of values.
-  fluidity_host_device static constexpr decltype(auto) apply()
+  static constexpr decltype(auto) apply()
   {
     return 1;
   }
@@ -70,7 +70,7 @@ template <int First, int... Rest>
 struct Folder<FoldOp::div, First, Rest...> {
   /// Applies the folding, returning the result of folding the compile time list
   /// of values.
-  fluidity_host_device static constexpr decltype(auto) apply()
+  static constexpr decltype(auto) apply()
   {
     using fold_t = Folder<FoldOp::div, Rest...>;
     return First / fold_t::apply();
@@ -82,7 +82,7 @@ template <>
 struct Folder<FoldOp::div> {
   /// Applies the folding, returning the result of folding the compile time list
   /// of values.
-  fluidity_host_device static constexpr decltype(auto) apply()
+  static constexpr decltype(auto) apply()
   {
     return 1;
   }
@@ -95,7 +95,7 @@ template <int First, int... Rest>
 struct Folder<FoldOp::add, First, Rest...> {
   /// Applies the folding, returning the result of folding the compile time list
   /// of values.
-  fluidity_host_device static constexpr decltype(auto) apply()
+  static constexpr decltype(auto) apply()
   {
     using fold_t = Folder<FoldOp::add, Rest...>;
     return First + fold_t::apply();
@@ -107,7 +107,7 @@ template <>
 struct Folder<FoldOp::add> {
   /// Applies the folding, returning the result of folding the compile time list
   /// of values.
-  fluidity_host_device static constexpr decltype(auto) apply()
+  static constexpr decltype(auto) apply()
   {
     return 0;
   }
@@ -120,7 +120,7 @@ template <int First, int... Rest>
 struct Folder<FoldOp::sub, First, Rest...> {
   /// Applies the folding, returning the result of folding the compile time list
   /// of values.
-  fluidity_host_device static constexpr decltype(auto) apply()
+  static constexpr decltype(auto) apply()
   {
     using fold_t = Folder<FoldOp::sub, Rest...>;
     return First - fold_t::apply();
@@ -134,7 +134,7 @@ template <>
 struct Folder<FoldOp::sub> {
   /// Applies the folding, returning the result of folding the compile time list
   /// of values.
-  fluidity_host_device static constexpr decltype(auto) apply()
+  static constexpr decltype(auto) apply()
   {
     return 0;
   }
@@ -146,7 +146,7 @@ struct Folder<FoldOp::sub> {
 /// \tparam Op     The operation to use while folding.
 /// \tparam Values The list of values to fold.
 template <FoldOp Op, int... Values>
-fluidity_host_device constexpr decltype(auto) fold()
+constexpr decltype(auto) fold()
 {
   return detail::Folder<Op, Values...>::apply();
 }

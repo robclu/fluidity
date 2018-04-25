@@ -49,9 +49,9 @@ struct Dimension {
   static constexpr std::size_t value = Value;
 
   /// Overload of operator size_t to convert a dimension to a size_t.
-  fluidity_host_device constexpr operator size_t() const
+  constexpr operator size_t() const
   {
-    return Value;
+    return static_cast<std::size_t>(Value);
   }
 };
 

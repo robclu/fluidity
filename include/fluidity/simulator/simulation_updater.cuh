@@ -16,13 +16,14 @@
 #ifndef FLUIDITY_SIMULATOR_SIMULATION_UPDATER_CUH
 #define FLUIDITY_SIMULATOR_SIMULATION_UPDATER_CUH
 
-#include <fluidity/execution/execution_policy.hpp>
 #include <fluidity/utility/debug.hpp>
 #include <fluidity/utility/portability.hpp>
 #include <fluidity/utility/type_traits.hpp>
 
 namespace fluid  {
 namespace sim    {
+namespace detail {
+namespace cuda   {
 
 /// Implementation of the updating function. This simply invokes the solving
 /// function of the solver with the input and output data and the simulation
@@ -35,12 +36,14 @@ namespace sim    {
 /// \tparam    T      The type of the scaling factor.
 /// \tparam    Solver The type of the solver.
 template <typename It, typename Solver, typename M, typename T>
-fluidity_global void update_impl(It in, In out, M mat, T dtdh, Solver solver)
+fluidity_global void update_impl(It in, It out, M mat, T dtdh, Solver solver)
 {
   solver.solve(in, out, mat, dtdh);
 }
 
-/// Updater function for updating the simulation using the GPU.
+/// Updater function for updating the simulation using the GPU. This invokes 
+/// the updating CUDA kernel for the simulation.
+/// 
 /// \param[in] multi_iterator_in The input data to use to update.
 /// \param[in] multi_itertor_out The output data to write to after updating.
 /// \param[in] dtdh              Scaling factor for the update.
@@ -51,25 +54,26 @@ fluidity_global void update_impl(It in, In out, M mat, T dtdh, Solver solver)
 /// \tparam    T                 The type of the scaling factor.
 /// \tparam    Solver            The type of the solver.
 /// \tparam    SizeInfo          The type of the size information.
-template < typename Iterator,
+template < typename Iterator
          , typename T
          , typename Material
          , typename Solver
-         , typename SizeInfo>
-void update(Iterator in          ,
-            Iterator out         ,
-            Solver   solver      ,
-            Material mat         ,
-            T        dtdh        ,
-            SizeInfo thread_sizes,
-            SizeInfo block_sizes )
+         , typename SizeInfo
+         >
+void update(Iterator&& in          ,
+            Iterator&& out         ,
+            Solver&&   solver      ,
+            Material&& mat         ,
+            T          dtdh        ,
+            SizeInfo&& thread_sizes,
+            SizeInfo&& block_sizes )
 {
 #if defined(__CUDACC__)
-  update_impl<<block_sizes, thread_sizes>>>(in, out, mat, dtdh, solver);
+  update_impl<<<block_sizes, thread_sizes>>>(in, out, mat, dtdh, solver);
   fluidity_cuda_check_result(cudaDeviceSynchronize()); 
 #endif // __CUDACC__
 }
 
-}} // namespace fluid::sim
+}}}} // namespace fluid::sim::detail::cuda
 
 #endif // FLUIDITY_SIMULATOR_SIMULATION_UPDATER_CUH

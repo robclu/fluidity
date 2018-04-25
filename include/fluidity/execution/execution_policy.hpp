@@ -17,6 +17,8 @@
 #ifndef FLUIDITY_EXECUTION_EXECUTION_POLICY_HPP
 #define FLUIDITY_EXECUTION_EXECUTION_POLICY_HPP
 
+#include <fluidity/utility/portability.hpp>
+#include <fluidity/dimension/dimension_info.hpp>
 #include <fluidity/utility/type_traits.hpp>
 
 namespace fluid {
@@ -78,6 +80,28 @@ static constexpr std::size_t default_threads_3d_y = 8;
 /// Defines the default number of threads per dimension for 3d in dim z.
 static constexpr std::size_t default_threads_3d_z = 4;
 
+// If the compilation system has cuda functionality then set the default
+// execution policy to use the GPU.
+#if defined(FLUIDITY_CUDA_AVAILABLE)
+
+/// Defines the default type of execution to use.
+using default_type = gpu_type;
+
+/// If the compilation system has cuda functionality then set the default
+/// execution policy to use the GPU.
+static constexpr auto default_policy = gpu_policy;
+
+#else
+
+/// Defines the default type of execution to use.
+using default_type = cpu_type;
+
+/// If the compilation system has no cuda functionality then set the default
+/// execution policy to use the CPU.
+static constexpr auto default_policy = cpu_policy;
+
+#endif // FLUIDITY_CUDA_AVAILABLE
+
 #if defined(__CUDACC__)
 
 /// Returns the number of threads in each of the dimensions for a single
@@ -97,7 +121,7 @@ dim3 get_thread_sizes(Iterator&& it)
     return dim3(it.size(dim_x) < default_threads_2d_x 
                   ? it.size(dim_x) : default_threads_2d_x,
                 it.size(dim_y) < default_threads_2d_y
-                  ? it.size(dim_y : default_threads_2d_y));
+                  ? it.size(dim_y) : default_threads_2d_y);
   }
   return dim3(it.size(dim_x) < default_threads_3d_x 
                 ? it.size(dim_x) : default_threads_3d_x,
@@ -115,7 +139,7 @@ dim3 get_thread_sizes(Iterator&& it)
 template <typename Iterator>
 dim3 get_block_sizes(Iterator&& it, dim3 thread_sizes)
 {
-  const auto default_value = unsigned int{1};
+  const auto default_value = std::size_t{1};
   if (it.num_dimensions() == 1)
   {
     return dim3(std::max(it.size(dim_x) / thread_sizes.x, default_value));
@@ -126,7 +150,7 @@ dim3 get_block_sizes(Iterator&& it, dim3 thread_sizes)
                 std::max(it.size(dim_y) / thread_sizes.y, default_value));
   }
   return dim3(std::max(it.size(dim_x) / thread_sizes.x, default_value),
-              std::max(it.size(dim_y) / thread_sizes.y, default_value)
+              std::max(it.size(dim_y) / thread_sizes.y, default_value),
               std::max(it.size(dim_z) / thread_sizes.z, default_value));
 }
 

@@ -22,44 +22,79 @@
 namespace fluid {
 namespace sim   {
 
-template <typename State, typename ExecutionPolicy>
-struct SimulationUpdater {
-  template <typename Storage,
-            typename Loader ,
-            typename Material>
-  static void update(Storage&&  initial_states,
-                     Storage&&  updated_states,
-                     Loader&&   data_loader   ,
-                     Material&& material      )
-  {
+/// Updater function for updating the simulation. This overload is only enabled
+/// which the input and output iterators are for CPU execution.
+/// \param[in] multi_iterator_in The input data to use to update.
+/// \param[in] multi_itertor_out The output data to write to after updating.
+/// \param[in] dtdh              Scaling factor for the update.
+/// \param[in] solver            The solver which updates the states.
+/// \param[in] thread_sizes      The number of threads in each block.
+/// \param[in] block_sizes       The number of blocks in the grid.
+/// \tparam    Iterator          The type of the mulri dimensional iterator.
+/// \tparam    T                 The type of the scaling factor.
+/// \tparam    Solver            The type of the solver.
+/// \tparam    SizeInfo          The type of the size information.
+template < typename Iterator
+         , typename Solver
+         , typename Material
+         , typename T
+         , typename SizeInfo
+         , std::enable_if_t<
+             exec::is_cpu_policy_v<typename Iterator::exec_policy_t>, int> = 0
+         >
+void update(Iterator&& in          ,
+            Iterator&& out         ,
+            Solver&&   solver      ,
+            Material&& mat         ,
+            T          dtdh        ,
+            SizeInfo&& thread_sizes,
+            SizeInfo&& block_sizes )
+{
+  // Call CPU implementation ...
+}
 
-  }
- private:
-};
-
-template <typename State>
-struct SimulationUpdater<exec::gpu_type> {
-  using state_t   = std::decay_t<State>;
-  using storage_t = DeviceTensor<state_t, state_t::dimensions>;
-
-  template <typename HostStorage>
-  SimulationUpdater(const HostStorage& i_states, const HostStorage& u_states)
-  : _initial_states(i_states), _updated_states(u_states) {}
-
-  template <ttypename Loader, typename Material>
-  void update(Loader&&   data_loader,
-              Material&& material   )
-  {
-
-  }
-
- private:
-  storage_t _initial_states;  //!< Initial states for simulation.
-  storage_t _updated_states;  //< Updated states for simulation.
-};
-
+/// Updater function for updating the simulation. This overload is only enabled
+/// which the input and output iterators are for GPU execution.
+/// 
+/// This simply forwards all the arguments onto the cuda implementation of the
+/// updating function.
+/// 
+/// \param[in] multi_iterator_in The input data to use to update.
+/// \param[in] multi_itertor_out The output data to write to after updating.
+/// \param[in] dtdh              Scaling factor for the update.
+/// \param[in] solver            The solver which updates the states.
+/// \param[in] thread_sizes      The number of threads in each block.
+/// \param[in] block_sizes       The number of blocks in the grid.
+/// \tparam    Iterator          The type of the mulri dimensional iterator.
+/// \tparam    T                 The type of the scaling factor.
+/// \tparam    Solver            The type of the solver.
+/// \tparam    SizeInfo          The type of the size information.
+template < typename Iterator
+         , typename Solver
+         , typename Material
+         , typename T
+         , typename SizeInfo
+         , std::enable_if_t<
+             exec::is_gpu_policy_v<typename Iterator::exec_policy_t>, int> = 0
+         >
+void update(Iterator&& in          ,
+            Iterator&& out         ,
+            Solver&&   solver      ,
+            Material&& mat         ,
+            T          dtdh        ,
+            SizeInfo&& thread_sizes,
+            SizeInfo&& block_sizes )
+{
+  detail::cuda::update(
+    std::forward<Iterator>(in)          ,
+    std::forward<Iterator>(out)         ,
+    std::forward<Solver>(solver)        ,
+    std::forward<Material>(mat)         ,
+    dtdh                                ,
+    std::forward<SizeInfo>(thread_sizes),
+    std::forward<SizeInfo>(block_sizes) );
+}
 
 }} // namespace fluid::sim
-
 
 #endif // FLUIDITY_SIMULATOR_SIMULATION_UPDATER_HPP

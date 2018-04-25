@@ -58,9 +58,9 @@ class HostTensor<T, 1> : public BaseTensor<T, 1> {
   /// Defines the type of a const reference to the data type.
   using const_reference_t = const value_t&; 
   /// Defines the type of a non const iterator.
-  using iterator_t        = StridedIterator<self_t, false, exec_t>;
+  using iterator_t        = StridedIterator<element_t, false, exec_t>;
   /// Defines the type of a const iterator.
-  using const_iterator_t  = StridedIterator<self_t, true, exec_t>;
+  using const_iterator_t  = StridedIterator<element_t, true, exec_t>;
   /// Defines the type of dimension information used for the tensor.
   using dim_info_t        = DimInfo<1>;
   /// Defines the type of a non const iterator.
@@ -114,7 +114,7 @@ class HostTensor<T, 1> : public BaseTensor<T, 1> {
   /// multidimensional iterator behaves the same as a StridedIterator.
   fluidity_host_device multi_iterator_t multi_iterator() const
   {
-    return multi_iterator_t{this->data, this->_size};
+    return multi_iterator_t{this->_data, this->_size};
   }
 
   /// Resizes the tensor to contain \p num_elements elements.

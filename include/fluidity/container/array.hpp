@@ -43,7 +43,7 @@ class Array {
   using const_iterator_t  = StridedIterator<self_t, true>;
 
   /// The default constructor uses the default initialization.
-  fluidity_host_device constexpr Array() = default;
+  constexpr Array() = default;
 
   /// Initializes each of the elements in the array to have the value \p value.
   /// \param[in] value The value to set the array elements to.

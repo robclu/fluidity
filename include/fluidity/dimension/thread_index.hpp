@@ -37,7 +37,7 @@ template <std::size_t Value>
 fluidity_host_device inline std::size_t block_size(Dimension<Value>)
 {
   static_assert(Value <= 2, "Can only get thread id for 3 dimensions {0,1,2}.");
-  detail::BlockSizeImpl<Dimension<Value>>()();
+  return detail::BlockSizeImpl<Dimension<Value>>()();
 }
 
 /// Returns the size of the block in a given dimension. The dimension
@@ -49,7 +49,7 @@ template <std::size_t Value>
 fluidity_host_device inline std::size_t grid_size(Dimension<Value>)
 {
   static_assert(Value <= 2, "Can only get thread id for 3 dimensions {0,1,2}.");
-  detail::GridSizeImpl<Dimension<Value>>()();
+  return detail::GridSizeImpl<Dimension<Value>>()();
 }
 
 /// Returns the total size of the grid (total number of threads in the grid).
@@ -91,7 +91,7 @@ template <std::size_t Value>
 fluidity_host_device inline std::size_t thread_id(Dimension<Value>)
 {
   static_assert(Value <= 2, "Can only get thread id for 3 dimensions {0,1,2}.");
-  detail::ThreadIdImpl<Dimension<Value>>()();
+  return detail::ThreadIdImpl<Dimension<Value>>()();
 }
 
 #else // __CUDACC__

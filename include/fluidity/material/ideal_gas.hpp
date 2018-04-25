@@ -31,7 +31,7 @@ struct IdealGas {
   using value_t = std::decay_t<T>;
 
   /// Sets the value of the gas to have the default adiabatic index of 1.4.
-  fluidity_host_device constexpr IdealGas() = default;
+  constexpr IdealGas() = default;
 
   /// Sets the adiabatic index for the gas to have the value of \p adi_index.
   /// \param[in] adi_index The adiabatic index of the gas.

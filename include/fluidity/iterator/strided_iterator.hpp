@@ -16,8 +16,8 @@
 #ifndef FLUIDITY_ITERATOR_STRIDED_ITERATOR_HPP
 #define FLUIDITY_ITERATOR_STRIDED_ITERATOR_HPP
 
+#include <fluidity/execution/execution_policy.hpp>
 #include <fluidity/utility/debug.hpp>
-#include <fluidity/utility/portability.hpp>
 #include <type_traits>
 
 namespace fluid {

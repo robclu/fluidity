@@ -18,12 +18,15 @@
 
 #include "parameters.hpp"
 #include "simulation_traits.hpp"
+#include "simulation_updater.hpp"
 #include "simulator.hpp"
 #include <fluidity/algorithm/fill.hpp>
 #include <fluidity/algorithm/max_element.hpp>
+#include <fluidity/container/device_tensor.hpp>
 #include <fluidity/container/host_tensor.hpp>
 #include <fluidity/dimension/dimension_info.hpp>
 #include <fluidity/execution/execution_policy.hpp>
+#include <fluidity/utility/type_traits.hpp>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
@@ -162,13 +165,13 @@ void GenericSimulator<Traits>::simulate()
     // Set patch ghost cells ...
     
     // Update the simulation ...
-    update(input_it    ,
-           output_it   ,
-           solver      ,
-           material_t{},
-           _params.dtdh,
-           thread_info ,
-           block_info  );
+    update(input_it       ,
+           output_it      ,
+           solver         ,
+           material_t{}   ,
+           _params.dt_dh(),
+           thread_info    ,
+           block_info     );
 
     time += _params.dt();
     std::swap(_initial_states, _updated_states);
@@ -309,19 +312,25 @@ void GenericSimulator<Traits>::stream_output(Stream&& stream) const
                            + std::to_string(dim_idx)           + right;
 
         const auto offset = dim_idx * dim_info.offset(Dimension<dim>{});
-        if constexpr (std::is_same_v<fs::path, std::decay_t<Stream>>)
+
+        auto output_to_file = [&] ()
         {
           std::ofstream output_file;
           output_file.open(output += ".txt", std::fstream::app);
           output_batch(output_file, offset, batch_size, element_idx);
-          output_file.close();         
-        }
-        else
-        {
-          stream << output << "\n";
-          output_batch(stream, offset, batch_size, element_idx);
-          stream << "\n";
-        }
+          output_file.close();
+        };
+
+        auto output_to_stream = [&] (auto& output_stream)
+        {          
+          output_stream << output << "\n";
+          output_batch(output_stream, offset, batch_size, element_idx);
+          output_stream << "\n";
+        };
+
+
+        //is_same_v<fs::path, std::decay_t<Stream>> 
+        //  ? output_to_file() : output_to_stream(stream);
       }
     }
   }); 

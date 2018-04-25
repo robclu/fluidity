@@ -21,7 +21,6 @@
 #include <fluidity/algorithm/if_constexpr.hpp>
 #include <fluidity/algorithm/unrolled_for.hpp>
 #include <fluidity/algorithm/fold.hpp>
-#include <fluidity/utility/type_traits.hpp>
 #include <vector>
 
 namespace fluid {
@@ -36,14 +35,14 @@ struct DimInfoCt {
   static constexpr auto constexpr_offsets = true;
 
   /// Returns the number of dimensions in the space.
-  fluidity_host_device constexpr auto num_dimensions() const
+  constexpr auto num_dimensions() const
   {
     return sizeof...(Sizes);
   }
 
   /// Returns the size of the \p nth dimension.
   /// \param[in] n The index of the dimension to get the size of.
-  fluidity_host_device constexpr std::size_t size(std::size_t i) const
+  constexpr std::size_t size(std::size_t i) const
   {
     constexpr std::size_t sizes[sizeof...(Sizes)] = { Sizes... };
     return sizes[i];
@@ -53,8 +52,7 @@ struct DimInfoCt {
   /// \param[in] dim    The dimension to get the size of.
   /// \tparam    Value  The value which defines the dimension.
   template <std::size_t Value>
-  fluidity_host_device constexpr std::size_t
-  size(Dimension<Value> /*dim*/) const
+  constexpr std::size_t size(Dimension<Value> /*dim*/) const
   {
       constexpr std::size_t sizes[sizeof...(Sizes)] = { Sizes... };
       return sizes[Value];
@@ -62,7 +60,7 @@ struct DimInfoCt {
 
   /// Returns the total size of the N dimensional space i.e the total number of
   /// elements in the space. This is the product sum of the dimension 
-  fluidity_host_device constexpr std::size_t total_size() const
+  constexpr std::size_t total_size() const
   {
     return fold<FoldOp::mult, Sizes...>();
   }
@@ -79,7 +77,7 @@ struct DimInfoCt {
     /// \param[in] start_value  The starting value for the computation.
     /// \tparam    Value        The value which defines the dimension.
     template <std::size_t Value>
-    fluidity_host_device static constexpr std::size_t
+    static constexpr std::size_t
     offset(Dimension<Value> /*dim*/, std::size_t start_value)
     {
       return start_value * dim_info_t().size(Dimension<Value - 1>{});
@@ -92,8 +90,7 @@ struct DimInfoCt {
   /// \param[in] dim    The dimension to get the offset for.
   /// \tparam    Value  The value which defines the dimension.
   template <std::size_t Value, std::enable_if_t<(Value > 0), int> = 0> 
-  fluidity_host_device constexpr std::size_t
-  offset(Dimension<Value> /*dim*/) const
+  constexpr std::size_t offset(Dimension<Value> /*dim*/) const
   {
     return detail::offset(Dimension<Value>{}            ,
                           offset(Dimension<Value - 1>{}));
@@ -104,8 +101,7 @@ struct DimInfoCt {
   /// \param[in] dim    The dimension to get the offset for.
   /// \tparam    Value  The value which defines the dimension.
   template <std::size_t Value, std::enable_if_t<(Value <= 0), int> = 0> 
-  fluidity_host_device constexpr std::size_t
-  offset(Dimension<Value> /*dim*/) const
+  constexpr std::size_t offset(Dimension<Value> /*dim*/) const
   {
     return 1;
   }
@@ -115,7 +111,7 @@ struct DimInfoCt {
   /// \param[in] index The index to get in a given dimension.
   /// \tparam    Value The value which defines the dimension.
   template <std::size_t Value>
-  fluidity_host_device constexpr std::size_t
+  constexpr std::size_t
   flattened_index(std::size_t index, Dimension<Value> /*dim*/) const
   {
     return index / offset(Dimension<Value>{}) % size(Value);
@@ -145,7 +141,7 @@ struct DimInfo {
   }
 
   /// Returns the number of dimensions in the space.
-  fluidity_host_device constexpr std::size_t num_dimensions() const
+  constexpr auto num_dimensions() const
   {
     return Dims;
   }

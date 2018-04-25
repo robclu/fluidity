@@ -47,7 +47,7 @@ target_link_libraries(dimension_host_tests ${GTEST_BOTH_LIBRARIES})
 add_executable(iterator_host_tests iterator_tests_host.cpp)
 target_link_libraries(iterator_host_tests ${GTEST_BOTH_LIBRARIES})
 
-add_executable(simulator_tests simulator_tests.cpp)
+add_executable(simulator_tests simulator_tests.cu)
 target_link_libraries(simulator_tests ${GTEST_BOTH_LIBRARIES})
 
 add_executable(solver_host_tests solver_tests_host.cpp)
