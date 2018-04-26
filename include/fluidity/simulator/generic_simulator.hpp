@@ -127,15 +127,26 @@ class GenericSimulator final : public Simulator<Traits> {
                     std::size_t batch_size   ,
                     std::size_t element_index) const;
 
-  /// Sets the boundary elements
-
   /// Implementation of the outputting functionality. The \p stream parameter
   /// is used to determine if the output is written to a file or if it is
   /// sent to the standard output stream.
   /// \param[in] stream   The stream to output the results to.
   /// \tparam    Stream   The type of the output stream.
   template <typename Stream>
-  void stream_output(Stream&& stream) const ;
+  void stream_output(Stream&& stream) const;
+
+  void output_data(std::ostream& output_stream,
+                        std::string   output       ,
+                        std::size_t   offset       ,
+                        std::size_t   batch_size   ,
+                        std::size_t   element_idx  ) const;
+
+  void output_data(fs::path                 ,
+                      std::string output       ,
+                      std::size_t offset       ,
+                      std::size_t batch_size   ,
+                      std::size_t element_idx  ) const;
+
 };
 
 //==--- Implementation -----------------------------------------------------==//
@@ -312,28 +323,36 @@ void GenericSimulator<Traits>::stream_output(Stream&& stream) const
                            + std::to_string(dim_idx)           + right;
 
         const auto offset = dim_idx * dim_info.offset(Dimension<dim>{});
-
-        auto output_to_file = [&] ()
-        {
-          std::ofstream output_file;
-          output_file.open(output += ".txt", std::fstream::app);
-          output_batch(output_file, offset, batch_size, element_idx);
-          output_file.close();
-        };
-
-        auto output_to_stream = [&] (auto& output_stream)
-        {          
-          output_stream << output << "\n";
-          output_batch(output_stream, offset, batch_size, element_idx);
-          output_stream << "\n";
-        };
-
-
-        //is_same_v<fs::path, std::decay_t<Stream>> 
-        //  ? output_to_file() : output_to_stream(stream);
+        output_data(stream, output, offset, batch_size, element_idx);
       }
     }
   }); 
+}
+
+
+template <typename Traits>
+void GenericSimulator<Traits>::output_data(std::ostream& output_stream,
+                                                std::string   output       ,
+                                                std::size_t   offset       ,
+                                                std::size_t   batch_size   ,
+                                                std::size_t   element_idx  ) const
+{
+  output_stream << output << "\n";
+  output_batch(output_stream, offset, batch_size, element_idx);
+  output_stream << "\n";  
+}
+
+template <typename Traits>
+void GenericSimulator<Traits>::output_data(fs::path                 ,
+                                              std::string output       ,
+                                              std::size_t offset       ,
+                                              std::size_t batch_size   ,
+                                              std::size_t element_idx  ) const
+{
+  std::ofstream output_file;
+  output_file.open(output += ".txt", std::fstream::app);
+  output_batch(output_file, offset, batch_size, element_idx);
+  output_file.close();
 }
 
 }} // namespace fluid::sim

@@ -55,9 +55,9 @@ fluidity_global void update_impl(It in, It out, M mat, T dtdh, Solver solver)
 /// \tparam    Solver            The type of the solver.
 /// \tparam    SizeInfo          The type of the size information.
 template < typename Iterator
-         , typename T
-         , typename Material
          , typename Solver
+         , typename Material
+         , typename T
          , typename SizeInfo
          >
 void update(Iterator&& in          ,
@@ -70,7 +70,7 @@ void update(Iterator&& in          ,
 {
 #if defined(__CUDACC__)
   update_impl<<<block_sizes, thread_sizes>>>(in, out, mat, dtdh, solver);
-  fluidity_cuda_check_result(cudaDeviceSynchronize()); 
+  fluidity_check_cuda_result(cudaDeviceSynchronize()); 
 #endif // __CUDACC__
 }
 

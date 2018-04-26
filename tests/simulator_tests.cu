@@ -20,7 +20,7 @@
 #include <fluidity/solver/hllc_solver.hpp>
 #include <fluidity/simulator/generic_simulator.hpp>
 #include <fluidity/state/state.hpp>
-#include <gtest/gtest.h>
+//#include <gtest/gtest.h>
 #include <memory>
 
 // Defines the type of data to use.
@@ -55,7 +55,7 @@ using simulator2d_props_t =
   , fluid::solver::Type::split
   >;
 
-TEST(generic_simulator_tests, can_create_and_output_1d_data)
+int main(int argc, char** argv)
 {
   using simulator_t = fluid::sim::GenericSimulator<simulator1d_props_t>;
 
@@ -83,11 +83,11 @@ TEST(generic_simulator_tests, can_create_and_output_1d_data)
     }
   });
 
-  simulator->print_results();
-}
+  simulator->simulate();
 
-int main(int argc, char** argv)
-{
-  ::testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
+  std::cout << "Finished running\n";
+
+  simulator->print_results();
+
+  EXPECT_EQ(true, true);
 }
