@@ -34,26 +34,27 @@ namespace sim   {
 /// \tparam    T                 The type of the scaling factor.
 /// \tparam    Solver            The type of the solver.
 /// \tparam    SizeInfo          The type of the size information.
-/*
 template < typename Iterator
          , typename Solver
          , typename Material
          , typename T
          , typename SizeInfo
          , std::enable_if_t<
-             exec::is_cpu_policy_v<typename Iterator::exec_policy_t>, int> = 0
+             exec::is_cpu_policy_v<
+               typename std::decay_t<Iterator>::exec_policy_t
+             >, int> = 0
          >
-void update(Iterator&& in          ,
-            Iterator&& out         ,
-            Solver&&   solver      ,
-            Material&& mat         ,
+void update(Iterator in          ,
+            Iterator out         ,
+            Solver   solver      ,
+            Material mat         ,
             T          dtdh        ,
-            SizeInfo&& thread_sizes,
-            SizeInfo&& block_sizes )
+            SizeInfo thread_sizes,
+            SizeInfo block_sizes )
 {
   // Call CPU implementation ...
 }
-*/
+
 /// Updater function for updating the simulation. This overload is only enabled
 /// which the input and output iterators are for GPU execution.
 /// 
@@ -75,16 +76,18 @@ template < typename Iterator
          , typename Material
          , typename T
          , typename SizeInfo
-//         , std::enable_if_t<
-//             exec::is_gpu_policy_v<typename Iterator::exec_policy_t>, int> = 0
+         , std::enable_if_t<
+             exec::is_gpu_policy_v<
+               typename std::decay_t<Iterator>::exec_policy_t
+             >, int> = 0
          >
-void update(Iterator&& in          ,
-            Iterator&& out         ,
-            Solver&&   solver      ,
-            Material&& mat         ,
+void update(Iterator in          ,
+            Iterator out         ,
+            Solver   solver      ,
+            Material mat         ,
             T          dtdh        ,
-            SizeInfo&& thread_sizes,
-            SizeInfo&& block_sizes )
+            SizeInfo thread_sizes,
+            SizeInfo block_sizes )
 {
   detail::cuda::update(
     std::forward<Iterator>(in)          ,

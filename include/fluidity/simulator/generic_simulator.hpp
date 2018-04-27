@@ -58,6 +58,8 @@ class GenericSimulator final : public Simulator<Traits> {
   using value_t     = typename state_t::value_t;
   /// Defines the type of the material for the simulation.
   using material_t  = typename traits_t::material_t;
+  /// Defines execution policy for the simulator.
+  using execution_t = typename traits_t::execution_t;
   /// Defines the type of the container used to store the state state.
   using storage_t   = HostTensor<state_t, state_t::dimensions>;
   /// Defines the type of the solver used to update the simulation.
@@ -66,8 +68,6 @@ class GenericSimulator final : public Simulator<Traits> {
   using wavespeed_t = HostTensor<value_t, 1>;
   /// Defines the type of the parameter container.
   using params_t    = Parameters<value_t>;
-  /// Defines execution policy for the simulator.
-  using execution_t = typename traits_t::execution_t;
 
  public:
   /// Defines the number of spacial dimensions in the simulation.
@@ -147,6 +147,26 @@ class GenericSimulator final : public Simulator<Traits> {
                       std::size_t batch_size   ,
                       std::size_t element_idx  ) const;
 
+
+  auto get_simulation_input_iterator(exec::cpu_type) const
+  {
+    return _initial_states.multi_iterator();
+  }
+
+  auto get_simulation_input_iterator(exec::gpu_type) const
+  {
+    return _initial_states.as_device().multi_iterator();
+  } 
+
+  auto get_simulation_output_iterator(exec::cpu_type) const
+  {
+    return _updated_states.multi_iterator();
+  }
+
+  auto get_simulation_output_iterator(exec::gpu_type) const
+  {
+    return _updated_states.as_device().multi_iterator();
+  } 
 };
 
 //==--- Implementation -----------------------------------------------------==//
@@ -162,8 +182,8 @@ void GenericSimulator<Traits>::simulate()
   auto end   = high_resolution_clock::now();
 
   //auto updater     = updater_t(_initial_states, _updated_states, _wavespeeds);
-  auto input_it    = _initial_states.multi_iterator();
-  auto output_it   = _updated_states.multi_iterator();
+  auto input_it    = get_simulation_input_iterator(execution_t{});
+  auto output_it   = get_simulation_output_iterator(execution_t{});
   auto thread_info = get_thread_sizes(input_it);
   auto block_info  = get_block_sizes(input_it, thread_info);
   auto solver      = solver_t{};

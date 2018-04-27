@@ -137,7 +137,7 @@ class DeviceTensor<T, 1> : public BaseTensor<T, 1> {
   /// multidimensional iterator behaves the same as a StridedIterator.
   fluidity_host_device multi_iterator_t multi_iterator() const
   {
-    return multi_iterator_t{this->data, this->_size};
+    return multi_iterator_t{this->_data, this->_size};
   }
 
   /// Resizes the tensor to contain \p num_elements elements.

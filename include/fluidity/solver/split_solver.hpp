@@ -65,8 +65,9 @@ struct SplitSolver {
   template <typename It, typename M, typename T>
   fluidity_device_only void solve(It&& in, It&& out, M material, T dtdh) const
   {
-    static_assert(std::decay_t<It>::num_dimensions() == num_dimensions,
-                  "Dimensions of iterator do not match solver specialization");
+    //static_assert(
+    //  std::declval<std::decay_t<It>>().num_dimensions() == num_dimensions,
+    //  "Dimensions of iterator do not match solver specialization");
     const auto loader = loader_t{};
     auto global_iter  = get_global_iterator(in);
     auto patch_iter   = get_patch_iterator(in);
@@ -75,8 +76,8 @@ struct SplitSolver {
     *patch_iter = *global_iter;
 
     // Load in the padding and boundary data:
-    loader.load_internal(patch_iter, dim_x);
-    loader.load_boundary(global_iter, patch_iter, dim_x);
+    loader.load_patch(patch_iter, dim_x);
+    //loader.load_boundary(global_iter, patch_iter, dim_x);
 
 #if defined(__CUDACC__)
     __syncthreads();

@@ -293,17 +293,19 @@ struct BoundaryLoader {
   template < typename    It
            , std::size_t Value
            , std::enable_if_t<
-               exec::is_gpu_policy_v<typename It::exec_policy_t>, int> = 0
+               exec::is_gpu_policy_v<
+                 typename std::decay_t<It>::exec_policy_t>, int
+               > = 0
            >
   static fluidity_host_device void
-  load_patch(It&& patch_it, std::size_t elements, Dimension<Value> /*dim*/)
+  load_patch(It&& patch_it, Dimension<Value> /*dim*/)
   {
     constexpr auto dim = Dimension<Value>{};
     if (thread_id(dim) < padding)
     {
       *patch_it = *patch_it.offset(-2 * thread_id(dim) - 1, dim);
     }
-    else if (thread_id(dim) > elements - padding)
+    else if (thread_id(dim) > patch_it.size(dim) - padding)
     {
       *patch_it = *patch_it.offset(2 * thread_id(dim) + 1, dim);
     }
@@ -338,17 +340,19 @@ struct BoundaryLoader {
   /// \tparam     It       The type of the iterators.
   /// \tparam     Value    The value which defines the dimension.
   template < typename    It
-           , typename    Data
            , std::size_t Value
            , std::enable_if_t<
-               exec::is_cpu_policy_v<typename It::exec_policy_t>, int> = 0
+               exec::is_cpu_policy_v<
+                 typename std::decay_t<It>::exec_policy_t>, int
+               > = 0
            >
-  static fluidity_host_device void load(It&&             patch_it,
-                                        std::size_t      elements,
-                                        Dimension<Value> /*dim*/ )
+  static fluidity_host_device void
+  load_patch(It&& patch_it, Dimension<Value> /*dim*/)
   {
+    constexpr auto dim = Dimension<Value>{};
+
     auto front = patch_it + padding;
-    auto back  = patch_it + elements - padding;
+    auto back  = patch_it + patch_it.size(dim) - padding;
 
     unrolled_for<padding>([&] (auto i)
     {

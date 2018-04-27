@@ -309,7 +309,7 @@ template <typename T, typename DimInfo>
 fluidity_device_only constexpr auto make_multidim_iterator()
 {
   using iter_t = MultidimIterator<T, DimInfo>;
-  __shared__ T buffer[DimInfo::total_size()];
+  __shared__ T buffer[DimInfo().total_size()];
   iter_t iter{buffer};
 
   // Move the iterator to the current thread.
@@ -331,6 +331,26 @@ fluidity_device_only constexpr auto make_multidim_iterator(T* ptr)
 {
   using iter_t = MultidimIterator<T, DimInfo>;
   iter_t iter{ptr};
+
+  // Move the iterator to the current thread.
+  //iter.shift(dim_x, thread_id(dim_x))
+  //    .shift(dim_y, thread_id(dim_y))
+  //    .shift(dim_z, thread_id(dim_z));
+  return iter;
+}
+
+/// Makes a multidimensional iterator over a multidimensional space, where the
+/// properties of the space are defined by the DimInfo parameter. The DimInfo
+/// template parameter must be of DimInfoCt type, otherwise a compiler error is
+/// generated.
+/// \param[in] ptr     A pointer to the start of data to iterate over.      
+/// \tparam    T       The type of the data to iterate over.
+/// \tparam    DimInfo The information which defines the multi dimensional space.
+template <typename T, typename DimInfo>
+fluidity_device_only constexpr auto make_multidim_iterator(T* ptr, DimInfo info)
+{
+  using iter_t = MultidimIterator<T, DimInfo>;
+  iter_t iter{ptr, info};
 
   // Move the iterator to the current thread.
   //iter.shift(dim_x, thread_id(dim_x))

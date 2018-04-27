@@ -7,7 +7,7 @@
 #==--------------------------------------------------------------------------==#
 
 cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
-project(fluidity VERSION 0.1.0 LANGUAGES CXX CUDA)
+project(fluidity VERSION 0.1.0 LANGUAGES CXX)
 
 #==--- Build Type -----------------------------------------------------------==#
 
@@ -19,9 +19,10 @@ endif(NOT CMAKE_BUILD_TYPE)
 if (NOT APPLE)
   set(CMAKE_CUDA_COMPILER /lsc/opt/cuda-9.0/bin/nvcc)
   #set(CMAKE_CUDA_COMPILER /lsc/opt/clang-6.0/bin/clang++)
+  set(CMAKE_CXX_COMPILER /lsc/opt/clang-6.0/bin/clang++)
 endif()
 
-string(REGEX MATCH "clang" CLANG_REGEX ${CMAKE_CUDA_COMPILER})
+string(REGEX MATCH "clang" CLANG_REGEX ${CMAKE_CXX_COMPILER})
 string(COMPARE EQUAL "${CLANG_REGEX}" "clang" USING_CLANG)
 
 # Test that the version of the cuda compiler is sufficient:

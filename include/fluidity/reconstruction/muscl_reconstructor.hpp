@@ -84,7 +84,7 @@ struct MHReconstructor {
 
       constexpr auto dim = Dimension<Value>{};
 
-      const auto eita   = half * limiter_t::apply(state, dim);
+      const auto eita   = half * limiter_t()(state, dim);
       const auto factor = (half * dtdh)
                         * (state_t(*state - eita).flux(mat, dim)
                         -  state_t(*state + eita).flux(mat, dim));

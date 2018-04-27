@@ -34,6 +34,8 @@ using material_t      = fluid::material::IdealGas<real_t>;
 // Defines the type of the limiter for the simulations.
 using reconstructor_t = 
   fluid::recon::MHReconstructor<real_t, fluid::limit::VanLeer>;
+/// Defines the execution policy of the solver, CPU / GPU
+using execution_t     = fluid::exec::gpu_type;
 
 // Defines the traits of the 1d simulator:
 using simulator1d_props_t =
@@ -43,6 +45,7 @@ using simulator1d_props_t =
   , reconstructor_t
   , fluid::solver::HllcSolver
   , fluid::solver::Type::split
+  , execution_t
   >;
 
 // Defines the traits of the 2d simulator:
@@ -53,6 +56,7 @@ using simulator2d_props_t =
   , reconstructor_t
   , fluid::solver::HllcSolver
   , fluid::solver::Type::split
+  , execution_t
   >;
 
 int main(int argc, char** argv)
@@ -88,6 +92,4 @@ int main(int argc, char** argv)
   std::cout << "Finished running\n";
 
   simulator->print_results();
-
-  EXPECT_EQ(true, true);
 }

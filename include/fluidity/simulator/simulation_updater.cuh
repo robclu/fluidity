@@ -35,7 +35,7 @@ namespace cuda   {
 /// \tparam    It     The type of the iterators.
 /// \tparam    T      The type of the scaling factor.
 /// \tparam    Solver The type of the solver.
-template <typename It, typename Solver, typename M, typename T>
+template <typename It, typename M, typename T, typename Solver>
 fluidity_global void update_impl(It in, It out, M mat, T dtdh, Solver solver)
 {
   solver.solve(in, out, mat, dtdh);
