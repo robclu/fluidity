@@ -25,7 +25,7 @@ function(fluid_include_directories_append DIRECTORIES)
 endfunction()
 
 function(fluid_library_directories DIRECTORIES)
-  set(FLUID_LIBRARY_DIRS "${FLUID_DIRECTORIES} ${ARGN}"
+  set(FLUID_LIBRARY_DIRS "${DIRECTORIES} ${ARGN}"
       CACHE FORCE "fluid library directories" FORCE)
 endfunction()
 

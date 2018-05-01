@@ -25,12 +25,6 @@ namespace detail {
 
 using namespace traits;
 
-/// Defines a message to print when there is a concept error on a function call,
-/// i.e, when an attempt is made to invoke a function where the template param
-/// is a State but the argument is not.
-static constexpr const char* const state_concept_error =
-  "Attempt to invoke a state function on a type which is not a state";
-
 /// Returns the sum of the square velocity of each of the velocity conponents
 /// for a state.
 /// \param[in]  state The state to calculate the squared velocity sum for.
@@ -70,100 +64,164 @@ fluidity_host_device inline constexpr auto density(State&& state) noexcept
 /// \param[in]  state   The state to get the velocity of.
 /// \param[in]  dim     The dimension to get the velocity for {x,y,z}.
 /// \tparam     State   The type of the state.
-template <typename State>
+template <typename State, std::enable_if_t<is_primitive_v<State>, int> = 0>
 fluidity_host_device inline constexpr auto 
 velocity(State&& state, std::size_t dim) noexcept
 {
   using state_t = std::decay_t<State>;
   using index_t = typename state_t::index;
-  static_assert(is_state_v<state_t>,
-    "Attempt to invoke a state function on a type which is not a state");
-
-  if constexpr (state_t::format == FormType::primitive)
-  {
-    return state[index_t::velocity(dim)];
-  } 
-  else 
-  {
-    return state[index_t::velocity(dim)] / state[index_t::density];
-  }
+  return state[index_t::velocity(dim)];
 }
 
-/// Overload of velocity implementation for pritive form states.
+/// Overload of velocity implementation for conservative form states.
 /// \param[in]  state   The state to get the velocity of.
 /// \param[in]  dim     The dimension to get the velocity for {x,y,z}.
 /// \tparam     State   The type of the state.
-template <typename State, std::size_t V>
+template <typename State, std::enable_if_t<is_conservative_v<State>, int> = 0>
+fluidity_host_device inline constexpr auto 
+velocity(State&& state, std::size_t dim) noexcept
+{
+  using state_t = std::decay_t<State>;
+  using index_t = typename state_t::index;
+  return state[index_t::velocity(dim)] / state[index_t::density];
+}
+
+/// Overload of velocity implementation for pritive form states, to get the
+/// velocity with respect to a specific dimension.
+/// \param[in]  state   The state to get the velocity of.
+/// \param[in]  dim     The dimension to get the velocity for {x,y,z}.
+/// \tparam     State   The type of the state.
+template < typename State
+         , std::size_t V
+         , std::enable_if_t<is_primitive_v<State>, int> = 0>
 fluidity_host_device inline constexpr auto 
 velocity(State&& state, Dimension<V> /*dim*/) noexcept
 {
   using state_t = std::decay_t<State>;
   using index_t = typename state_t::index;
-  static_assert(is_state_v<state_t>,
-    "Attempt to invoke a state function on a type which is not a state");
-
-  if constexpr (state_t::format == FormType::primitive)
-  {
-    return state[index_t::velocity(Dimension<V>{})];
-  } 
-  else 
-  {
-    return state[index_t::velocity(Dimension<V>{})] / state[index_t::density];
-  }
+  return state[index_t::velocity(Dimension<V>{})];
 }
 
-/// Returns the pressure of the \p state. There is a compiler error if the
-/// \p state is not a state type.
+/// Overload of velocity implementation for conservative form states, to get the
+/// velocity with respect to a specific dimension.
+/// \param[in]  state   The state to get the velocity of.
+/// \param[in]  dim     The dimension to get the velocity for {x,y,z}.
+/// \tparam     State   The type of the state.
+template < typename State
+         , std::size_t V
+         , std::enable_if_t<is_conservative_v<State>, int> = 0>
+fluidity_host_device inline constexpr auto 
+velocity(State&& state, Dimension<V> /*dim*/) noexcept
+{
+  using state_t = std::decay_t<State>;
+  using index_t = typename state_t::index;
+  return state[index_t::velocity(Dimension<V>{})] / state[index_t::density];
+}
+
+/// Returns the pressure of the \p state, for a primitive form state.
 /// \param[in]  state      The state to get the pressure of.
 /// \param[in]  material   The material for the system.
 /// \tparam     State      The type of the state.
 /// \tparam     Material   The type of the material.
-template <typename State, typename Material>
+template < typename State
+         , typename Material
+         , std::enable_if_t<is_primitive_v<State>, int> = 0>
 fluidity_host_device inline constexpr auto
 pressure(State&& state, Material&&  material) noexcept
 {
   using state_t = std::decay_t<State>;
   using value_t = typename state_t::value_t;
-  static_assert(is_state_v<state_t>,
-    "Attempt to invoke a state function on a type which is not a state");
-
-  if constexpr (state_t::format == FormType::primitive)
-  {
-    return state[state_t::index::pressure];
-  } 
-  else 
-  {
-    return (material.adiabatic() - value_t{1})
-           * (state[state_t::index::energy]
-           -  value_t{0.5} * state.density() * state.v_squared_sum());
-  }
+  return state[state_t::index::pressure];
 }
 
-/// Returns the energy for the \p state.
+/// Returns the pressure of the \p state, for a conservative form state.
+/// \param[in]  state      The state to get the pressure of.
+/// \param[in]  material   The material for the system.
+/// \tparam     State      The type of the state.
+/// \tparam     Material   The type of the material.
+template < typename State
+         , typename Material
+         , std::enable_if_t<is_conservative_v<State>, int> = 0>
+fluidity_host_device inline constexpr auto
+pressure(State&& state, Material&&  material) noexcept
+{
+  using state_t = std::decay_t<State>;
+  using value_t = typename state_t::value_t;  
+  return (material.adiabatic() - value_t{1})
+         * (state[state_t::index::energy]
+         -  value_t{0.5} * state.density() * state.v_squared_sum());
+}
+
+/// Returns the energy for the \p state, when the state is primitive.
 /// \param[in]  state      The state to get the energy of.
 /// \param[in]  material   The material for the system.
 /// \tparam     State      The type of the state.
 /// \tparam     Material   The type of the material.
-template <typename State, typename Material>
+template < typename State
+         , typename Material
+         , std::enable_if_t<is_primitive_v<State>, int> = 0>
 fluidity_host_device inline constexpr auto
 energy(State&& state, Material&& material) noexcept
 {
   using state_t = std::decay_t<State>;
-  static_assert(is_state_v<state_t>,
-    "Attempt to invoke a state function on a type which is not a state");
-
-  if constexpr (state_t::format == FormType::primitive)
-  {
-    return state.density() * 
+  return state.density() * 
            (0.5 * state.v_squared_sum() + material.eos(state));
-  } 
-  else 
-  {
-    return state[state_t::index::energy];
-  }
+
 }
 
-/// Makes additional components of the \p flux container.
+/// Returns the energy for the \p state, when the state is conservative.
+/// \param[in]  state      The state to get the energy of.
+/// \param[in]  material   The material for the system.
+/// \tparam     State      The type of the state.
+/// \tparam     Material   The type of the material.
+template < typename State
+         , typename Material
+         , std::enable_if_t<is_conservative_v<State>, int> = 0>
+fluidity_host_device inline constexpr auto
+energy(State&& state, Material&& material) noexcept
+{
+  using state_t = std::decay_t<State>;
+  return state[state_t::index::energy];
+}
+
+/// Modifies additional fluxes for a primitive state. When the state is
+/// primitive some of the fluxes need to be multiplied by the density, which
+/// this function does for a flux at a specific index.
+/// \param[in] state    The state to compute the flux for.
+/// \param[in] flux     The flux to compute the values of the additional
+///            components for.
+/// \param[in] index    The index of the flux to set.
+/// \tparam    State    The type of the state.
+/// \tparam    Flux     The type of the flux container.
+template < typename State
+         , typename Flux
+         , std::enable_if_t<is_primitive_v<State>, int> = 0>
+fluidity_host_device inline constexpr auto
+modify_other_fluxes(State&& state, Flux&& flux, std::size_t index)
+{
+  flux[index] = state.density();
+}
+
+/// Modifies additional fluxes for a primitive state. This function is enabled
+/// when the state is conservative and does nothing, and will be removed by the
+/// compiler at compile time, resulting in zero overhead for conservative
+/// states.
+/// \param[in] state    The state to compute the flux for.
+/// \param[in] flux     The flux to compute the values of the additional
+///            components for.
+/// \param[in] index    The index of the flux to set.
+/// \tparam    State    The type of the state.
+/// \tparam    Flux     The type of the flux container.
+template < typename State
+         , typename Flux
+         , std::enable_if_t<is_conservative_v<State>, int> = 0>
+fluidity_host_device inline constexpr auto
+modify_other_fluxes(State&& state, Flux&& flux, std::size_t index) {}
+
+/// Makes additional components of the \p flux container. This overload is
+/// enabled if the state has multiple dimensions, or of it has additional
+/// components.
+/// 
 /// \param[in] state    The state to compute the flux for.
 /// \param[in] flux     The flux to compute the values of the additional
 ///            components for.
@@ -171,7 +229,13 @@ energy(State&& state, Material&& material) noexcept
 /// \tparam    State    The type of the state.
 /// \tparam    Flux     The type of the flux container.
 /// \tparam    Value    The value which defines the dimension.
-template <typename State, typename Flux, std::size_t Value>
+template < typename State
+         , typename Flux 
+         , std::size_t Value
+         , typename DecayedState = std::decay_t<State>
+         , enable_if_t<
+            (DecayedState::dimensions > 1 ||
+             DecayedState::additional_components > 0), int> = 0>
 fluidity_host_device inline constexpr auto
 make_other_fluxes(State&& state, Flux&& flux, Dimension<Value> /*dim*/)
 {
@@ -184,12 +248,30 @@ make_other_fluxes(State&& state, Flux&& flux, Dimension<Value> /*dim*/)
     constexpr auto index = state_t::index::v_offset + i + (i >= Value ? 1 : 0);
 
     flux[index] = state[index] * state.velocity(dim);
-    if constexpr (state_t::format == FormType::primitive)
-    {
-      flux[index] *= state.density();
-    }
+    modify_other_fluxes(state, flux, index);
   });
 }
+
+/// Makes additional components of the \p flux container. This overload is
+/// enabled if the state does not have any additional fluxes to make, and
+/// therefore does nothing.
+/// 
+/// \param[in] state    The state to compute the flux for.
+/// \param[in] flux     The flux to compute the values of the additional
+///            components for.
+/// \param[in] dim      The dimension not to compute a flux for.
+/// \tparam    State    The type of the state.
+/// \tparam    Flux     The type of the flux container.
+/// \tparam    Value    The value which defines the dimension.
+template < typename State
+         , typename Flux 
+         , std::size_t Value
+         , typename DecayedState = std::decay_t<State>
+         , enable_if_t<
+            !(DecayedState::dimensions > 1 ||
+              DecayedState::additional_components > 0), int> = 0>
+fluidity_host_device inline constexpr auto
+make_other_fluxes(State&& state, Flux&& flux, Dimension<Value> /*dim*/) {}
 
 /// Computes the flux for a state.
 /// \param[in] state    The state to compute the flux for.
@@ -215,6 +297,12 @@ flux(State&& state, Material&& mat, Dimension<Value> /*dim*/)
   flux[index_t::density]       = state.density() * v;
   flux[index_t::velocity(dim)] = flux[index_t::density] * v + p;
 
+  constexpr auto index_p_or_e = 
+    is_primitive_v<State> ? index_t::pressure : index_t::energy;
+
+  flux[index_p_or_e] = v * (e + p);
+
+/*
   if constexpr (state_t::format == FormType::primitive)
   {
     flux[index_t::pressure] = v * (e + p);
@@ -223,18 +311,32 @@ flux(State&& state, Material&& mat, Dimension<Value> /*dim*/)
   {
     flux[index_t::energy] = v * (e + p);
   }
+*/
 
-  if constexpr (state_t::dimensions > 1 || state_t::additional_components > 0)
-  {
+  //if constexpr (state_t::dimensions > 1 || state_t::additional_components > 0)
+  //{
     make_other_fluxes(std::forward<State>(state), flux, dim);
-  }
+  //}
   return flux;
 }
 
 /// Returns the primitive form of the state, regardless of whether the type of
 /// the state is primitive or conservative. If the state is conservative, then
 /// a conversion is performed to convert the state.
-template <typename State, typename Material>
+template < typename State
+         , typename Material
+         , std::enable_if_t<is_primitive_v<State>, int> = 0>
+fluidity_host_device inline constexpr auto
+primitive(State&& state, Material&& mat)
+{
+  return state;
+
+}
+
+/// Returns the primitive form of the state when the state is conservative.
+template < typename State
+         , typename Material
+         , std::enable_if_t<is_conservative_v<State>, int> = 0>
 fluidity_host_device inline constexpr auto
 primitive(State&& state, Material&& mat)
 {
@@ -247,31 +349,24 @@ primitive(State&& state, Material&& mat)
                       , state_t::storage_layout
                       >;
   using index_t  = typename result_t::index;
+  
+  result_t result;
+  result[index_t::density]  = state.density();
+  result[index_t::pressure] = state.pressure(mat);
 
-  if constexpr (state_t::format == FormType::primitive)
+  constexpr auto it = state_t::dimensions + state_t::additional_components;
+  unrolled_for<it>([&] (auto i)
   {
-    return state;
-  }
-  else
-  {
-    result_t result;
-    result[index_t::density]  = state.density();
-    result[index_t::pressure] = state.pressure(mat);
-
-    constexpr auto it = state_t::dimensions + state_t::additional_components;
-    unrolled_for<it>([&] (auto i)
-    {
-      constexpr auto index = index_t::v_offset + i;
-      result[index] = state[index] / state.density();
-    });
-    return result;
-  }
+    constexpr auto index = index_t::v_offset + i;
+    result[index] = state[index] / state.density();
+  });
+  return result;
 }
 
-/// Returns the conservative form of the state, regardless of whether the type
-/// of the state is primitive or conservative. If the state is primtive, then
-/// a conversion is performed to convert the state.
-template <typename State, typename Material>
+/// Returns the conservative form of the state when the state is primitive.
+template < typename State
+         , typename Material
+         , std::enable_if_t<is_primitive_v<State>, int> = 0>
 fluidity_host_device inline constexpr auto
 conservative(State&& state, Material&& mat)
 {
@@ -285,24 +380,27 @@ conservative(State&& state, Material&& mat)
                       >;
   using index_t  = typename result_t::index;
 
-  if constexpr (state_t::format == FormType::conservative)
-  {
-    return state;
-  }
-  else
-  {
-    result_t result;
-    result[index_t::density] = state.density();
-    result[index_t::energy]  = state.energy(mat);
+  result_t result;
+  result[index_t::density] = state.density();
+  result[index_t::energy]  = state.energy(mat);
 
-    constexpr auto it = state_t::dimensions + state_t::additional_components;
-    unrolled_for<it>([&] (auto i)
-    {
-      constexpr auto index = index_t::v_offset + i;
-      result[index] = state[index] * state.density();
-    });
-    return result;
-  }
+  constexpr auto it = state_t::dimensions + state_t::additional_components;
+  unrolled_for<it>([&] (auto i)
+  {
+    constexpr auto index = index_t::v_offset + i;
+    result[index] = state[index] * state.density();
+  });
+  return result;
+}
+
+/// Returns the conservative form of the state when the state is primitive.
+template < typename State
+         , typename Material
+         , std::enable_if_t<is_conservative_v<State>, int> = 0>
+fluidity_host_device inline constexpr auto
+conservative(State&& state, Material&& mat)
+{
+  return state;
 }
 
 } // namespace detail

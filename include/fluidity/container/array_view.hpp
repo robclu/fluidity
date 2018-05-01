@@ -41,6 +41,20 @@ class ArrayView {
   /// Defines the type of a const reference to the data type.
   using const_reference_t = const value_t&;
 
+  /// Defines a tag class which can be used to define unrolled and non-unrolled
+  /// implementations of the array functionality.
+  template <bool> struct UnrollTag {};
+
+  /// Defines the type of tag for unrolled implementations.
+  using unroll_true_tag_t  = UnrollTag<true>;
+  /// Defines the type of a tage for non-unrolled implementations.
+  using unroll_false_tag_t = UnrollTag<false>;
+
+  /// Defines an instance of the unroll tag for this class based on the number
+  /// of elements in the array.
+  static constexpr auto unroll_tag = UnrollTag<(Elements < max_unroll_depth)>{};
+ public:
+
   /// \todo Implement StidedIterator and change this to use those.
   
   /// Defines the type of a non const iterator.
@@ -112,28 +126,79 @@ class ArrayView {
   /// \tparam    Container The type of the container.
   template <typename Container>
   void copy_from_container(Container&& container);
+
+  /// Copies the contents of a container into the contents which are viewed by
+  /// this class, unsing an unrolled implementation.
+  /// \param[in] container The container to copy the data from.
+  /// \tparam    Container The type of the container.
+  template <typename Container>
+  void copy_from_container(Container&& container, unroll_true_tag_t);
+
+  /// Copies the contents of a container into the contents which are viewed by
+  /// this class, unsing a  non-unrolled implementation.
+  /// \param[in] container The container to copy the data from.
+  /// \tparam    Container The type of the container.
+  template <typename Container>
+  void copy_from_container(Container&& container, unroll_false_tag_t);
 };
 
 //==--- Implementation -----------------------------------------------------==//
+
+//===== Operator --------------------------------------------------------=====//
+
+template < typename    T
+         , std::size_t S
+         , std::enable_if_t<(S < max_unroll_depth), int> = 0>
+fluidity_host_device constexpr auto
+operator*(T scalar, const ArrayView<T, S>& a)
+{
+  auto result = a;
+  unrolled_for<S>([&] (auto i)
+  {
+    result[i] *= scalar;
+  });
+  return result;
+} 
+
+template < typename    T
+         , std::size_t S
+         , std::enable_if_t<!(S < max_unroll_depth), int> = 0>
+fluidity_host_device constexpr auto
+operator*(T scalar, const ArrayView<T, S>& a)
+{
+  auto result = a;
+  for (auto i : range(S))
+  {
+    result[i] *= scalar;
+  }
+  return result;
+} 
 
 //===== Private ---------------------------------------------------------=====//
 
 template <typename T, std::size_t Elements> template <typename Container>
 void ArrayView<T, Elements>::copy_from_container(Container&& container)
 {
-  if constexpr (size() < max_unroll_depth)
+  copy_from_container(std::forward<Container>(container), unroll_tag);
+}
+
+template <typename T, std::size_t Elements> template <typename Container>
+void ArrayView<T, Elements>::copy_from_container(Container&& container,
+                                                 unroll_true_tag_t)
+{
+  unrolled_for<size()>([&] (auto i)
   {
-    unrolled_for<size()>([&] (auto i)
-    {
-      _ptr[i * _step] = container[i];
-    });
-  }
-  else
+    _ptr[i * _step] = container[i];
+  });
+}
+
+template <typename T, std::size_t Elements> template <typename Container>
+void ArrayView<T, Elements>::copy_from_container(Container&& container,
+                                                 unroll_false_tag_t)
+{
+  for (auto i : range(size()))
   {
-    for (auto i : range(size()))
-    {
-      _ptr[i * step] = container[i];
-    }
+    _ptr[i * _step] = container[i];
   }
 }
 

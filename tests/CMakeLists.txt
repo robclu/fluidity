@@ -17,9 +17,9 @@ include(fluidity_cmake)
 set(GTEST_BOTH_LIBRARIES gtest gtest_main)
 
 if (APPLE)
-  set(CUDA_LIBRARIES -lcudart -ldl -lrt -lcudadevrt)
+  set(CUDA_LIBRARIES -lcudart -ldl -lrt -lcudadevrt -pthread)
 else()
-  set(CUDA_LIBRARIES -lcudart_static -ldl -lrt -lcudadevrt)
+  set(CUDA_LIBRARIES -lcudart_static -ldl -lrt -lcudadevrt -pthread)
 endif()
 
 #fluid_add_definitions(${CMAKE_CUDA_FLAGS})
@@ -68,7 +68,7 @@ fluid_add_executable(
 )
 fluid_target_link_libraries(
   simulator_tests
-  ${GTEST_BOTH_LIBRARIES}
+#  ${GTEST_BOTH_LIBRARIES}
   ${CUDA_LIBRARIES}
 )
 

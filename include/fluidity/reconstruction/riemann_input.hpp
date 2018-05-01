@@ -36,7 +36,7 @@ struct RiemannInput {
 template <typename State>
 fluidity_host_device auto make_riemann_input(State&& l, State&& r)
 {
-  return RiemannInput{l, r};
+  return RiemannInput<std::decay_t<State>>{l, r};
 }
 
 }} // namespace fluid::recon

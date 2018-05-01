@@ -306,7 +306,7 @@ struct MultidimIterator : public DimensionInfo {
 /// \tparam T       The type of the data to iterate over.
 /// \tparam DimInfo The information which defines the multi dimensional space.
 template <typename T, typename DimInfo>
-fluidity_device_only constexpr auto make_multidim_iterator()
+fluidity_device_only auto make_multidim_iterator()
 {
   using iter_t = MultidimIterator<T, DimInfo>;
   __shared__ T buffer[DimInfo().total_size()];

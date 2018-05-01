@@ -136,12 +136,11 @@ struct MHReconstructor {
              value_t          dtdh    ,
              Dimension<Value> /*dim*/ ) const
   {
-    //using state_t = std::decay_t<decltype(*state)>;
-    //auto input    = make_riemann_input<state_t>();
+    using state_t = std::decay_t<decltype(*state)>;
 
     // Define the dimension to ensure constexpr functionality:
     constexpr auto dim = Dimension<Value>{};
-    return make_riemann_input(
+    return make_riemann_input<state_t>(
       fwrd_recon_t{}(state, material, dtdh, dim),
       back_recon_t{}(state.offset(1, dim), material, dtdh, dim)
     );

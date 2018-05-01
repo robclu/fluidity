@@ -80,17 +80,17 @@ class BaseTensor {
 //==--- BaseTensor Implementation ------------------------------------------==//
 
 template <typename T, std::size_t D>
-BaseTensor<T, D>::BaseTensor(std::size_t elements)
+fluidity_host_device BaseTensor<T, D>::BaseTensor(std::size_t elements)
 : _data(nullptr), _size(elements) {}
 
 template <typename T, std::size_t D>
-std::size_t BaseTensor<T, D>::mem_requirement() const
+fluidity_host_device std::size_t BaseTensor<T, D>::mem_requirement() const
 {
   return sizeof(value_t) * _size;
 }
 
 template <typename T, std::size_t D>
-std::size_t BaseTensor<T, D>::total_size() const
+fluidity_host_device std::size_t BaseTensor<T, D>::total_size() const
 {
   return _size;
 }

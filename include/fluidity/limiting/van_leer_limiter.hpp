@@ -54,11 +54,12 @@ struct VanLeer {
   fluidity_host_device constexpr decltype(auto)
   operator()(T&& central, T&& left, T&& right) const 
   {
-    return (left * right < T(0))
-           ? T(0)
+    using value_t = std::decay_t<T>;
+    return (left * right < value_t{0})
+           ? value_t{0}
            : math::signum(central)
-           * std::min(T(0.5) * std::abs(central),
-                      T(2.0) * std::min(std::abs(left), std::abs(right)));
+           * std::min(value_t{0.5} * std::abs(central),
+                      value_t{2.0} * std::min(std::abs(left), std::abs(right)));
   }
 
   /// Implementation of the limit function which applies the limiting to an
@@ -80,9 +81,9 @@ struct VanLeer {
       constexpr auto limiter = self_t{};
       constexpr auto dim     = Dimension<Value>{};
 
-      limited[i] = limiter(state_it.template central_diff<i>(dim) ,
-                           state_it.template backward_diff<i>(dim),
-                           state_it.template forward_diff<i>(dim) );
+      limited[i] = limiter(state_it.central_diff(dim)[i] ,
+                           state_it.backward_diff(dim)[i],
+                           state_it.forward_diff(dim)[i] );
     });
     return limited;
   }

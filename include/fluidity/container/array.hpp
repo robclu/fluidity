@@ -16,6 +16,7 @@
 #ifndef FLUIDITY_CONTAINER_ARRAY_HPP
 #define FLUIDITY_CONTAINER_ARRAY_HPP
 
+#include <fluidity/algorithm/unrolled_for.hpp>
 #include <fluidity/iterator/strided_iterator.hpp>
 
 namespace fluid {
@@ -84,6 +85,32 @@ class Array {
     return _data[i];
   }
 
+  /// Overload of operator- to subtract each element of a container from each
+  /// element in the array.
+  template <typename Container>
+  fluidity_host_device constexpr self_t operator-(Container&& container) const
+  {
+    auto result = *this;
+    unrolled_for_bounded<max_unroll_depth>([&] (auto i)
+    {
+      result[i] -= container[i];
+    });
+    return result;
+  }
+
+  /// Overload of operator- to add each element of a container to each element
+  /// in the array.
+  template <typename Container>
+  fluidity_host_device constexpr self_t operator+(Container&& container) const
+  {
+    auto result = *this;
+    unrolled_for_bounded<max_unroll_depth>([&] (auto i)
+    {
+      result[i] += container[i];
+    });
+    return result;
+  }
+
   /// Returns an iterator to the first element in the tensor.
   fluidity_host_device constexpr iterator_t begin()
   {
@@ -106,6 +133,34 @@ class Array {
 };
 
 //==--- Array Implementation -----------------------------------------------==//
+
+//===== Operator --------------------------------------------------------=====//
+
+template < typename    T
+         , std::size_t S
+         , std::enable_if_t<(S < max_unroll_depth), int> = 0>
+fluidity_host_device constexpr auto operator*(T scalar, const Array<T, S>& a)
+{
+  auto result = a;
+  unrolled_for<S>([&] (auto i)
+  {
+    result[i] *= scalar;
+  });
+  return result;
+} 
+
+template < typename    T
+         , std::size_t S
+         , std::enable_if_t<!(S < max_unroll_depth), int> = 0>
+fluidity_host_device constexpr auto operator*(T scalar, const Array<T, S>& a)
+{
+  auto result = a;
+  for (auto i : range(S))
+  {
+    result[i] *= scalar;
+  }
+  return result;
+} 
 
 //===== Public ----------------------------------------------------------=====//
 

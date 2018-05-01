@@ -37,6 +37,8 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
   using storage_t = traits::storage_t<T, Dimensions, Components, Format>;
   /// Defines the type of the data elements in the state.
   using value_t   = std::decay_t<T>;
+  /// Defines the type of this state.
+  using self_t    = State;
 
   /// Returns the format of the state.
   static constexpr FormType    format                = Form;
@@ -50,6 +52,9 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
   static constexpr auto        elements              = 2 
                                                      + dimensions
                                                      + additional_components;
+
+  /// Use the storage class constructors.
+  using storage_t::storage_t;
 
   /// The index struct returns the values where data is stored in the state.
   struct index {
@@ -72,7 +77,7 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
     /// ~~~
     /// 
     /// describes the layout of the state data elements.
-    static constexpr auto element_names()
+    static auto element_names()
     {
       // ASCII offst to char code x:
       constexpr int ascii_offset = 120;
@@ -139,6 +144,29 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
     }
   };
 
+  /// Constructor to create the state from a container. This does not check that
+  /// the container is the same size as the state.
+  /// 
+  /// TODO: Add debug mode size checking ...
+  /// 
+  /// \param[in] container The container with the data to set the elements to.
+  /// \tparam    Container The type of the container.
+  template <typename Container>
+  fluidity_host_device State(Container&& container)
+  {
+    // debug::check([&]
+    // {
+    //    if (container.size() != size())
+    //    {
+    //        debug::log("Size mismatch when initializing state!");
+    //    }
+    // });
+    unrolled_for_bounded<max_unroll_depth>([&] (auto i)
+    {
+      this->operator[](i) = container[i];
+    });
+  }
+
   /// Returns the density of the state.
   fluidity_host_device constexpr auto density() const
   { 
@@ -161,22 +189,14 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
     return detail::pressure(*this, std::forward<Material>(material));
   }
 
-  /// Sets the pressure of the state, if the state is primitive. If this is
-  /// called on a conservative form state then a compiler error is generated as
-  /// conservative states do not store the pressure, but compute it from the
+  /// Sets the pressure of the state, if the state is primitive. This overload
+  /// is only enabled for primitive form states.
   /// other conservative components.
   /// \param[in] value The value to set the pressure for the state to.
-  fluidity_host_device constexpr void set_pressure(value_t value)
+  fluidity_host_device constexpr void
+  set_pressure(value_t value)
   {
-    if constexpr (Form == FormType::primitive)
-    {
-      this->operator[](index::pressure) = value;
-    }
-    else
-    {
-      static_assert(Form == FormType::primitive,
-                    "Cannot set the pressure for a conservative state!");
-    }
+    set_pressure_impl(value, traits::state_dispatch_tag<self_t>);
   }
 
   /// Returns the internal energy of the state.
@@ -188,22 +208,12 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
     return detail::energy(*this, std::forward<Material>(material));
   }
 
-  /// Sets the energy of the state, if the state is conservative. If this is
-  /// called on a primitive form state then a compiler error is generated as
-  /// primitive states do not store the pressure, but compute it from the
-  /// other primitve components.
+  /// Sets the energy of the state. This overload is enabled for conservative
+  /// form states.
   /// \param[in] value The value to set the energy to.
-  fluidity_host_device constexpr void set_energy(value_t value)
+  fluidity_host_device constexpr void set_energy(value_t value) 
   {
-    if constexpr (Form == FormType::conservative)
-    {
-      this->operator[](index::energy) = value;
-    }
-    else
-    {
-      static_assert(Form == FormType::conservative,
-                    "Cannot set the energy for a primitive state!");
-    }
+    set_energy_impl(value, traits::state_dispatch_tag<self_t>);
   }
 
   /// Returns the velocity in a given dimension (direction). Asking for the
@@ -222,7 +232,8 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
     return detail::velocity(*this, Dimension<V>{});
   }
 
-  /// Sets the velocity of the state for a given dimension \p dim.
+  /// Sets the velocity of the state for a given dimension \p dim, when the
+  /// state has a primitive form.
   /// \param[in] value The value to set the velocity to.
   /// \param[in] dim   The dimension to set the velocity for.
   /// \tparam    V     The value whihc defines the dimension.
@@ -230,13 +241,7 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
   fluidity_host_device constexpr void
   set_velocity(value_t value, Dimension<V> /*dim*/)
   {
-    // For the conservative form we need to add the density multiplication
-    // because {\rho v} is what is actually stored.
-    if constexpr (Form == FormType::conservative)
-    {
-      value *= this->operator[](index::density);
-    }
-    this->operator[](index::velocity(Dimension<V>{})) = value;
+    set_velocity_impl(value, traits::state_dispatch_tag<self_t>);
   }
 
   /// Returns the \p nth additional component of the state, if it exists.
@@ -319,7 +324,6 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
     return detail::primitive(*this, std::forward<Material>(material));
   }
 
-
   /// Returns the flux from the state vector, in terms of a specific spacial
   /// dimension \p dim for a given material \p material.
   /// \param[in] material The material which describes the system.
@@ -344,6 +348,76 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
   fluidity_host_device constexpr auto size() const
   {
     return index::a_offset + additional_components;
+  }
+
+ private:
+  /// Sets the pressure of the state, if the state is primitive. This overload
+  /// is only enabled for primitive form states.
+  /// other conservative components.
+  /// \param[in] value The value to set the pressure for the state to.
+  fluidity_host_device constexpr void
+  set_pressure_impl(value_t value, traits::primitive_tag_t /*tag*/)
+  {
+    this->operator[](index::pressure) = value;
+  }
+
+  /// Sets the pressure of the state, if the state is primitive. This overload
+  /// is only enabled for primitive form states.
+  /// other conservative components.
+  /// \param[in] value The value to set the pressure for the state to.
+  fluidity_host_device constexpr void
+  set_pressure_impl(value_t value, traits::conservative_tag_t /*tag*/)
+  {
+    static_assert(traits::is_primitive_v<self_t>,
+                  "Cannot set the pressure for a conservative form state!");
+  }
+
+  /// Sets the energy of the state. This overload is enabled for conservative
+  /// form states.
+  /// \param[in] value The value to set the energy to.
+  fluidity_host_device constexpr void 
+  set_energy_impl(value_t value, traits::primitive_tag_t /*tag*/) 
+  {
+    static_assert(traits::is_conservative_v<self_t>,
+                  "Cannot set the energy for a primitive form state!");
+  }
+
+  /// Sets the energy of the state. This overload is enabled for conservative
+  /// form states.
+  /// \param[in] value The value to set the energy to.
+  fluidity_host_device constexpr void 
+  set_energy_impl(value_t value, traits::conservative_tag_t /*tag*/) 
+  {
+    this->operator[](index::energy) = value;
+  }
+
+  /// Sets the velocity of the state for a given dimension \p dim, when the
+  /// state has a primitive form.
+  /// \param[in] value The value to set the velocity to.
+  /// \param[in] dim   The dimension to set the velocity for.
+  /// \tparam    V     The value whihc defines the dimension.
+  template <std::size_t V>
+  fluidity_host_device constexpr void 
+  set_velocity_impl(value_t                value   ,
+                    Dimension<V>            /*dim*/,
+                    traits::primitive_tag_t /*tag*/)
+  {
+    this->operator[](index::velocity(Dimension<V>{})) = value;
+  }
+
+  /// Sets the velocity of the state for a given dimension \p dim, when the
+  /// state has a conservative form.
+  /// \param[in] value The value to set the velocity to.
+  /// \param[in] dim   The dimension to set the velocity for.
+  /// \tparam    V     The value whihc defines the dimension.
+  template <std::size_t V>
+  fluidity_host_device constexpr void
+  set_velocity_impl(value_t                    value  ,
+                    Dimension<V>               /*dim*/,
+                    traits::conservative_tag_t /*tag*/)
+  {
+    value *= this->operator[](index::density);
+    this->operator[](index::velocity(Dimension<V>{})) = value;
   }
 };
 

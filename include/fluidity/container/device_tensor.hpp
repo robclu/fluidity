@@ -201,7 +201,8 @@ void DeviceTensor<T, 1>::resize(std::size_t num_elements)
 }
 
 template <typename T>
-std::size_t DeviceTensor<T, 1>::size(std::size_t /*dim*/) const
+fluidity_host_device std::size_t
+DeviceTensor<T, 1>::size(std::size_t /*dim*/) const
 {
   return this->_size;
 }

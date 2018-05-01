@@ -18,32 +18,31 @@
 #define FLUIDITY_SIMULATOR_SIMULATION_UPDATER_HPP
 
 #include "simulation_updater.cuh"
+#include <fluidity/execution/execution_policy.hpp>
 
 namespace fluid {
 namespace sim   {
 
 /// Updater function for updating the simulation. This overload is only enabled
 /// which the input and output iterators are for CPU execution.
-/// \param[in] multi_iterator_in The input data to use to update.
-/// \param[in] multi_itertor_out The output data to write to after updating.
-/// \param[in] dtdh              Scaling factor for the update.
-/// \param[in] solver            The solver which updates the states.
-/// \param[in] thread_sizes      The number of threads in each block.
-/// \param[in] block_sizes       The number of blocks in the grid.
-/// \tparam    Iterator          The type of the mulri dimensional iterator.
-/// \tparam    T                 The type of the scaling factor.
-/// \tparam    Solver            The type of the solver.
-/// \tparam    SizeInfo          The type of the size information.
+/// \param[in] in           The input data to use to update.
+/// \param[in] out          The output data to write to after updating.
+/// \param[in] solver       The solver which updates the states.
+/// \param[in] mat          The material for the system.
+/// \param[in] dtdh         Scaling factor for the update.
+/// \param[in] thread_sizes The number of threads in each block.
+/// \param[in] block_sizes  The number of blocks in the grid.
+/// \tparam    Iterator     The type of the mulri dimensional iterator.
+/// \tparam    Solver       The type of the solver.
+/// \tparam    Material     The type of the material for the system.
+/// \tparam    T            The type of the scaling factor.
+/// \tparam    SizeInfo     The type of the size information.
 template < typename Iterator
          , typename Solver
          , typename Material
          , typename T
          , typename SizeInfo
-         , std::enable_if_t<
-             exec::is_cpu_policy_v<
-               typename std::decay_t<Iterator>::exec_policy_t
-             >, int> = 0
-         >
+         , exec::cpu_enable_t<Iterator> = 0>
 void update(Iterator in          ,
             Iterator out         ,
             Solver   solver      ,
@@ -61,26 +60,24 @@ void update(Iterator in          ,
 /// This simply forwards all the arguments onto the cuda implementation of the
 /// updating function.
 /// 
-/// \param[in] multi_iterator_in The input data to use to update.
-/// \param[in] multi_itertor_out The output data to write to after updating.
-/// \param[in] dtdh              Scaling factor for the update.
-/// \param[in] solver            The solver which updates the states.
-/// \param[in] thread_sizes      The number of threads in each block.
-/// \param[in] block_sizes       The number of blocks in the grid.
-/// \tparam    Iterator          The type of the mulri dimensional iterator.
-/// \tparam    T                 The type of the scaling factor.
-/// \tparam    Solver            The type of the solver.
-/// \tparam    SizeInfo          The type of the size information.
+/// \param[in] in           The input data to use to update.
+/// \param[in] out          The output data to write to after updating.
+/// \param[in] solver       The solver which updates the states.
+/// \param[in] mat          The material for the system.
+/// \param[in] dtdh         Scaling factor for the update.
+/// \param[in] thread_sizes The number of threads in each block.
+/// \param[in] block_sizes  The number of blocks in the grid.
+/// \tparam    Iterator     The type of the mulri dimensional iterator.
+/// \tparam    Solver       The type of the solver.
+/// \tparam    Material     The type of the material for the system.
+/// \tparam    T            The type of the scaling factor.
+/// \tparam    SizeInfo     The type of the size information.
 template < typename Iterator
          , typename Solver
          , typename Material
          , typename T
          , typename SizeInfo
-         , std::enable_if_t<
-             exec::is_gpu_policy_v<
-               typename std::decay_t<Iterator>::exec_policy_t
-             >, int> = 0
-         >
+         , exec::gpu_enable_t<Iterator> = 0>
 void update(Iterator in          ,
             Iterator out         ,
             Solver   solver      ,

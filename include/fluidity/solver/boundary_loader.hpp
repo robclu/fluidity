@@ -169,16 +169,12 @@ struct BoundaryLoader {
   /// \param[in]  elements The number of elements in the data for the dim.
   /// \param[in]  dim      The dimension to set the boundary in.
   /// \param[in]  setter   The object which is used to set the elements.
-  /// \tparam     Iterator The type of the iterators.
+  /// \tparam     It       The type of the iterators.
   /// \tparam     Value    The value which defines the dimension.
-  template < typename    Iterator
-           , std::size_t Value
-           , std::enable_if_t<
-               exec::is_gpu_policy_v<typename Iterator::exec_policy_t>, int> = 0
-           >
+  template <typename It, std::size_t Value, exec::gpu_enable_t<It> = 0>
   static fluidity_host_device void
-  load_boundary(Iterator&&            data     ,
-                Iterator&&            patch    ,
+  load_boundary(It&&                  data     ,
+                It&&                  patch    ,
                 std::size_t           elements ,
                 Dimension<Value>      /*dim*/  ,
                 const BoundarySetter& setter   )
@@ -239,22 +235,18 @@ struct BoundaryLoader {
   /// \param[in]  setter   The object which is used to set the elements.
   /// \tparam     Iterator The type of the iterators.
   /// \tparam     Value    The value which defines the dimension.
-  template < typename    Iterator
-           , std::size_t Value
-           , std::enable_if_t<
-               exec::is_cpu_policy_v<typename Iterator::exec_policy_t>, int> = 0
-           >
+  template <typename It, std::size_t Value, exec::cpu_enable_t<It> = 0>
   static fluidity_host_device void
-  load_boundary(Iterator&&            data     ,
-                Iterator&&            patch    ,
-                std::size_t           elements ,
-                Dimension<Value>      /*dim*/  ,
-                const BoundarySetter& setter   )
+  load_boundary(It&&                  data    ,
+                It&&                  patch   ,
+                std::size_t           elements,
+                Dimension<Value>      /*dim*/ ,
+                const BoundarySetter& setter  )
   {
     constexpr auto dim = Dimension<Value>{};
 
-    auto front = data + padding;
-    auto back  = data + elements - padding;
+    auto front = data.offset(padding, dim);
+    auto back  = data.offset(elements - padding, dim);
 
     unrolled_for<padding>([&] (auto i)
     {
@@ -290,13 +282,7 @@ struct BoundaryLoader {
   /// \param[in]  dim      The dimension to set the boundary in.
   /// \tparam     It       The type of the iterators.
   /// \tparam     Value    The value which defines the dimension.
-  template < typename    It
-           , std::size_t Value
-           , std::enable_if_t<
-               exec::is_gpu_policy_v<
-                 typename std::decay_t<It>::exec_policy_t>, int
-               > = 0
-           >
+  template <typename It, std::size_t Value, exec::gpu_enable_t<It> = 0>
   static fluidity_host_device void
   load_patch(It&& patch_it, Dimension<Value> /*dim*/)
   {
@@ -339,30 +325,25 @@ struct BoundaryLoader {
   /// \param[in]  dim      The dimension to set the boundary in.
   /// \tparam     It       The type of the iterators.
   /// \tparam     Value    The value which defines the dimension.
-  template < typename    It
-           , std::size_t Value
-           , std::enable_if_t<
-               exec::is_cpu_policy_v<
-                 typename std::decay_t<It>::exec_policy_t>, int
-               > = 0
-           >
+  template <typename It, std::size_t Value, exec::cpu_enable_t<It> = 0>
   static fluidity_host_device void
   load_patch(It&& patch_it, Dimension<Value> /*dim*/)
   {
     constexpr auto dim = Dimension<Value>{};
 
-    auto front = patch_it + padding;
-    auto back  = patch_it + patch_it.size(dim) - padding;
+    auto front = patch_it.offset(padding, dim);
+    auto back  = patch_it.offset(patch_it.size(dim) - padding, dim);
 
     unrolled_for<padding>([&] (auto i)
     {
       constexpr auto dim   = Dimension<Value>{};
-      constexpr auto shift = -2 * i - 1;
+      constexpr auto shift = -2 * int{i} - 1;
 
       *front                   = *front.offset(shift, dim);
       *back.offset(shift, dim) = *back;
 
-      front++; back++;
+      front.shift(1, dim);
+      back.shift(1, dim);
     });
   }
 };

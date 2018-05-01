@@ -65,6 +65,24 @@ template <typename T>
 static constexpr auto is_gpu_policy_v = 
   is_same_v<std::decay_t<T>, gpu_type>;
 
+/// Defines the type of the execution policy of the type T, if it has an
+/// execution policy.
+/// \tparam T The type to get the execution policy of.
+template <typename T>
+using exec_policy_t = typename std::decay_t<T>::exec_t;
+
+/// Defines a type which is valid if T has an execution policy and it's a CPU
+/// execution policy.
+/// \tparam T The type to get a CPU execution enabling type for.
+template <typename T>
+using cpu_enable_t = std::enable_if_t<is_cpu_policy_v<exec_policy_t<T>>, int>;
+
+/// Defines a type which is valid if T has an execution policy and it's a GPU
+/// execution policy.
+/// \tparam T The type to get a GPU execution enabling type for.
+template <typename T>
+using gpu_enable_t = std::enable_if_t<is_gpu_policy_v<exec_policy_t<T>>, int>;
+
 /// Defines the default number of threads per dimension for 1d.
 static constexpr std::size_t default_threads_1d = 512;
 
@@ -104,31 +122,96 @@ static constexpr auto default_policy = cpu_policy;
 
 #if defined(__CUDACC__)
 
+namespace detail {
+
 /// Returns the number of threads in each of the dimensions for a single
-/// dimension.
+/// dimension. This overload is selected for a 1D iterator.
 /// \param[in] it       The iterator for the multi dimensional space.
 /// \tparam    Iterator The type of the iterator. 
 template <typename Iterator>
-dim3 get_thread_sizes(Iterator&& it)
+dim3 get_thread_sizes(Iterator&& it, dispatch_tag_1d_t)
 {
-  if (it.num_dimensions() == 1)
-  {
-    return dim3(it.size(dim_x) < default_threads_1d 
-                  ? it.size(dim_x) : default_threads_1d);
-  }
-  else if (it.num_dimensions() == 2)
-  {
-    return dim3(it.size(dim_x) < default_threads_2d_x 
-                  ? it.size(dim_x) : default_threads_2d_x,
-                it.size(dim_y) < default_threads_2d_y
-                  ? it.size(dim_y) : default_threads_2d_y);
-  }
+  return dim3(it.size(dim_x) < default_threads_1d 
+                ? it.size(dim_x) : default_threads_1d);
+}
+
+/// Returns the number of threads in each of the dimensions for a two
+/// dimensional iterator. This overload is selected for a 2D iterator.
+/// \param[in] it       The iterator for the multi dimensional space.
+/// \tparam    Iterator The type of the iterator. 
+template <typename Iterator>
+dim3 get_thread_sizes(Iterator&& it, dispatch_tag_2d_t)
+{
+  return dim3(it.size(dim_x) < default_threads_2d_x 
+                ? it.size(dim_x) : default_threads_2d_x,
+              it.size(dim_y) < default_threads_2d_y
+                ? it.size(dim_y) : default_threads_2d_y);
+}
+
+/// Returns the number of threads in each of the dimensions for a three
+/// dimensional iterator. This overload is selected for a 3D iterator.
+/// \param[in] it       The iterator for the multi dimensional space.
+/// \tparam    Iterator The type of the iterator. 
+template <typename Iterator>
+dim3 get_thread_sizes(Iterator&& it, dispatch_tag_3d_t)
+{
   return dim3(it.size(dim_x) < default_threads_3d_x 
                 ? it.size(dim_x) : default_threads_3d_x,
               it.size(dim_y) < default_threads_3d_y
                 ? it.size(dim_y) : default_threads_3d_y,
               it.size(dim_z) < default_threads_3d_z
                 ? it.size(dim_z) : default_threads_3d_z);
+}
+
+/// Returns the size of the block based on the size of the space defined by the
+/// \p iterator and the thread sizes. This overload is for a 1D space.
+/// \param[in] it           The iterator for the multi dimensional space.
+/// \param[in] thread_sizes The number of threads in each dimension.
+/// \tparam    Iterator     The type of the iterator. 
+template <typename Iterator>
+dim3 get_block_sizes(Iterator&& it, dim3 thread_sizes, dispatch_tag_1d_t)
+{
+  constexpr auto default_value = std::size_t{1};
+  return dim3(std::max(it.size(dim_x) / thread_sizes.x, default_value));
+}
+
+/// Returns the size of the block based on the size of the space defined by the
+/// \p iterator and the thread sizes. This overload is for a 2D space.
+/// \param[in] it           The iterator for the multi dimensional space.
+/// \param[in] thread_sizes The number of threads in each dimension.
+/// \tparam    Iterator     The type of the iterator. 
+template <typename Iterator>
+dim3 get_block_sizes(Iterator&& it, dim3 thread_sizes, dispatch_tag_2d_t)
+{
+  constexpr auto default_value = std::size_t{1};
+  return dim3(std::max(it.size(dim_x) / thread_sizes.x, default_value),
+              std::max(it.size(dim_y) / thread_sizes.y, default_value));
+}
+
+/// Returns the size of the block based on the size of the space defined by the
+/// \p iterator and the thread sizes. This overload is for a 3D space.
+/// \param[in] it           The iterator for the multi dimensional space.
+/// \param[in] thread_sizes The number of threads in each dimension.
+/// \tparam    Iterator     The type of the iterator. 
+template <typename Iterator>
+dim3 get_block_sizes(Iterator&& it, dim3 thread_sizes, dispatch_tag_3d_t)
+{
+  constexpr auto default_value = std::size_t{1};
+  return dim3(std::max(it.size(dim_x) / thread_sizes.x, default_value),
+              std::max(it.size(dim_y) / thread_sizes.y, default_value),
+              std::max(it.size(dim_z) / thread_sizes.z, default_value));
+}
+
+} // namespace detail
+
+/// Returns the number of threads for each dimension.
+/// \param[in] it       The iterator for the multi dimensional space.
+/// \tparam    Iterator The type of the iterator. 
+template <typename Iterator>
+dim3 get_thread_sizes(Iterator&& it)
+{
+  return detail::get_thread_sizes(std::forward<Iterator>(it),
+                                  dim_dispatch_tag<Iterator>);
 }
 
 /// Returns the size of the block based on the size of the space defined by the
@@ -139,19 +222,9 @@ dim3 get_thread_sizes(Iterator&& it)
 template <typename Iterator>
 dim3 get_block_sizes(Iterator&& it, dim3 thread_sizes)
 {
-  const auto default_value = std::size_t{1};
-  if (it.num_dimensions() == 1)
-  {
-    return dim3(std::max(it.size(dim_x) / thread_sizes.x, default_value));
-  }
-  else if (it.num_dimensions() == 2)
-  {
-    return dim3(std::max(it.size(dim_x) / thread_sizes.x, default_value),
-                std::max(it.size(dim_y) / thread_sizes.y, default_value));
-  }
-  return dim3(std::max(it.size(dim_x) / thread_sizes.x, default_value),
-              std::max(it.size(dim_y) / thread_sizes.y, default_value),
-              std::max(it.size(dim_z) / thread_sizes.z, default_value));
+  return detail::get_block_sizes(std::forward<Iterator>(it),
+                                 thread_sizes              ,
+                                 dim_dispatch_tag<Iterator>);
 }
 
 #else

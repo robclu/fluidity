@@ -60,6 +60,10 @@ struct IsState<State<T, F, D, C, S>> {
   static constexpr bool value = true;
 };
 
+/// Defines a class which can be used for tag dispatch based on the form of the
+/// state.
+template <FormType Form> struct StateDispatchTag {};
+
 } // namespace detail
 
 /// Alias for checking if a class is a state. Returns true if the class T is
@@ -67,6 +71,32 @@ struct IsState<State<T, F, D, C, S>> {
 /// \tparam T The type to check for a State type.
 template <typename T>
 static constexpr bool is_state_v = detail::IsState<T>::value;
+
+/// Constexpr trait function which returns true if the State is has a primitive
+/// form. This can be used to enable function overloads for a primitve state.
+/// \tparam State The state to check if in primitive form.
+template <typename State>
+static constexpr auto is_primitive_v = 
+  std::decay_t<State>::format == FormType::primitive;
+
+/// Constexpr trait function which returns true if the State is has a
+/// conservative form. This can be used to enable function overloads for a
+/// conservative state.
+/// \tparam State The state to check if in primitive form.
+template <typename State>
+static constexpr auto is_conservative_v = 
+  std::decay_t<State>::format == FormType::conservative;
+
+/// Alias for a primtiive dispatch tag type.
+using primitive_tag_t    = detail::StateDispatchTag<FormType::primitive>;
+/// Alias for a conservative dispatch tag type;
+using conservative_tag_t = detail::StateDispatchTag<FormType::conservative>;
+
+/// Creates a consetexpr instance of a dispatch tag from a state.
+/// \tparam State The state to create a dispatch tag for.
+template <typename State>
+static constexpr auto state_dispatch_tag = 
+  detail::StateDispatchTag<std::decay_t<State>::format>{};
 
 /// Defines the storage type used by the state class. If the storage format is
 /// row major, then a traditional array is used which stores each element

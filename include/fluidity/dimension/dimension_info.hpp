@@ -23,7 +23,27 @@
 #include <fluidity/algorithm/fold.hpp>
 #include <vector>
 
-namespace fluid {
+namespace fluid  {
+namespace detail {
+
+/// Dispatch tag struct for dispatching based on the number of dimensions.
+template <std::size_t> struct DimDispatchTag {};
+
+} // namespace detail
+
+/// Defines the type of a 1D dispatch tag.
+using dispatch_tag_1d_t = detail::DimDispatchTag<1>;
+/// Defines the type of a 2D dispatch tag.
+using dispatch_tag_2d_t = detail::DimDispatchTag<2>;
+/// Defines the type of a 3D dispatch tag.
+using dispatch_tag_3d_t = detail::DimDispatchTag<3>;
+
+/// Creates a constexpr instance of a dimension dispatch tag from a type which
+/// contains a constexpr dimensions trait.
+/// \tparam T The type which has dimension information.
+template <typename T>
+static constexpr auto dim_dispatch_tag = 
+  detail::DimDispatchTag<std::decay_t<T>::dimensions>{};
 
 /// The DimInfoCt struct defines dimension information which is known at compile
 /// time, where the dimension sizes are built into the type via the template
@@ -33,6 +53,9 @@ template <std::size_t... Sizes>
 struct DimInfoCt {
   /// Defines that the offset computations are constexpr.
   static constexpr auto constexpr_offsets = true;
+  /// Defines the number of dimensions which can be used with the type.
+  static constexpr auto dimensions        = sizeof...(Sizes);
+
 
   /// Returns the number of dimensions in the space.
   constexpr auto num_dimensions() const
@@ -125,6 +148,8 @@ template <std::size_t Dims>
 struct DimInfo {
   /// Defines that the offset computations are constexpr.
   static constexpr auto constexpr_offsets = false;
+  /// Defines the number of dimensions, which can be used with the type.
+  static constexpr auto dimensions        = Dims;
 
   /// Default constructor -- enables creation of empty dimension information.
   DimInfo() = default;
@@ -159,7 +184,9 @@ struct DimInfo {
   template <std::size_t Value>
   fluidity_host_device std::size_t size(Dimension<Value> /*dim*/) const
   {
-      return _sizes[Value];
+    static_assert(Value < Dims,
+                  "Accessing the size of a dimension which does not exist!");
+    return _sizes[Value];
   }
 
   /// Returns the total size of the N dimensional space i.e the total number of

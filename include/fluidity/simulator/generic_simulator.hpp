@@ -104,6 +104,11 @@ class GenericSimulator final : public Simulator<Traits> {
   void write_results(fs::path file_path) const override;
 
  private:
+  /// Defines a constexpr instance of a tag which is std::true_type of the batch
+  /// size must be fetched for 1 spacial dimension.
+  static constexpr auto batch_size_tag = 
+    std::integral_constant<bool, traits_t::spacial_dims == 1>{};
+
   storage_t   _initial_states;  //!< States at the start of an iteration.
   storage_t   _updated_states;  //!< States at the end of an iteration.
   wavespeed_t _wavespeeds;      //!< Wavespeeds for the simulation.
@@ -166,7 +171,17 @@ class GenericSimulator final : public Simulator<Traits> {
   auto get_simulation_output_iterator(exec::gpu_type) const
   {
     return _updated_states.as_device().multi_iterator();
-  } 
+  }
+
+  constexpr std::size_t get_batch_size(std::true_type) const
+  {
+    return 1;
+  }
+
+  constexpr std::size_t get_batch_size(std::false_type) const
+  {
+    return dimension_info().size(dim_y);
+  }
 };
 
 //==--- Implementation -----------------------------------------------------==//
@@ -314,14 +329,12 @@ void GenericSimulator<Traits>::stream_output(Stream&& stream) const
   constexpr auto iterations = dimensions <= 2 ? 1 : dimensions - 2;
 
   auto dim_info = dimension_info();
-
   // Iterate over the dimensions after the first 2 dimensions, size we only want
   // to output pages of 2D data ...
   unrolled_for<iterations>([&, this] (auto dim)
   {
     const auto element_names = index_t::element_names();
-    const auto batch_size    = dim_info.size(dim_x)
-                             * (dimensions == 1 ? 1 : dim_info.size(dim_y));
+    const auto batch_size    = get_batch_size(batch_size_tag);
 
     for (const auto element_idx : range(element_names.size()))
     {
@@ -348,7 +361,6 @@ void GenericSimulator<Traits>::stream_output(Stream&& stream) const
     }
   }); 
 }
-
 
 template <typename Traits>
 void GenericSimulator<Traits>::output_data(std::ostream& output_stream,

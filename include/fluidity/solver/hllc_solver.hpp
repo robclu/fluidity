@@ -40,7 +40,7 @@ struct HllcSolver {
   fluidity_host_device auto operator()(const State&     left    ,
                                        const State&     right   ,
                                        Material&&       material,
-                                       Dimension<Value> /*dim*/ )
+                                       Dimension<Value> /*dim*/ ) const
   {
     using state_t = std::decay_t<State>;
     using value_t = typename state_t::value_t;
@@ -48,8 +48,10 @@ struct HllcSolver {
     static_assert(is_state_v<state_t>,
       "Attempt to invoke a state function on a type which is not a state");
 
-    const auto pl = left.primtive(material)    , pr = right.primtive(material);
-    const auto cl = left.conservative(material), cr = right.conservative(material);
+    const auto pl = left.primitive(material),
+               pr = right.primitive(material);
+    const auto cl = left.conservative(material),
+               cr = right.conservative(material);
 
     const auto al  = material.sound_speed(pl), ar = material.sound_speed(pr);
     const auto adi = q_factor(material);
@@ -104,12 +106,11 @@ struct HllcSolver {
   /// \param[in] material The material describing the system to solve.
   /// \tparam    Material The type of the material.
   template <typename Material>
-  fluidity_host_device static decltype(auto)
-  q_factor(Material&& material)
+  fluidity_host_device static decltype(auto) q_factor(Material&& material)
   {
-    using value_t = decltype(material.adi_index());
-    return (material.adi_index() + value_t{1}) /
-           (value_t{2} * material.adi_index());
+    using value_t = std::decay_t<decltype(material.adiabatic())>;
+    return (material.adiabatic() + value_t{1}) /
+           (value_t{2} * material.adiabatic());
   }
 
   /// Computes the speed, SL or SR, as follows:
