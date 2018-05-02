@@ -47,7 +47,7 @@ void update(Iterator in          ,
             Iterator out         ,
             Solver   solver      ,
             Material mat         ,
-            T          dtdh        ,
+            T        dtdh        ,
             SizeInfo thread_sizes,
             SizeInfo block_sizes )
 {
@@ -82,7 +82,7 @@ void update(Iterator in          ,
             Iterator out         ,
             Solver   solver      ,
             Material mat         ,
-            T          dtdh        ,
+            T        dtdh        ,
             SizeInfo thread_sizes,
             SizeInfo block_sizes )
 {
@@ -94,6 +94,42 @@ void update(Iterator in          ,
     dtdh                                ,
     std::forward<SizeInfo>(thread_sizes),
     std::forward<SizeInfo>(block_sizes) );
+}
+
+/// Sets the wavespeed values pointed to by the \p wavespeed_it using the state
+/// data pointed to by the \p state_it iterator.
+/// \param[in] state_it     Iterator to the state data.
+/// \param[in] wavespeed_it Iterator to the wavespeed data.
+/// \param[in] mat          The material for the system.
+/// \tparam    StateIt      The type of the state iterator.
+/// \tparam    WsIt         The type of the wavespeed iterator.
+/// \tparam    Material     The type of the material.
+template < typename StateIt
+         , typename WsIt
+         , typename Material
+         , exec::cpu_enable_t<StateIt> = 0>
+void set_wavespeeds(StateIt&& state_it, WsIt&& wavespeed_it, Material&& mat)
+{
+  // Call CPU implementation ...
+}
+
+/// Sets the wavespeed values pointed to by the \p wavespeed_it using the state
+/// data pointed to by the \p state_it iterator.
+/// \param[in] state_it     Iterator to the state data.
+/// \param[in] wavespeed_it Iterator to the wavespeed data.
+/// \param[in] mat          The material for the system.
+/// \tparam    StateIt      The type of the state iterator.
+/// \tparam    WsIt         The type of the wavespeed iterator.
+/// \tparam    Material     The type of the material.
+template < typename StateIt
+         , typename WsIt
+         , typename Material
+         , exec::gpu_enable_t<StateIt> = 0>
+void set_wavespeeds(StateIt&& state_it, WsIt&& wavespeed_it, Material&& mat)
+{
+  detail::cuda::set_wavespeeds(std::forward<StateIt>(state_it) ,
+                               std::forward<WsIt>(wavespeed_it),
+                               std::forward<Material>(mat)     );
 }
 
 }} // namespace fluid::sim

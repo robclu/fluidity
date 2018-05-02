@@ -72,9 +72,25 @@ class DeviceTensor<T, 1> : public BaseTensor<T, 1> {
   /// Cleans up any memory allocated for the tensor.
   ~DeviceTensor();
 
+  /// Constructor to copy a device tensor to another device tensor.
+  /// \param[in] other The other device tensor to copy from.
+  DeviceTensor(const self_t& other);
+
+  /// Constructor to move a device tensor to another device tensor.
+  /// \param[in] other The other device tensor to move from.
+  DeviceTensor(self_t&& other);
+
   /// Constructor to create a device tensor from a host tensor.
   /// \param[in] host_tensor The host tensor to create the device tensor from.
   DeviceTensor(const HostTensor<T, 1>& host_tensor);
+
+  /// Overload of operator= to copy a device tensor to another device tensor.
+  /// \param[in] other The other device tensor to copy from.
+  self_t& operator=(const self_t& other);
+
+  /// Overload of operator= to move a device tensor to another device tensor.
+  /// \param[in] other The other device tensor to move from.
+  self_t& operator=(self_t&& other);
 
   /// Returns the device tensor as a host tensor.
   HostTensor<T, 1> as_host() const;
@@ -177,6 +193,27 @@ DeviceTensor<T, 1>::~DeviceTensor()
 }
 
 template <typename T>
+DeviceTensor<T, 1>::DeviceTensor(const self_t& other) 
+: BaseTensor<T, 1>(other.size())
+{
+  allocate();
+  util::cuda::memcpy_device_to_device(other._data            ,
+                                      this->_data            ,
+                                      this->mem_requirement());
+}
+
+template <typename T>
+DeviceTensor<T, 1>::DeviceTensor(self_t&& other) 
+: BaseTensor<T, 1>(other.size())
+{
+  this->_data      = other._data;
+  this->_must_free = true;
+  other._data      = nullptr;
+  other._must_free = false;
+  other._size      = 0;
+}
+
+template <typename T>
 DeviceTensor<T, 1>::DeviceTensor(const HostTensor<T, 1>& host_tensor)
 : BaseTensor<T, 1>(host_tensor.size())
 {
@@ -184,6 +221,30 @@ DeviceTensor<T, 1>::DeviceTensor(const HostTensor<T, 1>& host_tensor)
   util::cuda::memcpy_host_to_device(host_tensor._data      ,
                                     this->_data            ,
                                     this->mem_requirement());
+}
+
+template <typename T>
+DeviceTensor<T, 1>& DeviceTensor<T, 1>::operator=(const self_t& other)
+{
+  this->_size      = other.size();
+  this->_must_free = true;
+  allocate();
+  util::cuda::memcpy_device_to_device(other._data            ,
+                                      this->_data            ,
+                                      this->mem_requirement());
+  return *this;
+}
+
+template <typename T>
+DeviceTensor<T, 1>& DeviceTensor<T, 1>::operator=(self_t&& other) 
+{
+  this->_data      = other._data;
+  this->_size      = other._size;
+  this->_must_free = true;
+  other._data      = nullptr;
+  other._size      = 0;
+  other._must_free = false;
+  return *this;
 }
 
 template <typename T>
@@ -225,6 +286,7 @@ void DeviceTensor<T, 1>::cleanup()
 {
   if (this->_data != nullptr && this->_must_free)
   {
+    printf("Freeing data: %x\n", this->_data);
     util::cuda::free(this->_data);
   }
 }

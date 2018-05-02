@@ -45,7 +45,7 @@ struct StridedIterator {
   /// Defines the type of the size type for the stride.
   using stride_t      = difference_t;
   /// Defines the type of the execution policy for the iterator.
-  using exec_policy_t = Exec;
+  using exec_t        = Exec;
 
   /// Defines the number of dimensions for the iterator.
   static constexpr std::size_t dimensions = 1;
@@ -230,9 +230,28 @@ struct StridedIterator {
   /// 
   /// \param[in] offset The offset of the iterator to access, from this
   ///                   iterator.
-  fluidity_host_device self_t operator[](difference_t offset) const
+  //fluidity_host_device self_t operator[](difference_t offset) const
+  //{
+  //  return *this + offset * _stride;
+  //}
+
+  /// Overload of access operator to return the value of a specific element
+  /// the iterator iterates over, at \p offset from the starting element to
+  /// iterate over. For example:
+  /// 
+  /// \code{cpp}
+  /// tensor_iterator_t t;
+  /// 
+  /// // new_iterator is a tensor_iterator_t pointer to the element 4 positions
+  /// // from the element t points to.
+  /// auto new_iterator = t[4];
+  /// \endcode
+  /// 
+  /// \param[in] offset The offset of the iterator element to access, from this
+  ///                   iterator.
+  fluidity_host_device value_t& operator[](difference_t offset)
   {
-    return *this + offset * _stride;
+    return *(_ptr + offset * _stride);
   }
 
   /// Tests if one iterator is equal to another iterator (when they both point

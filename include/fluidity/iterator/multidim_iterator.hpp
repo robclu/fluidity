@@ -123,6 +123,13 @@ struct MultidimIterator : public DimensionInfo {
     return self_t{_ptr + amount * offset(Dimension<Value>{}), *this};
   }
 
+  /// Overload of operator[] to access the data as if it is a 1D array. 
+  /// \param[in] index The global index of the element to access
+  fluidity_host_device constexpr value_t& operator[](std::size_t index)
+  {
+    return _ptr[index];
+  }
+
   /// Overload of operator* to get the value the iterator points to.
   fluidity_host_device constexpr value_t&  operator*()
   {
@@ -253,11 +260,33 @@ struct MultidimIterator : public DimensionInfo {
   /// \param[in]  amount  The amount of offset from this iterator.
   /// \param[in]  dim     The dimension in which to offset.
   /// \tparam     Value   The value which defines the dimension.
+  fluidity_host_device constexpr self_t offset(int amount) const
+  {
+    return self_t{_ptr + amount * stride(dim_x), *this};
+  }
+
+  /// Offsets the iterator by \p amount in the dimension defined by \p dim, and
+  /// returns a new iterator to the offset element.
+  /// \param[in]  amount  The amount of offset from this iterator.
+  /// \param[in]  dim     The dimension in which to offset.
+  /// \tparam     Value   The value which defines the dimension.
   template <std::size_t Value>
   fluidity_host_device constexpr self_t
   offset(int amount, Dimension<Value> /*dim*/) const
   {
     return self_t{_ptr + amount * stride(Dimension<Value>{}), *this};
+  }
+
+  /// Shifts the iterator by \p amount in dimension \p dim, modifying this
+  /// iterator. This can shift the iterator forward and backward in the given
+  /// dimension based on the sign of \p amount (+ = forward).
+  /// \param[in]  amount  The amount to advance the iterator by.
+  /// \param[in]  dim     The dimension to advance the iterator in.
+  /// \tparam     Value   The value which defines the dimension.
+  fluidity_host_device constexpr self_t& shift(int amount)
+  {
+    _ptr += amount * stride(dim_x);
+    return *this;
   }
 
   /// Shifts the iterator by \p amount in dimension \p dim, modifying this

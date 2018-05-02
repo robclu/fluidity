@@ -82,6 +82,20 @@ class HostTensor<T, 1> : public BaseTensor<T, 1> {
   /// \param[in] dev_tensor The device tensor to create the host tensor from.
   HostTensor(const DeviceTensor<T, 1>& dev_tensor);
 
+  /// Constructor to copy a host tensor to another host tensor.
+  /// \param[in] other The other host tensor to copy from.
+  HostTensor(const self_t& other);
+
+  /// Constructor to move a host tensor to another host tensor.
+  /// \param[in] other The other host tensor to move from.
+  HostTensor(self_t&& other);
+
+  /// Overload of operator= to copy a host tensor to another host tensor.
+  self_t& operator=(const self_t& other);
+
+  /// Overload of operator= to move a host tensor to another host tensor.
+  self_t& operator=(self_t&& other);
+
   /// Returns the HostTensor as a device tensor.
   DeviceTensor<T, 1> as_device() const;
 
@@ -152,6 +166,27 @@ HostTensor<T, 1>::~HostTensor()
 }
 
 template <typename T>
+HostTensor<T, 1>::HostTensor(const self_t& other) 
+: BaseTensor<T, 1>(other.size())
+{
+  allocate();
+
+  for (const auto i : range(other.size()))
+  {
+    this->_data[i] = other[i];
+  }
+}
+
+template <typename T>
+HostTensor<T, 1>::HostTensor(self_t&& other) 
+: BaseTensor<T, 1>(other.size())
+{
+  this->_data = other._data;
+  other._data = nullptr;
+  other._size = 0;
+}
+
+template <typename T>
 HostTensor<T, 1>::HostTensor(const DeviceTensor<T, 1>& dev_tensor)
 : BaseTensor<T, 1>(dev_tensor.size())
 {
@@ -159,6 +194,29 @@ HostTensor<T, 1>::HostTensor(const DeviceTensor<T, 1>& dev_tensor)
   util::cuda::memcpy_device_to_host(dev_tensor._data       ,
                                     this->_data            ,
                                     this->mem_requirement());
+}
+
+template <typename T>
+HostTensor<T, 1>& HostTensor<T, 1>::operator=(const self_t& other)
+{
+  this->_size = other.size();
+  allocate();
+
+  for (const auto i : range(other.size()))
+  {
+    this->_data[i] = other[i];
+  }
+  return *this;
+}
+
+template <typename T>
+HostTensor<T, 1>& HostTensor<T, 1>::operator=(self_t&& other) 
+{
+  this->_data = other._data;
+  this->_size = other._size;
+  other._data = nullptr;
+  other._size = 0;
+  return *this;
 }
 
 template <typename T>
@@ -198,6 +256,7 @@ void HostTensor<T, 1>::cleanup()
 {
   if (this->_data != nullptr)
   {
+    printf("Freeing host data: %x\n", this->_data);
     free(this->_data);
   }
 }

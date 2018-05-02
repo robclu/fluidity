@@ -41,6 +41,29 @@ fluidity_global void update_impl(It in, It out, M mat, T dtdh, Solver solver)
   solver.solve(in, out, mat, dtdh);
 }
 
+/// Implementation of a function to set the wavespeed values pointed to by
+/// the \p wavespeed_it using the state data pointed to by the \p state_it
+/// iterator.
+/// \param[in] state_it     Iterator to the state data.
+/// \param[in] wavespeed_it Iterator to the wavespeed data.
+/// \param[in] mat          The material for the system.
+/// \tparam    StateIt      The type of the state iterator.
+/// \tparam    WsIt         The type of the wavespeed iterator.
+/// \tparam    Material     The type of the material.
+template <typename StateIt, typename WsIt, typename Material>
+fluidity_global void set_wavespeeds_impl(StateIt  state_it    ,
+                                         WsIt     wavespeed_it,
+                                         Material mat         )
+{
+#if defined(__CUDACC__)
+  const auto idx = flattened_id(dim_x);
+  if (idx < wavespeed_it.size(dim_x))
+  {
+    wavespeed_it[idx] = state_it[idx].max_wavespeed(std::move(mat));
+  }
+#endif // __CUDACC__
+}
+
 /// Updater function for updating the simulation using the GPU. This invokes 
 /// the updating CUDA kernel for the simulation.
 /// 
@@ -71,6 +94,27 @@ void update(Iterator&& in          ,
 #if defined(__CUDACC__)
   update_impl<<<block_sizes, thread_sizes>>>(in, out, mat, dtdh, solver);
   fluidity_check_cuda_result(cudaDeviceSynchronize()); 
+#endif // __CUDACC__
+}
+
+/// Sets the wavespeed values pointed to by the \p wavespeed_it using the state
+/// data pointed to by the \p state_it iterator.
+/// \param[in] state_it     Iterator to the state data.
+/// \param[in] wavespeed_it Iterator to the wavespeed data.
+/// \param[in] mat          The material for the system.
+/// \tparam    StateIt      The type of the state iterator.
+/// \tparam    WsIt         The type of the wavespeed iterator.
+/// \tparam    Material     The type of the material.
+template <typename StateIt, typename WsIt, typename Material>
+void set_wavespeeds(StateIt&& state_it, WsIt&& wavespeed_it, Material&& mat)
+{
+  // The WS iterator is used to determine the thread and block sizes because the
+  // data should be treated as linear for performance.
+  auto threads = get_thread_sizes(wavespeed_it);
+  auto blocks  = get_block_sizes(wavespeed_it, threads);
+#if defined(__CUDACC__)
+  set_wavespeeds_impl<<<blocks, threads>>>(state_it, wavespeed_it, mat);
+  fluidity_check_cuda_result(cudaDeviceSynchronize());
 #endif // __CUDACC__
 }
 

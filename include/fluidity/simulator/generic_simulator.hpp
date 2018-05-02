@@ -69,15 +69,21 @@ class GenericSimulator final : public Simulator<Traits> {
   /// Defines the type of the parameter container.
   using params_t    = Parameters<value_t>;
 
+  /// Defines a constexpr instance of the execution polcity.
+  static constexpr auto execution_policy = execution_t{};
+
  public:
   /// Defines the number of spacial dimensions in the simulation.
   static constexpr auto dimensions = state_t::dimensions;
 
   /// Creates the simulator.
-  GenericSimulator() {};
+  GenericSimulator() {}
 
   /// Cleans up all resources acquired by the simulator.
-  ~GenericSimulator() {}
+  ~GenericSimulator() 
+  {
+    printf("Destroying simulator!\n");
+  }
 
   /// Runs the simulation until completion.
   void simulate() override;
@@ -93,6 +99,10 @@ class GenericSimulator final : public Simulator<Traits> {
   /// \param[in] dim  The dimension to specify.
   /// \param[in] spec The specification of the dimension.
   base_t* configure_dimension(std::size_t dim, dim_spec_t spec) override; 
+
+  /// Configures the simulator to simulate until a certain simulation time.
+  /// \param[in] sim_time The time to run the simulation until.
+  base_t* configure_sim_time(double sim_time) override;
 
   /// Prints the results of the simulation to the standard output stream.
   void print_results() const override;
@@ -153,29 +163,48 @@ class GenericSimulator final : public Simulator<Traits> {
                       std::size_t element_idx  ) const;
 
 
-  auto get_simulation_input_iterator(exec::cpu_type) const
+  auto& get_sim_input_states(exec::cpu_type) const
   {
-    return _initial_states.multi_iterator();
+    return _initial_states;
   }
 
-  auto get_simulation_input_iterator(exec::gpu_type) const
+  auto get_sim_input_states(exec::gpu_type) const
   {
-    return _initial_states.as_device().multi_iterator();
+    return std::move(_initial_states.as_device());
   } 
 
-  auto get_simulation_output_iterator(exec::cpu_type) const
+  auto& get_sim_output_states(exec::cpu_type) const
   {
-    return _updated_states.multi_iterator();
+    return _updated_states;
   }
 
-  auto get_simulation_output_iterator(exec::gpu_type) const
+  auto get_sim_output_states(exec::gpu_type) const
   {
-    return _updated_states.as_device().multi_iterator();
+    return std::move(_updated_states.as_device());
+  }
+
+  auto& get_sim_wavespeeds(exec::cpu_type) const
+  {
+    return _wavespeeds;
+  }
+
+  auto get_sim_wavespeeds(exec::gpu_type) const
+  {
+    return std::move(_wavespeeds.as_device());
+  }
+
+  template <typename States>
+  void finalise_output_states(const States& states, exec::cpu_type) {}
+
+  template <typename States>
+  void finalise_output_states(const States& states, exec::gpu_type)
+  {
+    _updated_states = states.as_host();
   }
 
   constexpr std::size_t get_batch_size(std::true_type) const
   {
-    return 1;
+    return _updated_states.size(dim_x);
   }
 
   constexpr std::size_t get_batch_size(std::false_type) const
@@ -196,33 +225,59 @@ void GenericSimulator<Traits>::simulate()
   auto start = high_resolution_clock::now();
   auto end   = high_resolution_clock::now();
 
-  //auto updater     = updater_t(_initial_states, _updated_states, _wavespeeds);
-  auto input_it    = get_simulation_input_iterator(execution_t{});
-  auto output_it   = get_simulation_output_iterator(execution_t{});
-  auto thread_info = get_thread_sizes(input_it);
-  auto block_info  = get_block_sizes(input_it, thread_info);
-  auto solver      = solver_t{};
-  
+  auto input_states  = get_sim_input_states(execution_policy);
+  auto output_states = get_sim_output_states(execution_policy);
+  auto wavespeeds    = get_sim_wavespeeds(execution_policy);
+
+  auto input_it  = input_states.multi_iterator();
+  auto output_it = output_states.multi_iterator();
+  auto wavespeed_it = wavespeeds.multi_iterator();
+
+  auto threads   = get_thread_sizes(input_it);
+  auto blocks    = get_block_sizes(input_it, threads);
+  auto solver    = solver_t{};
+  auto mat       = material_t{};
+
+#if !defined(NDEBUG)
+  printf("PARAMETERS      \n----------------\n");
+  printf("RUN TIME  : %5.5f\n", _params.run_time);
+  printf("MAX ITERS : %5lu\n", _params.max_iters);
+  printf("----------------\n\n");
+
+  printf("ITERATION | TIME\n----------------\n");
+#endif
+
   while (time < _params.run_time && iters < _params.max_iters)
   {
-    _params.update(max_element(_wavespeeds.begin(), _wavespeeds.end()));
+#if !defined(NDEBUG)
+    printf("%10lu|%5.5f\n", iters, time);
+#endif // NDEBUG
+
+    input_it     = input_states.multi_iterator();
+    output_it    = output_states.multi_iterator();
+    wavespeed_it = wavespeeds.multi_iterator();
+
+    set_wavespeeds(input_it, wavespeed_it, mat);
+
+    printf("A\n");
+    _params.update(max_element(wavespeeds.begin(), wavespeeds.end()));
 
     // Set boundary ghost cells ...
     // Set patch ghost cells ...
-    
+   
+    printf("B\n");
     // Update the simulation ...
-    update(input_it       ,
-           output_it      ,
-           solver         ,
-           material_t{}   ,
-           _params.dt_dh(),
-           thread_info    ,
-           block_info     );
+    update(input_it, output_it, solver, mat, _params.dt_dh(), threads, blocks);
 
-    time += _params.dt();
-    std::swap(_initial_states, _updated_states);
+    time  += _params.dt();
+    iters += 1;
+    printf("C\n");
+
+    std::swap(input_states, output_states);
+    printf("D\n");
   }
 
+  finalise_output_states(output_states, execution_policy);
 }
 
 template <typename Traits>
@@ -232,6 +287,14 @@ GenericSimulator<Traits>::configure_dimension(std::size_t /*dim*/,
 {
   _initial_states.resize(spec.elements());
   _updated_states.resize(spec.elements());
+  _wavespeeds.resize(spec.elements());
+  return this;
+}
+
+template <typename Traits>
+Simulator<Traits>* GenericSimulator<Traits>::configure_sim_time(double sim_time)
+{
+  _params.run_time = sim_time;
   return this;
 }
 
@@ -329,8 +392,6 @@ void GenericSimulator<Traits>::stream_output(Stream&& stream) const
   constexpr auto iterations = dimensions <= 2 ? 1 : dimensions - 2;
 
   auto dim_info = dimension_info();
-  // Iterate over the dimensions after the first 2 dimensions, size we only want
-  // to output pages of 2D data ...
   unrolled_for<iterations>([&, this] (auto dim)
   {
     const auto element_names = index_t::element_names();
@@ -352,8 +413,8 @@ void GenericSimulator<Traits>::stream_output(Stream&& stream) const
         // <element_name>_<page_number+dim>_<index in dimension>;
         std::string left   = "_<", comma = ",", right = ">";
         std::string output = element_names[element_idx]        + left
-                           + std::to_string(page_number + dim) + comma
-                           + std::to_string(dim_idx)           + right;
+                           + "p-" + std::to_string(page_number + dim) + comma
+                           + "d-" + std::to_string(dim_idx)           + right;
 
         const auto offset = dim_idx * dim_info.offset(Dimension<dim>{});
         output_data(stream, output, offset, batch_size, element_idx);

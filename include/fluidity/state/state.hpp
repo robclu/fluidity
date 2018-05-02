@@ -193,8 +193,7 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
   /// is only enabled for primitive form states.
   /// other conservative components.
   /// \param[in] value The value to set the pressure for the state to.
-  fluidity_host_device constexpr void
-  set_pressure(value_t value)
+  fluidity_host_device constexpr void set_pressure(value_t value)
   {
     set_pressure_impl(value, traits::state_dispatch_tag<self_t>);
   }
@@ -337,6 +336,15 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
     constexpr auto dim = Dimension<Value>{};
     return detail::flux(*this, std::forward<Material>(material), dim);
   }
+
+  /// Returns the max wavespeed of the state.
+  /// \param[in] material The material for the system.
+  /// \tparam    Material The type of the material.
+  template <typename Material>
+  fluidity_host_device constexpr value_t max_wavespeed(Material&& material)
+  {
+    return detail::max_wavespeed(*this, std::forward<Material>(material));
+  };
 
   /// Returns the sum of sqaured velocities for the state.
   fluidity_host_device constexpr value_t v_squared_sum() const

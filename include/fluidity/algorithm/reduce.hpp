@@ -17,6 +17,7 @@
 #define FLUIDITY_ALGORITHM_REDUCE_HPP
 
 #include "reduce.cuh"
+#include <fluidity/execution/execution_policy.hpp>
 #include <fluidity/utility/type_traits.hpp>
 
 namespace fluid {
@@ -54,26 +55,22 @@ namespace fluid {
 /// \note Predicates must use ``fluidity_host_device`` so that they can execute
 ///       on the GPU.
 ///
-/// \param[in]  begin     An iterator to the beginning of the data.
-/// \param[in]  end       An iterator to the end of the data.
-/// \param[in]  pred      The predicate to apply to element pairs.
-/// \param[in]  args      Additional arguments for the predicate.
-/// \tparam     Iterator  The type of the iterator.
-/// \tparam     Pred      The type of the predicate.
-/// \tparam     Args      The type of any additional args for the predicate.
-template < typename    Iterator
-         , typename    Pred
-         , typename... Args
-         , std::enable_if_t<
-             exec::is_cpu_policy_v<typename Iterator::exec_policy_t>, int> = 0
-         >
-fluidity_host_only decltype(auto)
-reduce(Iterator&& begin, Iterator&& end, Pred&& pred, Args&&... args)
+/// \param[in]  begin An iterator to the beginning of the data.
+/// \param[in]  end   An iterator to the end of the data.
+/// \param[in]  pred  The predicate to apply to element pairs.
+/// \param[in]  args  Additional arguments for the predicate.
+/// \tparam     It    The type of the iterator.
+/// \tparam     P     The type of the predicate.
+/// \tparam     As    The type of any additional args for the predicate.
+template < typename It, typename P, typename... As, exec::cpu_enable_t<It> = 0>
+fluidity_host_device auto reduce(It&& begin, It&& end, P&& pred, As&&... args)
 {
-  auto best = *(begin++);
+  printf("Begin: %x\n", &(*begin));
+  auto best = *begin; begin++;
   while (end - begin > 0)
   {
-    pred(best, *begin, std::forward<Args>(args)...);
+    printf("It diff: %4lu\n", end - begin);
+    pred(best, *begin, std::forward<As>(args)...);
     begin++;
   }
   return best;
@@ -111,29 +108,21 @@ reduce(Iterator&& begin, Iterator&& end, Pred&& pred, Args&&... args)
 /// 
 /// \note Predicates must use ``fluidity_host_device`` so that they can execute
 ///       on the GPU.
-///       
-/// \todo   Change __syncthreads() to sync() to support CPU and GPU block sync.
 ///
-/// \param[in]  begin     An iterator to the beginning of the data.
-/// \param[in]  end       An iterator to the end of the data.
-/// \param[in]  pred      The predicate to apply to element pairs.
-/// \param[in]  args      Additional arguments for the predicate.
-/// \tparam     Iterator  The type of the iterator.
-/// \tparam     Pred      The type of the predicate.
-/// \tparam     Args      The type of any additional args for the predicate.
-template < typename    Iterator
-         , typename    Pred
-         , typename... Args
-         , std::enable_if_t<
-             exec::is_gpu_policy_v<typename Iterator::exec_policy_t>, int> = 0
-         >
-fluidity_host_device decltype(auto)
-reduce(Iterator&& begin, Iterator&& end, Pred&& pred, Args&&... args)
+/// \param[in]  begin An iterator to the beginning of the data.
+/// \param[in]  end   An iterator to the end of the data.
+/// \param[in]  pred  The predicate to apply to element pairs.
+/// \param[in]  args  Additional arguments for the predicate.
+/// \tparam     It    The type of the iterator.
+/// \tparam     P     The type of the predicate.
+/// \tparam     As    The type of any additional args for the predicate.
+template <typename It, typename P, typename... As, exec::gpu_enable_t<It> = 0>
+fluidity_host_device auto reduce(It&& begin, It&& end, P&& pred, As&&... args)
 {
-  detail::cuda::reduce(std::forward<Iterator>(begin),
-                       std::forward<Iterator>(end)  ,
-                       std::forward<Pred>(pred)     ,
-                       std::forward<Args>(args)...  );
+  return detail::cuda::reduce(std::forward<It>(begin)  ,
+                              std::forward<It>(end)    ,
+                              std::forward<P>(pred)    ,
+                              std::forward<As>(args)...);
 }
 
 } // namespace fluid

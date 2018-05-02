@@ -16,12 +16,34 @@
 #ifndef FLUIDITY_UTILITY_CUDA_UTILS_HPP
 #define FLUIDITY_UTILITY_CUDA_UTILS_HPP
 
+#include "cuda.cuh"
 #include "debug.hpp"
 #include "portability.hpp"
 
 namespace fluid {
 namespace util  {
 namespace cuda  {
+
+/// Copies \p bytes of data from \p dev_ptr to \p dev_ptr.
+/// \param[in]  dev_ptr_in   The device pointer to copy from.
+/// \param[in]  dev_ptr_out  The device pointer to copy to.
+/// \param[in]  bytes        The number of bytes to copy.
+/// \tparam     DevPtr       The type of the device pointer.
+template <typename DevPtr>
+static inline void memcpy_device_to_device(const DevPtr* dev_ptr_in ,
+                                           DevPtr*       dev_ptr_out,
+                                           std::size_t   bytes      )
+{
+#if defined(__CUDACC__)
+  constexpr auto num_threads = 2014;
+  const     auto elements    = bytes / sizeof(DevPtr);
+  auto threads = dim3(num_threads);
+  auto blocks  = dim3(elements / num_threads);
+
+  copy<<<blocks, threads>>>(dev_ptr_in, dev_ptr_out, elements);
+  fluidity_check_cuda_result(cudaDeviceSynchronize());
+#endif // __CUDACC__
+}
 
 /// Copies \p bytes of data from \p host_ptr to \p dev_ptr.
 /// \param[in]  host_ptr The host pointer to copy from.

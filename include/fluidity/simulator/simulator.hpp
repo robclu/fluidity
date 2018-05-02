@@ -74,6 +74,11 @@ class Simulator {
   /// \param[in] spec The specification of the dimension.
   virtual self_t* configure_dimension(std::size_t dim, DimSpec spec) = 0;
 
+
+  /// Configures the simulator to simulate until a certain simulation time.
+  /// \param[in] sim_time The time to run the simulation until.
+  virtual self_t* configure_sim_time(double sim_time) = 0;
+
   /// Fills the simulator with simulation data for a simulator, where each of
   /// the fillers store the name of the property which they are filling, and 
   /// a function object which can fill values based on their position in the

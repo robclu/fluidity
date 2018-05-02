@@ -28,6 +28,9 @@ namespace fluid  {
 namespace detail {
 namespace cuda   {
 
+/// Defines the number of threads to use for a reduction.
+static constexpr auto reduction_threads = 512;
+
 /// Kernel implementation which reduces a container where the first element it
 /// pointed to by \p begin.
 /// \param[in] begin     The first iterator to fill with the \p value.
@@ -38,11 +41,7 @@ namespace cuda   {
 /// \tparam    BlockInfo Information for the block.
 /// \tparam    Pred      The type of the predicate.
 /// \tparam    Args      The type of the arguments for the predicate.
-template < typename    Iterator
-         , typename    BlockInfo
-         , typename    Pred
-         , typename... Args
-         >
+template <typename Iterator, typename Pred, typename... Args>
 fluidity_global void reduce_impl(Iterator    begin  ,
                                  Iterator    results,
                                  std::size_t size   ,
@@ -50,14 +49,16 @@ fluidity_global void reduce_impl(Iterator    begin  ,
                                  Args...     args   )
 {
 #if defined(__CUDACC__)
+  using dim_info_t = DimInfoCt<reduction_threads, 1, 1>;
+  using value_t    = typename Iterator::value_t;
   const auto index = flattened_id(dim_x);
   if (index < size)
   {
     // Create a shared memory multidimensional iterator:
-    auto iter = make_multidim_iterator<typename Iterator::value_t, BlockInfo>();
+    auto iter = make_multidim_iterator<value_t, dim_info_t>();
 
     // Load the data into shared memory:
-    *iter = *begin[index];
+    *iter = begin[index];
     __syncthreads();
 
     const auto block_start = flattened_block_id(dim_x) * block_size(dim_x);
@@ -75,7 +76,7 @@ fluidity_global void reduce_impl(Iterator    begin  ,
 
     if (index == 0)
     {
-      *(results[flattened_block_id(dim_x)]) = *iter;
+      results[flattened_block_id(dim_x)] = *iter;
     }
   }
 #endif // __CUDACC__
@@ -90,24 +91,22 @@ fluidity_global void reduce_impl(Iterator    begin  ,
 /// \tparam     Pred      The type of the predicate.
 /// \tparam     Args      The type of any additional args for the predicate.
 template <typename Iterator, typename Pred, typename... Args>
-fluidity_host_device decltype(auto)
-reduce(Iterator&& begin, Iterator&& end, Pred&& pred, Args&&... args)
+auto reduce(Iterator&& begin, Iterator&& end, Pred&& pred, Args&&... args)
 {
 #if defined(__CUDACC__)
   const int      elements    = end - begin;
-  constexpr auto max_threads = 256;
+  constexpr auto max_threads = reduction_threads;
 
   dim3 threads_per_block(elements < max_threads ? elements : max_threads);
   dim3 num_blocks(std::max(elements / threads_per_block.x,
                            static_cast<unsigned int>(1)));
 
-  using dim_info_t     = DimInfoCt<max_threads, 1, 1>;
   using value_t        = typename decay_t<Iterator>::value_t;
   using host_results_t = HostTensor<value_t, 1>;
   using dev_results_t  = DeviceTensor<value_t, 1>;
 
   dev_results_t dev_results(num_blocks.x);
-  reduce_impl<dim_info_t><<<num_blocks, threads_per_block>>>(
+  reduce_impl<<<num_blocks, threads_per_block>>>(
     begin              ,
     dev_results.begin(),
     elements           ,
@@ -116,8 +115,8 @@ reduce(Iterator&& begin, Iterator&& end, Pred&& pred, Args&&... args)
   );
   fluidity_check_cuda_result(cudaDeviceSynchronize());
 
-  auto host_results = host_results_t(dev_results);
-  value_t result = *begin;
+  auto host_results = dev_results.as_host();
+  value_t result    = *begin;
   for (const auto& e : host_results)
   {
     pred(result, e);

@@ -184,6 +184,34 @@ energy(State&& state, Material&& material) noexcept
   return state[state_t::index::energy];
 }
 
+/// Returns the maximum wavespeed for the state, which is defined as:
+/// 
+///   \begin{equation}
+///     S_{max} = \max_i \{ |u| + a }
+///   \end{equation}
+///   
+/// where $u_i$ is max velocity for this state, and $a$ is the speed of sound.
+/// 
+/// \param[in]  state     The state to compute the max wavespeed from.
+/// \param[in]  mat       The maaterial which defines the system and which is
+///                       used to compute the sound speed.
+/// \tparam     State     The type of the state.
+/// \tparam     Material  The material which describes the system.
+template <typename State, typename Material>
+fluidity_host_device inline constexpr auto
+max_wavespeed(State&& state, Material&& mat) noexcept
+{
+  using state_t     = std::decay_t<State>;
+  auto max_velocity = std::abs(state.velocity(dim_x));
+  unrolled_for<state_t::dimensions>([&] (auto i)
+  {
+    constexpr auto dim = Dimension<i + 1>{};
+    max_velocity = std::max(max_velocity, std::abs(state.velocity(dim)));
+  });
+  return max_velocity + mat.sound_speed(state);
+}
+
+
 /// Modifies additional fluxes for a primitive state. When the state is
 /// primitive some of the fluxes need to be multiplied by the density, which
 /// this function does for a flux at a specific index.
