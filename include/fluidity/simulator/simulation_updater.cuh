@@ -38,7 +38,9 @@ namespace cuda   {
 template <typename It, typename M, typename T, typename Solver>
 fluidity_global void update_impl(It in, It out, M mat, T dtdh, Solver solver)
 {
+  printf("About to solve  : %3lu\n", flattened_id(dim_x));
   solver.solve(in, out, mat, dtdh);
+  printf("Finished solving: %3lu\n", flattened_id(dim_x));
 }
 
 /// Implementation of a function to set the wavespeed values pointed to by

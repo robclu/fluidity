@@ -19,6 +19,7 @@
 #include "solver_utilities.hpp"
 #include <fluidity/dimension/dimension.hpp>
 #include <fluidity/iterator/multidim_iterator.hpp>
+#include <fluidity/utility/cuda.hpp>
 
 namespace fluid  {
 namespace solver {
@@ -65,9 +66,6 @@ struct SplitSolver {
   template <typename It, typename M, typename T>
   fluidity_device_only void solve(It&& in, It&& out, M material, T dtdh) const
   {
-    //static_assert(
-    //  std::declval<std::decay_t<It>>().num_dimensions() == num_dimensions,
-    //  "Dimensions of iterator do not match solver specialization");
     const auto loader = loader_t{};
     auto global_iter  = get_global_iterator(in);
     auto patch_iter   = get_patch_iterator(in);
@@ -75,13 +73,11 @@ struct SplitSolver {
     // Load the global data into the shared data:
     *patch_iter = *global_iter;
 
+    util::cuda::debug::thread_msg("loading patch");
     // Load in the padding and boundary data:
     loader.load_patch(patch_iter, dim_x);
     //loader.load_boundary(global_iter, patch_iter, dim_x);
-
-#if defined(__CUDACC__)
     __syncthreads();
-#endif
 
     // Run the rest of the sovler .. =D
     auto in_fwrd = make_recon_input(patch_iter, material, dtdh, fwrd_input);
@@ -115,15 +111,11 @@ struct SplitSolver {
   /// \param[in] it       The iterator to the start of the global data.
   /// \tparam    Iterator The type of the iterator.
   template <typename Iterator>
-  fluidity_device_only decltype(auto)
-  get_global_iterator(Iterator&& it) const
+  fluidity_device_only auto get_global_iterator(Iterator&& it) const
   {
-    using state_t    = std::decay_t<decltype(*it)>;
     using dim_info_t = DimInfo<num_dimensions>;
-
-    auto output_it = 
-      make_multidim_iterator<state_t>(
-        &(*it), dim_info_t{it.size(dim_x)});
+    auto output_it   = make_multidim_iterator(&(*it)                    ,
+                                              dim_info_t{it.size(dim_x)});
     return output_it.offset(flattened_id(dim_x), dim_x);
   }
 
@@ -133,14 +125,13 @@ struct SplitSolver {
   /// \param[in] it       The iterator to the start of the global data.
   /// \tparam    Iterator The type of the iterator.
   template <typename Iterator>
-  fluidity_device_only decltype(auto)
-  get_patch_iterator(Iterator&& it, bool pad = true) const
+  fluidity_device_only auto get_patch_iterator(Iterator&& it) const
   {
-    using state_t    = std::decay_t<decltype(*it)>;
+    using state_t    = std::decay_t<decltype(*(it))>;
     using dim_info_t = DimInfoCt<default_threads_per_block>;
 
-    auto output_it = make_multidim_iterator<state_t, dim_info_t>();
-    return output_it.offset(thread_id(dim_x) + (pad ? padding : 0), dim_x);
+    auto output_it = make_multidim_iterator<state_t, dim_info_t, padding>();
+    return output_it.offset(thread_id(dim_x) + padding, dim_x);
   }
 };
 

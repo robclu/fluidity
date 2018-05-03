@@ -94,6 +94,18 @@ fluidity_device_only inline std::size_t thread_id(Dimension<Value>)
   return detail::ThreadIdImpl<Dimension<Value>>()();
 }
 
+/// Returns the value of the block index in a given dimension. The dimension
+/// must be one of dim_x, dim_y, dim_z, or else a compile time error will be
+/// generated.
+/// \param[in] dim    The dimension to get the block index for.
+/// \tparam    Value  The value which defines the dimension.
+template <std::size_t Value>
+fluidity_device_only inline std::size_t block_id(Dimension<Value>)
+{
+  static_assert(Value <= 2, "Can only get block id for 3 dimensions {0,1,2}.");
+  return detail::BlockIdImpl<Dimension<Value>>()();
+}
+
 #else // __CUDACC__
 
 /// Returns the value of the thread index in a given dimension. The dimension

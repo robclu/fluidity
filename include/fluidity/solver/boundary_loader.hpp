@@ -17,6 +17,9 @@
 #define FLUIDITY_SOLVER_BOUNDARY_LOADER_HPP
 
 #include <fluidity/dimension/dimension.hpp>
+#include <fluidity/dimension/thread_index.hpp>
+#include <fluidity/math/math.hpp>
+#include <fluidity/utility/cuda.hpp>
 
 namespace fluid  {
 namespace solver {
@@ -287,13 +290,30 @@ struct BoundaryLoader {
   load_patch(It&& patch_it, Dimension<Value> /*dim*/)
   {
     constexpr auto dim = Dimension<Value>{};
+
+/*
+    const int rev_id = thread_id(dim) - patch_it.size(dim) - 1;
+    const int offset = std::min(static_cast<int>(thread_id(dim))  ,
+                                static_cast<int>(std::abs(rev_id)));
+    if (offset < padding)
+    {
+      util::cuda::debug::thread_msg("Loading patch boundaries");
+      const auto sign = 
+        math::signum(static_cast<int>(thread_id(dim_x)) - 
+                     static_cast<int>(patch_it.size(dim) >> 1));
+      *patch_it = *patch_it.offset(sign * 2 * offset + sign * 1);
+    }
+*/
+    const auto offset = thread_id(dim) - patch_it.size(dim) - 1;
     if (thread_id(dim) < padding)
     {
+      util::cuda::debug::thread_msg("Loading front patch boundaries");
       *patch_it = *patch_it.offset(-2 * thread_id(dim) - 1, dim);
     }
-    else if (thread_id(dim) > patch_it.size(dim) - padding)
+    else if (offset < padding)
     {
-      *patch_it = *patch_it.offset(2 * thread_id(dim) + 1, dim);
+      util::cuda::debug::thread_msg("Loading back patch boundaries");
+      *patch_it = *patch_it.offset(2 * offset + 1, dim);
     }
   }
 
@@ -330,6 +350,8 @@ struct BoundaryLoader {
   load_patch(It&& patch_it, Dimension<Value> /*dim*/)
   {
     constexpr auto dim = Dimension<Value>{};
+
+    printf("dsfs;ld\n");
 
     auto front = patch_it.offset(padding, dim);
     auto back  = patch_it.offset(patch_it.size(dim) - padding, dim);

@@ -82,10 +82,19 @@ struct DimInfoCt {
   }
 
   /// Returns the total size of the N dimensional space i.e the total number of
-  /// elements in the space. This is the product sum of the dimension 
+  /// elements in the space. This is the product sum of the dimensions.
   constexpr std::size_t total_size() const
   {
     return fold<FoldOp::mult, Sizes...>();
+  }
+
+  /// Returns the total size of the N dimensional space i.e the total number of
+  /// elements in the space if the space is padded with Padding amount.
+  /// \tparam Padding A padding value for each dimension.
+  template <std::size_t Padding>
+  constexpr std::size_t total_size() const
+  {
+    return fold<FoldOp::mult, (Sizes + (Padding << 1))...>();
   }
 
  private:

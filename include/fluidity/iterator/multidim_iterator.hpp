@@ -334,11 +334,12 @@ struct MultidimIterator : public DimensionInfo {
 /// generated.
 /// \tparam T       The type of the data to iterate over.
 /// \tparam DimInfo The information which defines the multi dimensional space.
-template <typename T, typename DimInfo>
+/// \tparam Padding The amount of padding for the iterator space.
+template <typename T, typename DimInfo, std::size_t Padding = 0>
 fluidity_device_only auto make_multidim_iterator()
 {
-  using iter_t = MultidimIterator<T, DimInfo>;
-  __shared__ T buffer[DimInfo().total_size()];
+  using iter_t = MultidimIterator<T, DimInfo, exec::gpu_type>;
+  __shared__ T buffer[DimInfo().template total_size<Padding>()];
   iter_t iter{buffer};
 
   // Move the iterator to the current thread.
@@ -358,7 +359,7 @@ fluidity_device_only auto make_multidim_iterator()
 template <typename T, typename DimInfo>
 fluidity_device_only constexpr auto make_multidim_iterator(T* ptr)
 {
-  using iter_t = MultidimIterator<T, DimInfo>;
+  using iter_t = MultidimIterator<T, DimInfo, exec::gpu_type>;
   iter_t iter{ptr};
 
   // Move the iterator to the current thread.
@@ -378,7 +379,7 @@ fluidity_device_only constexpr auto make_multidim_iterator(T* ptr)
 template <typename T, typename DimInfo>
 fluidity_device_only constexpr auto make_multidim_iterator(T* ptr, DimInfo info)
 {
-  using iter_t = MultidimIterator<T, DimInfo>;
+  using iter_t = MultidimIterator<T, DimInfo, exec::gpu_type>;
   iter_t iter{ptr, info};
 
   // Move the iterator to the current thread.

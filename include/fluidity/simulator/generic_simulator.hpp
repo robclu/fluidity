@@ -259,7 +259,7 @@ void GenericSimulator<Traits>::simulate()
 
     set_wavespeeds(input_it, wavespeed_it, mat);
 
-    printf("A\n");
+    printf("A : %4.4f\n", max_element(wavespeeds.begin(), wavespeeds.end()));
     _params.update(max_element(wavespeeds.begin(), wavespeeds.end()));
 
     // Set boundary ghost cells ...

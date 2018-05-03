@@ -116,7 +116,7 @@ auto reduce(Iterator&& begin, Iterator&& end, Pred&& pred, Args&&... args)
   fluidity_check_cuda_result(cudaDeviceSynchronize());
 
   auto host_results = dev_results.as_host();
-  value_t result    = *begin;
+  value_t result    = host_results[0];
   for (const auto& e : host_results)
   {
     pred(result, e);

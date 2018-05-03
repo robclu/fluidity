@@ -19,10 +19,32 @@
 #include "cuda.cuh"
 #include "debug.hpp"
 #include "portability.hpp"
+#include <fluidity/dimension/thread_index.hpp>
 
 namespace fluid {
 namespace util  {
 namespace cuda  {
+
+/// This namespace defines debugging functionality specifically for cuda.
+namespace debug {
+
+/// Prints the message \p msg, along with the thread and block information
+/// for the thread.
+template <typename Msg>
+fluidity_device_only void thread_msg(Msg&& msg)
+{
+  printf("\n|====================================|"
+         "\n| B,T: (%3lu, %3lu, %3lu),(%3lu,%3lu,%3lu) |"
+         "\n|------------------------------------|"
+         "\n|  %s"
+         "\n|====================================|\n",
+    block_id(dim_x) , block_id(dim_y) , block_id(dim_z) ,
+    thread_id(dim_x), thread_id(dim_y), thread_id(dim_z),
+    msg
+  );
+}
+
+} // namespace debug
 
 /// Copies \p bytes of data from \p dev_ptr to \p dev_ptr.
 /// \param[in]  dev_ptr_in   The device pointer to copy from.

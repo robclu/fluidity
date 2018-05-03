@@ -37,7 +37,7 @@ template <>
 struct BlockSizeImpl<dimx_t> {
   /// Overload of function call operator to return the block size in the
   /// x dimension.
-  fluidity_host_device std::size_t operator()() const
+  fluidity_device_only std::size_t operator()() const
   {
     return blockDim.x;
   }
@@ -48,7 +48,7 @@ template <>
 struct BlockSizeImpl<dimy_t> {
   /// Overload of function call operator to return the block size in the
   /// y dimension.
-  fluidity_host_device std::size_t operator()() const
+  fluidity_device_only std::size_t operator()() const
   {
     return blockDim.y;
   }
@@ -59,7 +59,7 @@ template <>
 struct BlockSizeImpl<dimz_t> {
   /// Overload of function call operator to return the block size in the
   /// z dimension.
-  fluidity_host_device std::size_t operator()() const
+  fluidity_device_only std::size_t operator()() const
   {
     return blockDim.z;
   }
@@ -78,7 +78,7 @@ template <>
 struct GridSizeImpl<dimx_t> {
   /// Overload of function call operator to return the grid size in the
   /// x dimension.
-  fluidity_host_device std::size_t operator()() const
+  fluidity_device_only std::size_t operator()() const
   {
     return gridDim.x * BlockSizeImpl<dimx_t>()();
   }
@@ -89,7 +89,7 @@ template <>
 struct GridSizeImpl<dimy_t> {
   /// Overload of function call operator to return the grid size in the
   /// y dimension.
-  fluidity_host_device std::size_t operator()() const
+  fluidity_device_only std::size_t operator()() const
   {
     return gridDim.y * BlockSizeImpl<dimy_t>()();
   }
@@ -100,7 +100,7 @@ template <>
 struct GridSizeImpl<dimz_t> {
   /// Overload of function call operator to return the block size in the
   /// z dimension.
-  fluidity_host_device std::size_t operator()() const
+  fluidity_device_only std::size_t operator()() const
   {
     return gridDim.z * BlockSizeImpl<dimz_t>()();
   }
@@ -118,7 +118,7 @@ template <>
 struct FlattenedIdImpl<dimx_t> {
   /// Overload of function call operator to return the flattened index in the
   /// x dimension.
-  fluidity_host_device std::size_t operator()() const
+  fluidity_device_only std::size_t operator()() const
   {
     return threadIdx.x + blockIdx.x * blockDim.x;
   }
@@ -129,7 +129,7 @@ template <>
 struct FlattenedIdImpl<dimy_t> {
   /// Overload of function call operator to return the flattened index in the
   /// y dimension.
-  fluidity_host_device std::size_t operator()() const
+  fluidity_device_only std::size_t operator()() const
   {
     return threadIdx.y + blockIdx.y * blockDim.y;
   }
@@ -140,7 +140,7 @@ template <>
 struct FlattenedIdImpl<dimz_t> {
   /// Overload of function call operator to return the flattened index in the
   /// z dimension.
-  fluidity_host_device std::size_t operator()() const
+  fluidity_device_only std::size_t operator()() const
   {
     return threadIdx.z + blockIdx.z * blockDim.z;
   }
@@ -158,7 +158,7 @@ template <>
 struct FlattenedBlockIdImpl<dimx_t> {
   /// Overload of function call operator to return the flattened block index in
   /// the x dimension.
-  fluidity_host_device std::size_t operator()() const
+  fluidity_device_only std::size_t operator()() const
   {
     return blockIdx.x
          + blockIdx.y * gridDim.x
@@ -171,7 +171,7 @@ template <>
 struct FlattenedBlockIdImpl<dimy_t> {
   /// Overload of function call operator to return the flattened block index in
   /// the y dimension.
-  fluidity_host_device std::size_t operator()() const
+  fluidity_device_only std::size_t operator()() const
   {
     return blockIdx.y
          + blockIdx.x * gridDim.y
@@ -184,7 +184,7 @@ template <>
 struct FlattenedBlockIdImpl<dimz_t> {
   /// Overload of function call operator to return the flattened block index in
   /// the z dimension.
-  fluidity_host_device std::size_t operator()() const
+  fluidity_device_only std::size_t operator()() const
   {
     return blockIdx.z
          + blockIdx.y * gridDim.z
@@ -204,7 +204,7 @@ template <>
 struct ThreadIdImpl<dimx_t> {
   /// Overload of function call operator to return the thread index in the
   /// x dimension.
-  fluidity_host_device std::size_t operator()() const
+  fluidity_device_only std::size_t operator()() const
   {
     return threadIdx.x;
   }
@@ -215,7 +215,7 @@ template <>
 struct ThreadIdImpl<dimy_t> {
   /// Overload of function call operator to return the thread index in the
   /// y dimension.
-  fluidity_host_device std::size_t operator()() const
+  fluidity_device_only std::size_t operator()() const
   {
     return threadIdx.y;
   }
@@ -226,9 +226,49 @@ template <>
 struct ThreadIdImpl<dimz_t> {
   /// Overload of function call operator to return the thread index in the
   /// z dimension.
-  fluidity_host_device std::size_t operator()() const
+  fluidity_device_only std::size_t operator()() const
   {
     return threadIdx.z;
+  }
+};
+
+/// The BlockIdImpl struct defines a struct which can be specialized for
+/// the different dimension types.
+/// \tparam Dimension The dimension to implement to the block index
+///         computation for.
+template <typename Dimension>
+struct BlockIdImpl;
+
+/// Specialization of the block index computation for the x dimension.
+template <>
+struct BlockIdImpl<dimx_t> {
+  /// Overload of function call operator to return the block index in the
+  /// x dimension.
+  fluidity_device_only std::size_t operator()() const
+  {
+    return blockIdx.x;
+  }
+};
+
+/// Specialization of the block index computation for the y dimension.
+template <>
+struct BlockIdImpl<dimy_t> {
+  /// Overload of function call operator to return the block index in the
+  /// y dimension.
+  fluidity_device_only std::size_t operator()() const
+  {
+    return blockIdx.y;
+  }
+};
+
+/// Specialization of the block index computation for the z dimension.
+template <>
+struct BlockIdImpl<dimz_t> {
+  /// Overload of function call operator to return the block index in the
+  /// z dimension.
+  fluidity_device_only std::size_t operator()() const
+  {
+    return blockIdx.z;
   }
 };
 

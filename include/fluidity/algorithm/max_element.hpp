@@ -30,10 +30,7 @@ namespace fluid {
 template <typename It>
 auto max_element(It&& begin, It&& end)
 {
-  using value_t = typename It::value_t;
-
-  // Because of cuda only supporting c++14, this can't be a lambda, so we need
-  // to create a separate functor for the max predicate ...
+  using value_t = typename std::decay_t<It>::value_t;
   auto max = [] fluidity_host_device (value_t& a, const value_t& b)
   {
     a = std::max(a, b);
