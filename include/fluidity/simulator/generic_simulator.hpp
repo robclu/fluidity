@@ -68,6 +68,8 @@ class GenericSimulator final : public Simulator<Traits> {
   using wavespeed_t = HostTensor<value_t, 1>;
   /// Defines the type of the parameter container.
   using params_t    = Parameters<value_t>;
+  /// Defines the type of the boundary setter.
+  using setter_t    = solver::BoundarySetter;
 
   /// Defines a constexpr instance of the execution polcity.
   static constexpr auto execution_policy = execution_t{};
@@ -123,9 +125,10 @@ class GenericSimulator final : public Simulator<Traits> {
   storage_t   _updated_states;  //!< States at the end of an iteration.
   wavespeed_t _wavespeeds;      //!< Wavespeeds for the simulation.
   params_t    _params;          //!< The parameters for the simulation.
+  setter_t    _setter;          //!< The boundary setter.
 
   /// Returns the dimension information for the simulator.
-  decltype(auto) dimension_info() const;
+  auto dimension_info() const;
 
   /// Outputs a batch of 1D or 2D data to the \p stream where the batch contains
   /// \p batch_size number of total elements. The \p offset defines the offset
@@ -267,7 +270,14 @@ void GenericSimulator<Traits>::simulate()
    
     printf("B\n");
     // Update the simulation ...
-    update(input_it, output_it, solver, mat, _params.dt_dh(), threads, blocks);
+    update(input_it       ,
+           output_it      ,
+           solver         ,
+           mat            ,
+           _params.dt_dh(),
+           threads        ,
+           blocks         ,
+           _setter        );
 
     time  += _params.dt();
     iters += 1;
@@ -356,7 +366,7 @@ void GenericSimulator<Traits>::write_results(fs::path file_path) const
 //===== Private ---------------------------------------------------------=====//
 
 template <typename Traits>
-decltype(auto) GenericSimulator<Traits>::dimension_info() const
+auto GenericSimulator<Traits>::dimension_info() const
 {
   auto dim_info = DimInfo<dimensions>();
   unrolled_for<dimensions>([&] (auto i)

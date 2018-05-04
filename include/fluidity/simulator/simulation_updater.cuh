@@ -36,11 +36,14 @@ namespace cuda   {
 /// \tparam    T      The type of the scaling factor.
 /// \tparam    Solver The type of the solver.
 template <typename It, typename M, typename T, typename Solver>
-fluidity_global void update_impl(It in, It out, M mat, T dtdh, Solver solver)
+fluidity_global void update_impl(It                     in    ,
+                                 It                     out   ,
+                                 M                      mat   ,
+                                 T                      dtdh  ,
+                                 Solver                 solver,
+                                 solver::BoundarySetter setter)
 {
-  printf("About to solve  : %3lu\n", flattened_id(dim_x));
-  solver.solve(in, out, mat, dtdh);
-  printf("Finished solving: %3lu\n", flattened_id(dim_x));
+  solver.solve(in, out, mat, dtdh, setter);
 }
 
 /// Implementation of a function to set the wavespeed values pointed to by
@@ -85,16 +88,17 @@ template < typename Iterator
          , typename T
          , typename SizeInfo
          >
-void update(Iterator&& in          ,
-            Iterator&& out         ,
-            Solver&&   solver      ,
-            Material&& mat         ,
-            T          dtdh        ,
-            SizeInfo&& thread_sizes,
-            SizeInfo&& block_sizes )
+void update(Iterator&&             in          ,
+            Iterator&&             out         ,
+            Solver&&               solver      ,
+            Material&&             mat         ,
+            T                      dtdh        ,
+            SizeInfo&&             thread_sizes,
+            SizeInfo&&             block_sizes ,
+            solver::BoundarySetter setter      )
 {
 #if defined(__CUDACC__)
-  update_impl<<<block_sizes, thread_sizes>>>(in, out, mat, dtdh, solver);
+  update_impl<<<block_sizes, thread_sizes>>>(in, out, mat, dtdh, solver, setter);
   fluidity_check_cuda_result(cudaDeviceSynchronize()); 
 #endif // __CUDACC__
 }

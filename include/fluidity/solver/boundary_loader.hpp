@@ -174,34 +174,47 @@ struct BoundaryLoader {
   /// \param[in]  setter   The object which is used to set the elements.
   /// \tparam     It       The type of the iterators.
   /// \tparam     Value    The value which defines the dimension.
-  template <typename It, std::size_t Value, exec::gpu_enable_t<It> = 0>
+  template < typename    DataIt
+           , typename    PatchIt
+           , std::size_t Value
+           , exec::gpu_enable_t<DataIt> = 0>
   static fluidity_host_device void
-  load_boundary(It&&                  data     ,
-                It&&                  patch    ,
-                std::size_t           elements ,
-                Dimension<Value>      /*dim*/  ,
-                const BoundarySetter& setter   )
+  load_boundary(DataIt&&         data_it ,
+                PatchIt&&        patch_it,
+                Dimension<Value> /*dim*/ ,
+                BoundarySetter   setter  )
   {
     constexpr auto dim = Dimension<Value>{};
+    const auto     elements = data_it.size(dim);
 
-    // The global index is used to load additional data at the boundaries of
-    // the domain, and the local index is used to load extra data which is
-    // inside the domain.
-    auto shift = global_id(dim);
-    if (shift < padding)
+    int global_idx = flattened_id(dim), local_idx = thread_id(dim);
+    if (global_idx < padding)
     {
-      const auto elem_to_use = *data.offset(2 * shift + 1  , dim);
-      const auto elem_to_set = *patch.offset(-2 * shift - 1, dim);
-      setter(elem_to_use, elem_to_set, dim, BoundaryIndex::first);
+      util::cuda::debug::thread_msg("L FRONT BOUNDARY");
+      constexpr auto bi = BoundaryIndex::first;
+      setter(*patch_it, *patch_it.offset(-2 * global_idx - 1, dim), dim, bi);
+    }
+    else if (local_idx < padding)
+    {
+      util::cuda::debug::thread_msg("L FRONT DATA");
+      const auto shift = -2 * local_idx - 1;
+      *patch_it.offset(shift, dim) = *data_it.offset(shift, dim);
     }
 
-    // Move id values to end end of the block:
-    shift = elements - global_id(dim) - 1;
-    if (shift < padding)
+    global_idx = static_cast<int>(data_it.size(dim)) - global_idx - 1;
+    local_idx  = static_cast<int>(block_size(dim)) - local_idx - 1;
+
+    if (global_idx < padding)
     {
-      const auto elem_to_use = *data.offset(elements - 2 * shift - 1, dim);
-      const auto elem_to_set = *patch.offset(2 * shift + 1, dim);
-      setter(elem_to_use, elem_to_set, dim, BoundaryIndex::second);
+      util::cuda::debug::thread_msg("L BACK BOUNDARY");
+      constexpr auto bi = BoundaryIndex::second;
+      setter(*patch_it, *patch_it.offset(2 * global_idx + 1), dim, bi);
+    }
+    else if (local_idx < padding)
+    {
+      util::cuda::debug::thread_msg("L BACK DATA");
+      const auto shift = 2 * local_idx + 1;
+      *patch_it.offset(shift, dim) = *data_it.offset(shift, dim);
     }
   }
 
@@ -238,18 +251,20 @@ struct BoundaryLoader {
   /// \param[in]  setter   The object which is used to set the elements.
   /// \tparam     Iterator The type of the iterators.
   /// \tparam     Value    The value which defines the dimension.
-  template <typename It, std::size_t Value, exec::cpu_enable_t<It> = 0>
+  template < typename    DataIt
+           , typename    PatchIt
+           , std::size_t Value
+           , exec::cpu_enable_t<DataIt> = 0>
   static fluidity_host_device void
-  load_boundary(It&&                  data    ,
-                It&&                  patch   ,
-                std::size_t           elements,
-                Dimension<Value>      /*dim*/ ,
-                const BoundarySetter& setter  )
+  load_boundary(DataIt&&         data_it ,
+                PatchIt&&        patch_it,
+                Dimension<Value> /*dim*/ ,
+                BoundarySetter   setter  )
   {
     constexpr auto dim = Dimension<Value>{};
 
-    auto front = data.offset(padding, dim);
-    auto back  = data.offset(elements - padding, dim);
+    auto front = data_it.offset(padding, dim);
+    auto back  = data_it.offset(data_it.size(dim) - padding, dim);
 
     unrolled_for<padding>([&] (auto i)
     {
@@ -290,11 +305,9 @@ struct BoundaryLoader {
   load_patch(It&& patch_it, Dimension<Value> /*dim*/)
   {
     constexpr auto dim = Dimension<Value>{};
-
-/*
-    const int rev_id = thread_id(dim) - patch_it.size(dim) - 1;
-    const int offset = std::min(static_cast<int>(thread_id(dim))  ,
-                                static_cast<int>(std::abs(rev_id)));
+    const int rev_id   = thread_id(dim) - patch_it.size(dim) - 1;
+    const int offset   = std::min(static_cast<int>(thread_id(dim))  ,
+                                  static_cast<int>(std::abs(rev_id)));
     if (offset < padding)
     {
       util::cuda::debug::thread_msg("Loading patch boundaries");
@@ -303,7 +316,8 @@ struct BoundaryLoader {
                      static_cast<int>(patch_it.size(dim) >> 1));
       *patch_it = *patch_it.offset(sign * 2 * offset + sign * 1);
     }
-*/
+
+/*
     const auto offset = thread_id(dim) - patch_it.size(dim) - 1;
     if (thread_id(dim) < padding)
     {
@@ -315,6 +329,7 @@ struct BoundaryLoader {
       util::cuda::debug::thread_msg("Loading back patch boundaries");
       *patch_it = *patch_it.offset(2 * offset + 1, dim);
     }
+*/
   }
 
   /// This sets the padding elements in a specific dimension for a \p patch,

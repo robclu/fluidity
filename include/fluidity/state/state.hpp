@@ -240,7 +240,8 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
   fluidity_host_device constexpr void
   set_velocity(value_t value, Dimension<V> /*dim*/)
   {
-    set_velocity_impl(value, traits::state_dispatch_tag<self_t>);
+    constexpr auto dim = Dimension<V>{};
+    set_velocity_impl(value, dim, traits::state_dispatch_tag<self_t>);
   }
 
   /// Returns the \p nth additional component of the state, if it exists.

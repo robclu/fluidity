@@ -63,7 +63,7 @@ int main(int argc, char** argv)
   using simulator_t = fluid::sim::GenericSimulator<simulator1d_props_t>;
 
   auto simulator = std::make_unique<simulator_t>();
-  simulator->configure_dimension(fluid::dim_x, { 0.05, 1.0 })
+  simulator->configure_dimension(fluid::dim_x, { 0.045, 1.0 })
            ->configure_sim_time(0.1);
 
   simulator->fill_data({

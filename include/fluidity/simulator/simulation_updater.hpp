@@ -43,13 +43,14 @@ template < typename Iterator
          , typename T
          , typename SizeInfo
          , exec::cpu_enable_t<Iterator> = 0>
-void update(Iterator in          ,
-            Iterator out         ,
-            Solver   solver      ,
-            Material mat         ,
-            T        dtdh        ,
-            SizeInfo thread_sizes,
-            SizeInfo block_sizes )
+void update(Iterator               in          ,
+            Iterator               out         ,
+            Solver                 solver      ,
+            Material               mat         ,
+            T                      dtdh        ,
+            SizeInfo               thread_sizes,
+            SizeInfo               block_sizes ,
+            solver::BoundarySetter setter      )
 {
   // Call CPU implementation ...
 }
@@ -78,13 +79,14 @@ template < typename Iterator
          , typename T
          , typename SizeInfo
          , exec::gpu_enable_t<Iterator> = 0>
-void update(Iterator in          ,
-            Iterator out         ,
-            Solver   solver      ,
-            Material mat         ,
-            T        dtdh        ,
-            SizeInfo thread_sizes,
-            SizeInfo block_sizes )
+void update(Iterator               in          ,
+            Iterator               out         ,
+            Solver                 solver      ,
+            Material               mat         ,
+            T                      dtdh        ,
+            SizeInfo               thread_sizes,
+            SizeInfo               block_sizes ,
+            solver::BoundarySetter setter      )
 {
   detail::cuda::update(
     std::forward<Iterator>(in)          ,
@@ -93,7 +95,8 @@ void update(Iterator in          ,
     std::forward<Material>(mat)         ,
     dtdh                                ,
     std::forward<SizeInfo>(thread_sizes),
-    std::forward<SizeInfo>(block_sizes) );
+    std::forward<SizeInfo>(block_sizes) ,
+    setter                              );
 }
 
 /// Sets the wavespeed values pointed to by the \p wavespeed_it using the state
