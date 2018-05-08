@@ -18,6 +18,7 @@
 #define FLUIDITY_RECONSTRUCTION_MUSCL_RECONSTRUCTOR_HPP
 
 #include "riemann_input.hpp"
+#include <fluidity/dimension/thread_index.hpp>
 #include <fluidity/utility/portability.hpp>
 
 namespace fluid {
@@ -83,8 +84,8 @@ struct MHReconstructor {
                     "Invalid face for reconstruction");
 
       constexpr auto dim = Dimension<Value>{};
+      const auto eita    = half * limiter_t()(state, dim);
 
-      const auto eita   = half * limiter_t()(state, dim);
       const auto factor = (half * dtdh)
                         * (state_t(*state - eita).flux(mat, dim)
                         -  state_t(*state + eita).flux(mat, dim));

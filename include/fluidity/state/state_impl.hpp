@@ -64,7 +64,7 @@ fluidity_host_device inline constexpr auto density(State&& state) noexcept
 /// \param[in]  state   The state to get the velocity of.
 /// \param[in]  dim     The dimension to get the velocity for {x,y,z}.
 /// \tparam     State   The type of the state.
-template <typename State, std::enable_if_t<is_primitive_v<State>, int> = 0>
+template <typename State, primitive_enable_t<State> = 0>
 fluidity_host_device inline constexpr auto 
 velocity(State&& state, std::size_t dim) noexcept
 {
@@ -77,7 +77,7 @@ velocity(State&& state, std::size_t dim) noexcept
 /// \param[in]  state   The state to get the velocity of.
 /// \param[in]  dim     The dimension to get the velocity for {x,y,z}.
 /// \tparam     State   The type of the state.
-template <typename State, std::enable_if_t<is_conservative_v<State>, int> = 0>
+template <typename State, conservative_enable_t<State> = 0>
 fluidity_host_device inline constexpr auto 
 velocity(State&& state, std::size_t dim) noexcept
 {
@@ -93,7 +93,7 @@ velocity(State&& state, std::size_t dim) noexcept
 /// \tparam     State   The type of the state.
 template < typename State
          , std::size_t V
-         , std::enable_if_t<is_primitive_v<State>, int> = 0>
+         , primitive_enable_t<State> = 0>
 fluidity_host_device inline constexpr auto 
 velocity(State&& state, Dimension<V> /*dim*/) noexcept
 {
@@ -109,7 +109,7 @@ velocity(State&& state, Dimension<V> /*dim*/) noexcept
 /// \tparam     State   The type of the state.
 template < typename State
          , std::size_t V
-         , std::enable_if_t<is_conservative_v<State>, int> = 0>
+         , conservative_enable_t<State> = 0>
 fluidity_host_device inline constexpr auto 
 velocity(State&& state, Dimension<V> /*dim*/) noexcept
 {
@@ -125,7 +125,7 @@ velocity(State&& state, Dimension<V> /*dim*/) noexcept
 /// \tparam     Material   The type of the material.
 template < typename State
          , typename Material
-         , std::enable_if_t<is_primitive_v<State>, int> = 0>
+         , primitive_enable_t<State> = 0>
 fluidity_host_device inline constexpr auto
 pressure(State&& state, Material&&  material) noexcept
 {
@@ -141,7 +141,7 @@ pressure(State&& state, Material&&  material) noexcept
 /// \tparam     Material   The type of the material.
 template < typename State
          , typename Material
-         , std::enable_if_t<is_conservative_v<State>, int> = 0>
+         , conservative_enable_t<State> = 0>
 fluidity_host_device inline constexpr auto
 pressure(State&& state, Material&&  material) noexcept
 {
@@ -159,7 +159,7 @@ pressure(State&& state, Material&&  material) noexcept
 /// \tparam     Material   The type of the material.
 template < typename State
          , typename Material
-         , std::enable_if_t<is_primitive_v<State>, int> = 0>
+         , primitive_enable_t<State> = 0>
 fluidity_host_device inline constexpr auto
 energy(State&& state, Material&& material) noexcept
 {
@@ -176,7 +176,7 @@ energy(State&& state, Material&& material) noexcept
 /// \tparam     Material   The type of the material.
 template < typename State
          , typename Material
-         , std::enable_if_t<is_conservative_v<State>, int> = 0>
+         , conservative_enable_t<State> = 0>
 fluidity_host_device inline constexpr auto
 energy(State&& state, Material&& material) noexcept
 {
@@ -223,7 +223,7 @@ max_wavespeed(State&& state, Material&& mat) noexcept
 /// \tparam    Flux     The type of the flux container.
 template < typename State
          , typename Flux
-         , std::enable_if_t<is_primitive_v<State>, int> = 0>
+         , primitive_enable_t<State> = 0>
 fluidity_host_device inline constexpr auto
 modify_other_fluxes(State&& state, Flux&& flux, std::size_t index)
 {
@@ -242,7 +242,7 @@ modify_other_fluxes(State&& state, Flux&& flux, std::size_t index)
 /// \tparam    Flux     The type of the flux container.
 template < typename State
          , typename Flux
-         , std::enable_if_t<is_conservative_v<State>, int> = 0>
+         , conservative_enable_t<State> = 0>
 fluidity_host_device inline constexpr auto
 modify_other_fluxes(State&& state, Flux&& flux, std::size_t index) {}
 
@@ -353,7 +353,7 @@ flux(State&& state, Material&& mat, Dimension<Value> /*dim*/)
 /// a conversion is performed to convert the state.
 template < typename State
          , typename Material
-         , std::enable_if_t<is_primitive_v<State>, int> = 0>
+         , primitive_enable_t<State> = 0>
 fluidity_host_device inline constexpr auto
 primitive(State&& state, Material&& mat)
 {
@@ -364,7 +364,7 @@ primitive(State&& state, Material&& mat)
 /// Returns the primitive form of the state when the state is conservative.
 template < typename State
          , typename Material
-         , std::enable_if_t<is_conservative_v<State>, int> = 0>
+         , conservative_enable_t<State> = 0>
 fluidity_host_device inline constexpr auto
 primitive(State&& state, Material&& mat)
 {
@@ -394,7 +394,7 @@ primitive(State&& state, Material&& mat)
 /// Returns the conservative form of the state when the state is primitive.
 template < typename State
          , typename Material
-         , std::enable_if_t<is_primitive_v<State>, int> = 0>
+         , primitive_enable_t<State> = 0>
 fluidity_host_device inline constexpr auto
 conservative(State&& state, Material&& mat)
 {
@@ -424,7 +424,7 @@ conservative(State&& state, Material&& mat)
 /// Returns the conservative form of the state when the state is primitive.
 template < typename State
          , typename Material
-         , std::enable_if_t<is_conservative_v<State>, int> = 0>
+         , conservative_enable_t<State> = 0>
 fluidity_host_device inline constexpr auto
 conservative(State&& state, Material&& mat)
 {

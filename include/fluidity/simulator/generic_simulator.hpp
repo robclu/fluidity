@@ -241,6 +241,9 @@ void GenericSimulator<Traits>::simulate()
   auto solver    = solver_t{};
   auto mat       = material_t{};
 
+  // For debugging!
+  _params.max_iters = 1;
+
 #if !defined(NDEBUG)
   printf("PARAMETERS      \n----------------\n");
   printf("RUN TIME  : %5.5f\n", _params.run_time);

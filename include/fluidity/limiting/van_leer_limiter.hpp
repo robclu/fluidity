@@ -18,7 +18,7 @@
 
 #include <fluidity/algorithm/unrolled_for.hpp>
 #include <fluidity/container/array.hpp>
-#include <fluidity/dimension/dimension.hpp>
+#include <fluidity/dimension/thread_index.hpp>
 #include <fluidity/math/math.hpp>
 #include <fluidity/utility/portability.hpp>
 #include <algorithm>
@@ -80,6 +80,11 @@ struct VanLeer {
     {
       constexpr auto limiter = self_t{};
       constexpr auto dim     = Dimension<Value>{};
+
+      if (flattened_id(dim_x) == 0)
+      {
+        state_it->print();
+      }
 
       limited[i] = limiter(state_it.central_diff(dim)[i] ,
                            state_it.backward_diff(dim)[i],

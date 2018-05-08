@@ -98,6 +98,16 @@ template <typename State>
 static constexpr auto state_dispatch_tag = 
   detail::StateDispatchTag<std::decay_t<State>::format>{};
 
+/// Defines a type which enables functions for a primitive state type.
+/// \tparam State The type to base the primitive enabling on.
+template <typename State>
+using primitive_enable_t = std::enable_if_t<is_primitive_v<State>, int>;
+
+/// Defines a type which enables functions for a conservative state type.
+/// \tparam State The type to base the conservative enabling on.
+template <typename State>
+using conservative_enable_t = std::enable_if_t<is_conservative_v<State>, int>;
+
 /// Defines the storage type used by the state class. If the storage format is
 /// row major, then a traditional array is used which stores each element
 /// contigously, otherwise an ArrayView is used and the elements are stored

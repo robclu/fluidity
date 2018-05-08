@@ -82,48 +82,19 @@ struct SplitSolver {
     loader_t::load_boundary(global_iter, patch_iter, dim_x, setter);
     __syncthreads();
 
-    if (flattened_id(dim_x) == 0)
-    {
-      auto s  = *global_iter;
-      auto s1 = *patch_iter;
-      printf("\n| d: %3.3f | p: %3.3f | v_x : %3.3f |", s[0], s[1], s[2]);
-      printf("\n| d: %3.3f | p: %3.3f | v_x : %3.3f |\n-=-=-=\n", s1[0], s1[1], s1[2]);
-    }
-
     // Run the rest of the sovler .. =D
     auto in_fwrd = make_recon_input(patch_iter, material, dtdh, fwrd_input);
     auto in_back = make_recon_input(patch_iter, material, dtdh, back_input);
 
-    if (flattened_id(dim_x) == 0)
-    {
-      auto s  = *global_iter;
-      auto s1 = *patch_iter;
-      printf("| d: %3.3f | p: %3.3f | v_x : %3.3f |", s[0], s[1], s[2]);
-      printf("\n| d: %3.3f | p: %3.3f | v_x : %3.3f |\n-=-=-=\n", s1[0], s1[1], s1[2]);
-    }
-
     global_iter = get_global_iterator(out);
-
 
     auto f = flux_evaluator(in_fwrd.left, in_fwrd.right, material, dim_x);
     auto b = flux_evaluator(in_fwrd.left, in_fwrd.right, material, dim_x);
-    if (flattened_id(dim_x) == 0)
-    {
-      printf("| d: %3.3f | p: %3.3f | v_x : %3.3f |", f[0], f[1], f[2]);
-      printf("\n| d: %3.3f | p: %3.3f | v_x : %3.3f |\n-=-=-=\n", b[0], b[1], b[2]);
-    }
 
     *global_iter = *patch_iter - dtdh * 
       (flux_evaluator(in_fwrd.left, in_fwrd.right, material, dim_x) -
        flux_evaluator(in_back.left, in_back.right, material, dim_x));
 
-
-    if (flattened_id(dim_x) == 0)
-    {
-      auto s = *global_iter;
-      printf("\n| d: %3.3f | p: %3.3f | v_x : %3.3f |\n", s[0], s[1], s[2]);
-      printf("End\n--------------\n");
-    }
   }
 
  private:
