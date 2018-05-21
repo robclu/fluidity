@@ -88,9 +88,11 @@ int main(int argc, char** argv)
     }
   });
 
+  std::cout << "Initial data:\n";
+  simulator->print_results();
+
   simulator->simulate();
 
-  std::cout << "Finished running\n";
-
+  std::cout << "Final data:\n";
   simulator->print_results();
 }

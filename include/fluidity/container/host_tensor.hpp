@@ -256,7 +256,6 @@ void HostTensor<T, 1>::cleanup()
 {
   if (this->_data != nullptr)
   {
-    printf("Freeing host data: %x\n", this->_data);
     free(this->_data);
   }
 }

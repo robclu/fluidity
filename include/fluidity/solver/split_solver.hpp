@@ -88,67 +88,13 @@ struct SplitSolver {
     auto in_back = make_recon_input(patch_iter, material, dtdh, back_input);
 
     auto f_flux = flux_evaluator(in_fwrd.left, in_fwrd.right, material, dim_x);
+    //in_fwrd.left = flux_evaluator(in_fwrd.left, in_fwrd.right, material, dim_x);
     auto b_flux = flux_evaluator(in_back.left, in_back.right, material, dim_x);
-
-    constexpr std::size_t debug_id = 6;
-    if (flattened_id(dim_x) == debug_id)
-    {
-      printf("FLUX INPUTS:\n");
-      int v = 0;
-      for (const auto& e : in_back.left)
-      {
-        printf("\t%3u : %4.4f\n", v++, e);
-      }
-      printf("------------------\n");
-      for (const auto& e : in_back.right)
-      {
-        printf("\t%3u : %4.4f\n", v++, e);
-      }
-      printf("------------------\n");
-      for (const auto& e : in_fwrd.left)
-      {
-        printf("\t%3u : %4.4f\n", v++, e);
-      }
-      printf("------------------\n");
-      for (const auto& e : in_fwrd.right)
-      {
-        printf("\t%3u : %4.4f\n", v++, e);
-      }
-      printf("------------------\n");
-      for (const auto& e : b_flux)
-      {
-        printf("\t%3u : %4.4f\n", v++, e);
-      }
-      printf("------------------\n");
-      for (const auto& e : f_flux)
-      {
-        printf("\t%3u : %4.4f\n", v++, e);
-      }
-    }
+    //in_back.left = flux_evaluator(in_back.left, in_back.right, material, dim_x);
 
     global_iter  = get_global_iterator(out);
-
-    if (flattened_id(dim_x) == debug_id)
-    {
-      printf("GBefore:\n");
-      int v = 0;
-      for (const auto& e : *global_iter)
-      {
-        printf("\t%3u : %4.4f\n", v++, e);
-      }
-    }
-
     *global_iter = *patch_iter - dtdh * (f_flux - b_flux);
-
-    if (flattened_id(dim_x) == debug_id)
-    {
-      printf("GAfter:\n");
-      int v = 0;
-      for (const auto& e : *global_iter)
-      {
-        printf("\t%3u : %4.4f\n", v++, e);
-      }
-    }
+//    *global_iter = *patch_iter - dtdh * (in_fwrd.left - in_back.left);
   }
 
  private:

@@ -48,13 +48,8 @@ struct VanLeer {
     using value_t = typename state_t::value_t;
 
     constexpr auto dim = Dimension<Value>{};
-
-    if (flattened_id(dim_x) == 0)
-    {
-      printf("LIMITER START\n");
-    }
-
     Array<value_t, state_t::elements> limited;
+    
     const auto cent_diff = state_it.central_diff(dim);
     const auto fwrd_diff = state_it.forward_diff(dim);
     const auto back_diff = state_it.backward_diff(dim);

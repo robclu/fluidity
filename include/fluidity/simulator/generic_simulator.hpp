@@ -17,15 +17,13 @@
 #define FLUIDITY_SIMULATOR_GENERIC_SIMULATOR_HPP
 
 #include "parameters.hpp"
+#include "simulation_data.hpp"
 #include "simulation_traits.hpp"
 #include "simulation_updater.hpp"
 #include "simulator.hpp"
 #include <fluidity/algorithm/fill.hpp>
 #include <fluidity/algorithm/max_element.hpp>
-#include <fluidity/container/device_tensor.hpp>
-#include <fluidity/container/host_tensor.hpp>
 #include <fluidity/dimension/dimension_info.hpp>
-#include <fluidity/execution/execution_policy.hpp>
 #include <fluidity/utility/type_traits.hpp>
 #include <fstream>
 #include <iomanip>
@@ -60,18 +58,14 @@ class GenericSimulator final : public Simulator<Traits> {
   using material_t  = typename traits_t::material_t;
   /// Defines execution policy for the simulator.
   using execution_t = typename traits_t::execution_t;
-  /// Defines the type of the container used to store the state state.
-  using storage_t   = HostTensor<state_t, state_t::dimensions>;
   /// Defines the type of the solver used to update the simulation.
   using solver_t    = typename traits_t::solver_t;
-  /// Defines the type of the container used for storing wavespeed data.
-  using wavespeed_t = HostTensor<value_t, 1>;
   /// Defines the type of the parameter container.
   using params_t    = Parameters<value_t>;
   /// Defines the type of the boundary setter.
   using setter_t    = solver::BoundarySetter;
   /// Defines the type of the data storage for the simulation.
-  using storage_t   = SimlationData<traits_t, execution_t>;
+  using storage_t   = SimulationData<traits_t, execution_t::device>;
 
   /// Defines a constexpr instance of the execution polcity.
   static constexpr auto execution_policy = execution_t{};
@@ -127,12 +121,9 @@ class GenericSimulator final : public Simulator<Traits> {
   static constexpr auto batch_size_tag = 
     std::integral_constant<bool, traits_t::spacial_dims == 1>{};
 
-  storage_t   _data;            //!< Data for the simulation.
-  storage_t   _initial_states;  //!< States at the start of an iteration.
-  storage_t   _updated_states;  //!< States at the end of an iteration.
-  wavespeed_t _wavespeeds;      //!< Wavespeeds for the simulation.
-  params_t    _params;          //!< The parameters for the simulation.
-  setter_t    _setter;          //!< The boundary setter.
+  storage_t   _data;    //!< Data for the simulation.
+  params_t    _params;  //!< The parameters for the simulation.
+  setter_t    _setter;  //!< The boundary setter.
 
   /// Returns the dimension information for the simulator.
   auto dimension_info() const;
@@ -146,6 +137,7 @@ class GenericSimulator final : public Simulator<Traits> {
   ///            the state container.
   /// \param[in] batch_size    The size of the batch to output.
   /// \param[in] element_index The index of the element in the state container.
+  /// \tparam    Stream        The type of the stream to output to.
   template <typename Stream>
   void output_batch(Stream&&    stream       ,
                     std::size_t offset       ,
@@ -160,63 +152,37 @@ class GenericSimulator final : public Simulator<Traits> {
   template <typename Stream>
   void stream_output(Stream&& stream) const;
 
+  /// Outputs simulation data to an output stream \p stream.
+  /// \param[in] stream       The output stream to send the output to.
+  /// \param[in] output       Information to output to the stream.
+  /// \param[in] offset       The offset into the simulation data to output from.
+  /// \param[in] batch_size   The number of elements to output at a single time.
+  /// \param[in] element_idx  The index of the element in the state to output.
   void output_data(std::ostream& output_stream,
-                        std::string   output       ,
-                        std::size_t   offset       ,
-                        std::size_t   batch_size   ,
-                        std::size_t   element_idx  ) const;
+                   std::string   output       ,
+                   std::size_t   offset       ,
+                   std::size_t   batch_size   ,
+                   std::size_t   element_idx  ) const;
 
-  void output_data(fs::path                 ,
-                      std::string output       ,
-                      std::size_t offset       ,
-                      std::size_t batch_size   ,
-                      std::size_t element_idx  ) const;
+  /// Outputs simulation data to a file with path \p path.
+  /// \param[in] path         The path to output the data to.
+  /// \param[in] output       Information to output to the stream.
+  /// \param[in] offset       The offset into the simulation data to output from.
+  /// \param[in] batch_size   The number of elements to output at a single time.
+  /// \param[in] element_idx  The index of the element in the state to output.
+  void output_data(fs::path    path         ,
+                   std::string output       ,
+                   std::size_t offset       ,
+                   std::size_t batch_size   ,
+                   std::size_t element_idx  ) const;
 
-
-  auto& get_sim_input_states(exec::cpu_type) const
-  {
-    return _initial_states;
-  }
-
-  auto get_sim_input_states(exec::gpu_type) const
-  {
-    return std::move(_initial_states.as_device());
-  } 
-
-  auto& get_sim_output_states(exec::cpu_type) const
-  {
-    return _updated_states;
-  }
-
-  auto get_sim_output_states(exec::gpu_type) const
-  {
-    return std::move(_updated_states.as_device());
-  }
-
-  auto& get_sim_wavespeeds(exec::cpu_type) const
-  {
-    return _wavespeeds;
-  }
-
-  auto get_sim_wavespeeds(exec::gpu_type) const
-  {
-    return std::move(_wavespeeds.as_device());
-  }
-
-  template <typename States>
-  void finalise_output_states(const States& states, exec::cpu_type) {}
-
-  template <typename States>
-  void finalise_output_states(const States& states, exec::gpu_type)
-  {
-    _updated_states = states.as_host();
-  }
-
+  /// Returns the size of an output batch for the 1D case.
   constexpr std::size_t get_batch_size(std::true_type) const
   {
-    return _updated_states.size(dim_x);
+    return dimension_info().size(dim_x);
   }
 
+  /// Returns the size of an output batch for the case which is not 1D.
   constexpr std::size_t get_batch_size(std::false_type) const
   {
     return dimension_info().size(dim_y);
@@ -230,56 +196,38 @@ template <typename Traits>
 void GenericSimulator<Traits>::simulate()
 {
   using namespace std::chrono;
-  auto time  = double{0.0};
+
+  // Variables for debug info:
   auto iters = std::size_t{0};
   auto start = high_resolution_clock::now();
   auto end   = high_resolution_clock::now();
 
-  auto input_states  = get_sim_input_states(execution_policy);
-  auto output_states = get_sim_output_states(execution_policy);
-  auto wavespeeds    = get_sim_wavespeeds(execution_policy);
-
-  auto input_it  = input_states.multi_iterator();
-  auto output_it = output_states.multi_iterator();
-  auto wavespeed_it = wavespeeds.multi_iterator();
-
-  auto threads   = get_thread_sizes(input_it);
-  auto blocks    = get_block_sizes(input_it, threads);
-  auto solver    = solver_t{};
-  auto mat       = material_t{};
+  // Variables for simulation specification:
+  auto threads = get_thread_sizes(_data.input_iterator());
+  auto blocks  = get_block_sizes(_data.input_iterator(), threads);
+  auto solver  = solver_t{};
+  auto mat     = material_t{};
 
   // For debugging!
   _params.max_iters = 1;
 
-#if !defined(NDEBUG)
-  printf("PARAMETERS      \n----------------\n");
-  printf("RUN TIME  : %5.5f\n", _params.run_time);
-  printf("MAX ITERS : %5lu\n", _params.max_iters);
-  printf("----------------\n\n");
+  // debug::print::sim_config()
 
-  printf("ITERATION | TIME\n----------------\n");
-#endif
-
+  auto time = double{0.0};
   while (time < _params.run_time && iters < _params.max_iters)
   {
-#if !defined(NDEBUG)
-    printf("%10lu|%5.5f\n", iters, time);
-#endif // NDEBUG
-
-    input_it     = input_states.multi_iterator();
-    output_it    = output_states.multi_iterator();
-    wavespeed_it = wavespeeds.multi_iterator();
+    // debug::print::sim_status();
+    auto input_it     = _data.input_iterator();
+    auto output_it    = _data.output_iterator();
+    auto wavespeed_it = _data.wavespeed_iterator();
 
     set_wavespeeds(input_it, wavespeed_it, mat);
-
-    printf("A : %4.4f\n", max_element(wavespeeds.begin(), wavespeeds.end()));
-    _params.update(max_element(wavespeeds.begin(), wavespeeds.end()));
+    _params.update(max_element(_data.wavespeeds().begin(),
+                               _data.wavespeeds().end()));
 
     // Set boundary ghost cells ...
     // Set patch ghost cells ...
-   
-    printf("B %4.4f\n", _params.dt_dh());
-    // Update the simulation ...
+
     update(input_it       ,
            output_it      ,
            solver         ,
@@ -288,16 +236,14 @@ void GenericSimulator<Traits>::simulate()
            threads        ,
            blocks         ,
            _setter        );
+    _data.swap_states();
 
     time  += _params.dt();
     iters += 1;
-    printf("C\n");
-
-    std::swap(input_states, output_states);
-    printf("D\n");
   }
 
-  finalise_output_states(input_states, execution_policy);
+  // Make sure that the state data is accessible on the host.
+  _data.finalise_states();
 }
 
 template <typename Traits>
@@ -313,10 +259,7 @@ Simulator<Traits>*
 GenericSimulator<Traits>::configure_dimension(std::size_t /*dim*/, 
                                               dim_spec_t  spec   )
 {
-  _data.resize(elements);
-//  _initial_states.resize(spec.elements());
-//  _updated_states.resize(spec.elements());
-//  _wavespeeds.resize(spec.elements());
+  _data.resize(spec.elements());
   _params.resolution = spec.resolution;
   return this;
 }
@@ -332,7 +275,7 @@ template <typename Traits>
 void GenericSimulator<Traits>::fill_data(fillinfo_container_t&& fillers)
 {
   using index_t = typename state_t::index;
-  auto states = _data.get_fillable_input_states();
+  auto& states  = _data.states();
 
   std::vector<int> indices = {};
   for (const auto& fillinfo : fillers) 
@@ -364,13 +307,11 @@ void GenericSimulator<Traits>::fill_data(fillinfo_container_t&& fillers)
     {
       const auto value = filler.filler(pos);
       states[i][prop_index++] = value;
-      //_initial_states[i][prop_index]   = value;
-      //_updated_states[i][prop_index++] = value;
     }
   }
 
-  // Make sure that the host and device data is synced in the case that the
-  // data has GPU data.
+  // Make sure that the host and device data is
+  // synced in the case that the data has GPU data.
   _data.synchronize();
 }
 
@@ -397,7 +338,7 @@ auto GenericSimulator<Traits>::dimension_info() const
   auto dim_info = DimInfo<dimensions>();
   unrolled_for<dimensions>([&] (auto i)
   {
-    dim_info[i] = _initial_states.size(i);
+    dim_info[i] = _data.states().size(i);
   });
   return dim_info;
 }
@@ -408,12 +349,13 @@ void GenericSimulator<Traits>::output_batch(Stream&&    stream       ,
                                             std::size_t batch_size   ,
                                             std::size_t element_index) const
 {
-  auto dim_info = dimension_info();
+  auto  dim_info = dimension_info();
+  auto& states   = _data.states();
   for (const auto index : range(batch_size))
   {
     stream << std::setw(8) << std::right
            << std::fixed   << std::showpoint << std::setprecision(4)
-           << _updated_states[offset + index][element_index]
+           << states[offset + index][element_index]
            << ((index % dim_info.size(dim_x) == 0 && index != 0) ? "\n" : " ");
   }
 }
@@ -461,10 +403,10 @@ void GenericSimulator<Traits>::stream_output(Stream&& stream) const
 
 template <typename Traits>
 void GenericSimulator<Traits>::output_data(std::ostream& output_stream,
-                                                std::string   output       ,
-                                                std::size_t   offset       ,
-                                                std::size_t   batch_size   ,
-                                                std::size_t   element_idx  ) const
+                                           std::string   output       ,
+                                           std::size_t   offset       ,
+                                           std::size_t   batch_size   ,
+                                           std::size_t   element_idx  ) const
 {
   output_stream << output << "\n";
   output_batch(output_stream, offset, batch_size, element_idx);
@@ -472,11 +414,11 @@ void GenericSimulator<Traits>::output_data(std::ostream& output_stream,
 }
 
 template <typename Traits>
-void GenericSimulator<Traits>::output_data(fs::path                 ,
-                                              std::string output       ,
-                                              std::size_t offset       ,
-                                              std::size_t batch_size   ,
-                                              std::size_t element_idx  ) const
+void GenericSimulator<Traits>::output_data(fs::path    /*path*/   ,
+                                           std::string output     ,
+                                           std::size_t offset     ,
+                                           std::size_t batch_size ,
+                                           std::size_t element_idx) const
 {
   std::ofstream output_file;
   output_file.open(output += ".txt", std::fstream::app);
