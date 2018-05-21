@@ -64,7 +64,8 @@ int main(int argc, char** argv)
 
   auto simulator = std::make_unique<simulator_t>();
   simulator->configure_dimension(fluid::dim_x, { 0.045, 1.0 })
-           ->configure_sim_time(0.1);
+           ->configure_sim_time(0.1)
+           ->configure_cfl(0.9);
 
   simulator->fill_data({
     {

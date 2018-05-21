@@ -40,6 +40,10 @@ class ArrayView {
   using reference_t       = value_t&; 
   /// Defines the type of a const reference to the data type.
   using const_reference_t = const value_t&;
+  /// Defines the type of a non const iterator.
+  using iterator_t        = StridedIterator<value_t, false>;
+  /// Defines the type of a const iterator.
+  using const_iterator_t  = StridedIterator<value_t, true>;
 
   /// Defines a tag class which can be used to define unrolled and non-unrolled
   /// implementations of the array functionality.
@@ -100,6 +104,30 @@ class ArrayView {
   fluidity_host_device const_reference_t operator[](std::size_t i) const
   {
     return _ptr[i * _step];
+  }
+
+  /// Returns an iterator to the first element in the array.
+  fluidity_host_device constexpr iterator_t begin()
+  {
+    return iterator_t{_ptr, _step};
+  }
+
+  /// Returns an iterator to the last element in the array.
+  fluidity_host_device constexpr iterator_t end()
+  {
+    return iterator_t{_ptr + _step * Elements, _step};
+  }
+
+  /// Returns a constant iterator to the first element in the array.
+  fluidity_host_device constexpr const_iterator_t begin() const
+  {
+    return const_iterator_t{_ptr, _step};
+  }
+
+  /// Returns a constant iterator to the last element in the array.
+  fluidity_host_device constexpr const_iterator_t end() const
+  {
+    return const_iterator_t{_ptr + _step * Elements, _step};
   }
 
   /// Returns the number of elements in the array.

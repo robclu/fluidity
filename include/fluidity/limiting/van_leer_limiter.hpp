@@ -34,6 +34,39 @@ struct VanLeer {
   /// Defines the number of elements required for limiting.
   static constexpr std::size_t width = 2;
 
+  /// Implementation of the limit function which applies the limiting to an
+  /// iterator, calling the limit method on each of the iterator elements.
+  /// \param[in]  state_it  The state iterator to limit.
+  /// \param[in]  dim       The (spacial) dimension to limit over.
+  /// \tparam     Iterator  The type of the state iterator.
+  /// \tparam     Value     The value which defines the dimension.
+  template <typename Iterator, std::size_t Value>
+  fluidity_host_device constexpr decltype(auto)
+  operator()(Iterator&& state_it, Dimension<Value> /*dim*/) const
+  {
+    using state_t = std::decay_t<decltype(*state_it)>;
+    using value_t = typename state_t::value_t;
+
+    constexpr auto dim = Dimension<Value>{};
+
+    if (flattened_id(dim_x) == 0)
+    {
+      printf("LIMITER START\n");
+    }
+
+    Array<value_t, state_t::elements> limited;
+    const auto cent_diff = state_it.central_diff(dim);
+    const auto fwrd_diff = state_it.forward_diff(dim);
+    const auto back_diff = state_it.backward_diff(dim);
+
+    unrolled_for<state_t::elements>([&] (auto i)
+    {
+      limited[i] = limit_single(cent_diff[i], back_diff[i], fwrd_diff[i]);
+    });
+    return limited;
+  }
+
+ private:
   /// Returns the limited value of a single element, defined as follows:
   /// limiting is defined as:
   /// 
@@ -51,8 +84,8 @@ struct VanLeer {
   /// \param[in] left    The left state to limit on.
   /// \param[in] right   The right state to limit on.
   template <typename T>
-  fluidity_host_device constexpr decltype(auto)
-  operator()(T&& central, T&& left, T&& right) const 
+  fluidity_host_device constexpr auto
+  limit_single(T&& central, T&& left, T&& right) const
   {
     using value_t = std::decay_t<T>;
     return (left * right < value_t{0})
@@ -60,37 +93,6 @@ struct VanLeer {
            : math::signum(central)
            * std::min(value_t{0.5} * std::abs(central),
                       value_t{2.0} * std::min(std::abs(left), std::abs(right)));
-  }
-
-  /// Implementation of the limit function which applies the limiting to an
-  /// iterator, calling the limit method on each of the iterator elements.
-  /// \param[in]  state_it  The state iterator to limit.
-  /// \param[in]  dim       The (spacial) dimension to limit over.
-  /// \tparam     Iterator  The type of the state iterator.
-  /// \tparam     Value     The value which defines the dimension.
-  template <typename Iterator, std::size_t Value>
-  fluidity_host_device constexpr decltype(auto)
-  operator()(Iterator&& state_it, Dimension<Value> /*dim*/) const
-  {
-    using state_t = std::decay_t<decltype(*state_it)>;
-    using value_t = typename state_t::value_t;
-
-    Array<value_t, state_t::elements> limited;
-    unrolled_for<state_t::elements>([&] (auto i)
-    {
-      constexpr auto limiter = self_t{};
-      constexpr auto dim     = Dimension<Value>{};
-
-      if (flattened_id(dim_x) == 0)
-      {
-        state_it->print();
-      }
-
-      limited[i] = limiter(state_it.central_diff(dim)[i] ,
-                           state_it.backward_diff(dim)[i],
-                           state_it.forward_diff(dim)[i] );
-    });
-    return limited;
   }
 };
 

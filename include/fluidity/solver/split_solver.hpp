@@ -70,15 +70,16 @@ struct SplitSolver {
                                   T                     dtdh    ,
                                   const BoundarySetter& setter  ) const
   {
-    //const auto loader = loader_t{};
     auto global_iter  = get_global_iterator(in);
     auto patch_iter   = get_patch_iterator(in);
 
     // Load the global data into the shared data:
     *patch_iter = *global_iter;
 
-    // Load in the padding and boundary data:
-    //loader.load_patch(patch_iter, dim_x);
+    // DPERECATED:
+    // loader.load_patch(patch_iter, dim_x);
+    
+    // Load in the data at the global and patch boundaries:
     loader_t::load_boundary(global_iter, patch_iter, dim_x, setter);
     __syncthreads();
 
@@ -86,21 +87,74 @@ struct SplitSolver {
     auto in_fwrd = make_recon_input(patch_iter, material, dtdh, fwrd_input);
     auto in_back = make_recon_input(patch_iter, material, dtdh, back_input);
 
-    global_iter = get_global_iterator(out);
+    auto f_flux = flux_evaluator(in_fwrd.left, in_fwrd.right, material, dim_x);
+    auto b_flux = flux_evaluator(in_back.left, in_back.right, material, dim_x);
 
-    auto f = flux_evaluator(in_fwrd.left, in_fwrd.right, material, dim_x);
-    auto b = flux_evaluator(in_fwrd.left, in_fwrd.right, material, dim_x);
+    constexpr std::size_t debug_id = 6;
+    if (flattened_id(dim_x) == debug_id)
+    {
+      printf("FLUX INPUTS:\n");
+      int v = 0;
+      for (const auto& e : in_back.left)
+      {
+        printf("\t%3u : %4.4f\n", v++, e);
+      }
+      printf("------------------\n");
+      for (const auto& e : in_back.right)
+      {
+        printf("\t%3u : %4.4f\n", v++, e);
+      }
+      printf("------------------\n");
+      for (const auto& e : in_fwrd.left)
+      {
+        printf("\t%3u : %4.4f\n", v++, e);
+      }
+      printf("------------------\n");
+      for (const auto& e : in_fwrd.right)
+      {
+        printf("\t%3u : %4.4f\n", v++, e);
+      }
+      printf("------------------\n");
+      for (const auto& e : b_flux)
+      {
+        printf("\t%3u : %4.4f\n", v++, e);
+      }
+      printf("------------------\n");
+      for (const auto& e : f_flux)
+      {
+        printf("\t%3u : %4.4f\n", v++, e);
+      }
+    }
 
-    *global_iter = *patch_iter - dtdh * 
-      (flux_evaluator(in_fwrd.left, in_fwrd.right, material, dim_x) -
-       flux_evaluator(in_back.left, in_back.right, material, dim_x));
+    global_iter  = get_global_iterator(out);
 
+    if (flattened_id(dim_x) == debug_id)
+    {
+      printf("GBefore:\n");
+      int v = 0;
+      for (const auto& e : *global_iter)
+      {
+        printf("\t%3u : %4.4f\n", v++, e);
+      }
+    }
+
+    *global_iter = *patch_iter - dtdh * (f_flux - b_flux);
+
+    if (flattened_id(dim_x) == debug_id)
+    {
+      printf("GAfter:\n");
+      int v = 0;
+      for (const auto& e : *global_iter)
+      {
+        printf("\t%3u : %4.4f\n", v++, e);
+      }
+    }
   }
 
  private:
   /// Returns a reconstructed left input for the flux solver.
   template <typename It, typename M, typename T>
-  fluidity_device_only decltype(auto)
+  fluidity_device_only auto
   make_recon_input(It&& it, M mat, T dtdh, back_input_t) const
   {
     return reconstructor_t{}(it.offset(-1, dim_x), mat, dtdh, dim_x);
@@ -108,7 +162,7 @@ struct SplitSolver {
 
   /// Returns a reconstructed left input for the flux solver.
   template <typename It, typename M, typename T>
-  fluidity_device_only decltype(auto)
+  fluidity_device_only auto
   make_recon_input(It&& it, M mat, T dtdh, fwrd_input_t) const
   {
     return reconstructor_t{}(it, mat, dtdh, dim_x);

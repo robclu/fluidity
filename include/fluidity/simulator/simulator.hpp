@@ -69,11 +69,14 @@ class Simulator {
   /// Runs the simulation.
   virtual void simulate() = 0;
 
+  /// Configures the CFL number to use for the simulation.
+  /// \param[in] cfl The CFL number for the simulation.
+  virtual self_t* configure_cfl(double cfl) = 0;
+
   /// Configures the simulator to set size and resolution of a dimension \p dim.
   /// \param[in] dim  The dimension to specify.
   /// \param[in] spec The specification of the dimension.
   virtual self_t* configure_dimension(std::size_t dim, DimSpec spec) = 0;
-
 
   /// Configures the simulator to simulate until a certain simulation time.
   /// \param[in] sim_time The time to run the simulation until.

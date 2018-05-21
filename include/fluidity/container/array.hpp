@@ -39,9 +39,9 @@ class Array {
   /// Defines the type of a const reference to the data type.
   using const_reference_t = const value_t&;
   /// Defines the type of a non const iterator.
-  using iterator_t        = StridedIterator<self_t, false>;
+  using iterator_t        = StridedIterator<value_t, false>;
   /// Defines the type of a const iterator.
-  using const_iterator_t  = StridedIterator<self_t, true>;
+  using const_iterator_t  = StridedIterator<value_t, true>;
 
   /// The default constructor uses the default initialization.
   constexpr Array() = default;
@@ -122,6 +122,19 @@ class Array {
   {
     return iterator_t{this->_data + Elements};
   }
+
+  /// Returns a constant iterator to the first element in the array.
+  fluidity_host_device constexpr const_iterator_t begin() const
+  {
+    return const_iterator_t{this->_data};
+  }
+
+  /// Returns a constant iterator to the last element in the array.
+  fluidity_host_device constexpr const_iterator_t end() const
+  {
+    return const_iterator_t{this->_data + Elements};
+  }
+
   /// Returns the number of elements in the array.
   fluidity_host_device constexpr std::size_t size() const
   {

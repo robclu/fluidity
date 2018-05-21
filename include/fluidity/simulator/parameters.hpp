@@ -35,9 +35,9 @@ struct Parameters {
 
   /// Resolution of the computational domain. These parameters use the same
   /// resolution for each of the dimensions.
-  value_t resolution = 0;
+  value_t resolution = 0.1;
   /// CFL number for the simulation.
-  value_t cfl        = 0;
+  value_t cfl        = 0.9;
   /// Total run time for the simulation.
   value_t run_time   = 0;
   /// Maximum number of iterations for the simulation.

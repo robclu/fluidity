@@ -70,6 +70,8 @@ class GenericSimulator final : public Simulator<Traits> {
   using params_t    = Parameters<value_t>;
   /// Defines the type of the boundary setter.
   using setter_t    = solver::BoundarySetter;
+  /// Defines the type of the data storage for the simulation.
+  using storage_t   = SimlationData<traits_t, execution_t>;
 
   /// Defines a constexpr instance of the execution polcity.
   static constexpr auto execution_policy = execution_t{};
@@ -97,6 +99,10 @@ class GenericSimulator final : public Simulator<Traits> {
   /// \param[in] fillers A container of fillers for filling the data.
   void fill_data(fillinfo_container_t&& fillers) override;
 
+  /// Configures the simulator to use the specified CFL number.
+  /// \param[in] cfl The CFL number to use for the simulation.
+  base_t* configure_cfl(double cfl) override;
+
   /// Configures the simulator to set size and resolution of a dimension \p dim.
   /// \param[in] dim  The dimension to specify.
   /// \param[in] spec The specification of the dimension.
@@ -121,6 +127,7 @@ class GenericSimulator final : public Simulator<Traits> {
   static constexpr auto batch_size_tag = 
     std::integral_constant<bool, traits_t::spacial_dims == 1>{};
 
+  storage_t   _data;            //!< Data for the simulation.
   storage_t   _initial_states;  //!< States at the start of an iteration.
   storage_t   _updated_states;  //!< States at the end of an iteration.
   wavespeed_t _wavespeeds;      //!< Wavespeeds for the simulation.
@@ -271,7 +278,7 @@ void GenericSimulator<Traits>::simulate()
     // Set boundary ghost cells ...
     // Set patch ghost cells ...
    
-    printf("B\n");
+    printf("B %4.4f\n", _params.dt_dh());
     // Update the simulation ...
     update(input_it       ,
            output_it      ,
@@ -290,7 +297,15 @@ void GenericSimulator<Traits>::simulate()
     printf("D\n");
   }
 
-  finalise_output_states(output_states, execution_policy);
+  finalise_output_states(input_states, execution_policy);
+}
+
+template <typename Traits>
+Simulator<Traits>*
+GenericSimulator<Traits>::configure_cfl(double cfl)
+{
+  _params.cfl = cfl;
+  return this;
 }
 
 template <typename Traits>
@@ -298,9 +313,11 @@ Simulator<Traits>*
 GenericSimulator<Traits>::configure_dimension(std::size_t /*dim*/, 
                                               dim_spec_t  spec   )
 {
-  _initial_states.resize(spec.elements());
-  _updated_states.resize(spec.elements());
-  _wavespeeds.resize(spec.elements());
+  _data.resize(elements);
+//  _initial_states.resize(spec.elements());
+//  _updated_states.resize(spec.elements());
+//  _wavespeeds.resize(spec.elements());
+  _params.resolution = spec.resolution;
   return this;
 }
 
@@ -315,6 +332,7 @@ template <typename Traits>
 void GenericSimulator<Traits>::fill_data(fillinfo_container_t&& fillers)
 {
   using index_t = typename state_t::index;
+  auto states = _data.get_fillable_input_states();
 
   std::vector<int> indices = {};
   for (const auto& fillinfo : fillers) 
@@ -332,7 +350,7 @@ void GenericSimulator<Traits>::fill_data(fillinfo_container_t&& fillers)
   /// Go over each of the dimensions and fill the data:
   auto pos      = Array<float, 3>();
   auto dim_info = dimension_info();
-  for (std::size_t i = 0; i < _initial_states.total_size(); ++i)
+  for (std::size_t i = 0; i < states.total_size(); ++i)
   {
     unrolled_for<dimensions>([&] (auto d)
     {
@@ -345,10 +363,15 @@ void GenericSimulator<Traits>::fill_data(fillinfo_container_t&& fillers)
     for (const auto& filler : fillers)
     {
       const auto value = filler.filler(pos);
-      _initial_states[i][prop_index]   = value;
-      _updated_states[i][prop_index++] = value;
+      states[i][prop_index++] = value;
+      //_initial_states[i][prop_index]   = value;
+      //_updated_states[i][prop_index++] = value;
     }
   }
+
+  // Make sure that the host and device data is synced in the case that the
+  // data has GPU data.
+  _data.synchronize();
 }
 
 template <typename Traits>
