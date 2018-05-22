@@ -103,17 +103,17 @@ endif()
 # Gtest does not currently build without this flag!
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-unused-function")
 
-if (EXISTS ${fluidity_SOURCE_DIR}/googletest)
-  add_subdirectory(googletest)
-else()
-  message("-- NOTE: Googletest not found, fetching ...")
-  execute_process(
-    COMMAND git clone https://github.com/google/googletest.git 
-      ${fluidity_SOURCE_DIR}/googletest
-  )
-  message("-- DONE: Fetched googletest.")
-  add_subdirectory(googletest)
-endif()
+#if (EXISTS ${fluidity_SOURCE_DIR}/googletest)
+#  add_subdirectory(googletest)
+#else()
+#  message("-- NOTE: Googletest not found, fetching ...")
+#  execute_process(
+#    COMMAND git clone https://github.com/google/googletest.git 
+#      ${fluidity_SOURCE_DIR}/googletest
+#  )
+#  message("-- DONE: Fetched googletest.")
+#  add_subdirectory(googletest)
+#endif()
 
 #==--- Compiler Flags -------------------------------------------------------==#
 
@@ -170,6 +170,8 @@ endif()
 
 set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} ${CUDA_FLAGS}")
 
+add_subdirectory(googletest)
+
 # NVIDIA IS SO USELESS THAT IT CANNOT SUPPORT ANY NON-ARCHAIC COMPILER VERSION
 # SO WE CANNOT USE ANY NEW c++ FEATURES, PROBABLY FOR THE NEXT 10 YEARS!! =/
 #set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -ccbin ${CMAKE_CXX_COMPILER}")
@@ -179,6 +181,7 @@ set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} ${CUDA_FLAGS}")
 
 #add_subdirectory(src)
 add_subdirectory(tests)
+add_subdirectory(validation)
 
 #==--- Finish Up ------------------------------------------------------------==#
 

@@ -170,6 +170,13 @@ fluidity_host_device State(Container&& container)
   });
 }
 
+/// Constructor to fill the state with a list of data.
+/// \param[in] values The values of the data for the state.
+/// \tparam    Values The types of the values.
+template <typename... Values>
+fluidity_host_device State(Values&&... values)
+: storage_t(std::forward<Values>(values)...) {}
+
 /// Returns the density of the state.
 fluidity_host_device constexpr auto density() const
 { 

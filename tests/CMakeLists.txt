@@ -26,6 +26,7 @@ endif()
 fluid_include_directories(
   ${CUDA_INCLUDE_DIR}
   ${fluidity_SOURCE_DIR}/include
+  ${GTEST_INCLUDE}
 )
 fluid_library_directories(${CUDA_LIB_DIRS})
 
@@ -61,6 +62,16 @@ fluid_library_directories(${CUDA_LIB_DIRS})
 
 #add_executable(iterator_host_tests iterator_tests_host.cpp)
 #target_link_libraries(iterator_host_tests ${GTEST_BOTH_LIBRARIES})
+
+fluid_add_executable(
+  reconstruction_tests
+  ${fluidity_SOURCE_DIR}/tests/reconstruction_tests.cpp
+)
+fluid_target_link_libraries(
+  reconstruction_tests
+  #${GTEST_BOTH_LIBRARIES}
+  ${CUDA_LIBRARIES}
+)
 
 fluid_add_executable(
   simulator_tests

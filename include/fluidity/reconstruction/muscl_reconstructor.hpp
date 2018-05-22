@@ -91,37 +91,7 @@ struct MHReconstructor {
       const auto adjustment = (half * dtdh)
                             * (fwrd_recon.flux(mat, dim) 
                             -  back_recon.flux(mat, dim));
-/*
-      if (flattened_id(dim_x) == 0)
-      {
-        printf("RECONSTRUCTION START\n");
-        int v = 0;
-        for (const auto& e : back_recon)
-        {
-          printf("\t%3u : %4.4f\n", v++, e);
-        }
-        printf("------------\n");
-        for (const auto& e : fwrd_recon)
-        {
-          printf("\t%3u : %4.4f\n", v++, e);
-        }
-        printf("------------\n");
-        for (const auto& e : back_recon.flux(mat, dim))
-        {
-          printf("\t%3u : %4.4f\n", v++, e);
-        }
-        printf("------------\n");
-        for (const auto& e : fwrd_recon.flux(mat, dim))
-        {
-          printf("\t%3u : %4.4f\n", v++, e);
-        }
-        printf("------------\n");
-        for (const auto& e : adjustment)
-        {
-          printf("\t%3u : %4.4f\n", v++, e);
-        }
-      }
-*/
+                            
       return (Face == forward_face ? fwrd_recon : back_recon) - adjustment;
     }
   };

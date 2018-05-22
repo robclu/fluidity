@@ -421,7 +421,7 @@ void GenericSimulator<Traits>::output_data(fs::path    /*path*/   ,
                                            std::size_t element_idx) const
 {
   std::ofstream output_file;
-  output_file.open(output += ".txt", std::fstream::app);
+  output_file.open(output += ".txt", std::fstream::trunc);
   output_batch(output_file, offset, batch_size, element_idx);
   output_file.close();
 }

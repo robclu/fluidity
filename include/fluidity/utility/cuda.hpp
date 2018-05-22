@@ -28,6 +28,8 @@ namespace cuda  {
 /// This namespace defines debugging functionality specifically for cuda.
 namespace debug {
 
+#if defined(__CUDACC__)
+
 /// Prints the message \p msg, along with the thread and block information
 /// for the thread.
 template <typename Msg>
@@ -43,6 +45,15 @@ fluidity_device_only void thread_msg(Msg&& msg)
     msg
   );
 }
+
+#else
+
+/// Prints the message \p msg, along with the thread and block information
+/// for the thread.
+template <typename Msg>
+fluidity_host_only void thread_msg(Msg&& msg) {}
+
+#endif // __CUDACC__
 
 } // namespace debug
 

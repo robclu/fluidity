@@ -91,6 +91,25 @@ struct SplitSolver {
     //in_fwrd.left = flux_evaluator(in_fwrd.left, in_fwrd.right, material, dim_x);
     auto b_flux = flux_evaluator(in_back.left, in_back.right, material, dim_x);
     //in_back.left = flux_evaluator(in_back.left, in_back.right, material, dim_x);
+    
+    if (f_flux[0] != b_flux[0] || f_flux[1] != b_flux[1])
+    {
+      printf("IN BACK %3lu:\n---------------\n", flattened_id(dim_x));
+      for (auto i = 0; i < f_flux.size(); ++i)
+      {
+        printf("\t%02.4f : %02.4f\n", in_back.left[i], in_back.right[i]);
+      }
+      printf("IN FWRD %3lu:\n---------------\n", flattened_id(dim_x));
+      for (auto i = 0; i < f_flux.size(); ++i)
+      {
+        printf("\t%02.4f : %02.4f\n", in_fwrd.left[i], in_fwrd.right[i]);
+      }
+      printf("FLUXES %3lu:\n---------------\n", flattened_id(dim_x));
+      for (auto i = 0; i < f_flux.size(); ++i)
+      {
+        printf("\t%02.4f : %02.4f\n", b_flux[i], f_flux[i]);
+      }
+    }
 
     global_iter  = get_global_iterator(out);
     *global_iter = *patch_iter - dtdh * (f_flux - b_flux);

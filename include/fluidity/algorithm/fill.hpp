@@ -73,9 +73,7 @@ struct FillImpl<true> {
 template < typename    Iterator
          , typename    T
          , typename... Args
-         , std::enable_if_t<
-             exec::is_cpu_policy_v<typename Iterator::exec_policy_t>, int> = 0
-         >
+         , exec::cpu_enable_t<Iterator> = 0>
 void fill(Iterator begin, Iterator end, T value, Args&&... args)
 {
   constexpr bool is_predicate = 
@@ -100,11 +98,7 @@ void fill(Iterator begin, Iterator end, T value, Args&&... args)
 /// \tparam    Iterator The type of the iterator.
 /// \tparam    P        The type of the predicate.
 /// \tparam    Args     The type of arguments for a callable predicate.
-template < typename Iterator
-         , typename T
-         , std::enable_if_t<
-             exec::is_gpu_policy_v<typename Iterator::exec_policy_t>, int> = 0
-         >
+template <typename Iterator, typename T, exec::gpu_enable_t<Iterator> = 0>
 void fill(Iterator begin, Iterator end, T value)
 {
   detail::cuda::fill(begin, end, value);

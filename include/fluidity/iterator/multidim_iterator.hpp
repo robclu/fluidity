@@ -401,7 +401,7 @@ template <typename T, typename DimInfo>
 fluidity_host_only auto make_multidim_iterator()
 {
   using iter_t = MultidimIterator<T, DimInfo>;
-  static_assert(std::is_same_v<DimInfo, DimInfoCt>,
+  static_assert(fluid::is_same_v<DimInfo, DimInfoCt>,
                 "DimInfo must be DimInfoCt type to make a multidim iterator!");
   static thread_local T buffer[DimInfo::total_size()];
   iter_t iter{buffer};

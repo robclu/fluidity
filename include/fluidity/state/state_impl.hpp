@@ -130,7 +130,6 @@ fluidity_host_device inline constexpr auto
 pressure(State&& state, Material&&  material) noexcept
 {
   using state_t = std::decay_t<State>;
-  using value_t = typename state_t::value_t;
   return state[state_t::index::pressure];
 }
 
@@ -163,7 +162,6 @@ template < typename State
 fluidity_host_device inline constexpr auto
 energy(State&& state, Material&& material) noexcept
 {
-  using state_t = std::decay_t<State>;
   return state.density() * 
            (0.5 * state.v_squared_sum() + material.eos(state));
 

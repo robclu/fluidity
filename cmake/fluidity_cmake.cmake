@@ -94,7 +94,12 @@ function(fluid_create_all_targets)
 
     # Check if we are trying to compile for cuda:
     string(REGEX MATCH "cu" CUDA_REGEX ${TARGET_EXT})
-    string(COMPARE EQUAL "cu" ${CUDA_REGEX} CUDA_FILE)
+    if (${TARGET_EXT} MATCHES "cu")
+      set(CUDA_FILE TRUE)
+    else()
+      set(CUDA_FILE FALSE)
+    endif()
+    #string(COMPARE EQUAL "cu" ${CUDA_REGEX} CUDA_FILE)
 
     # Check the file type, and 
     if (CUDA_FILE)
@@ -180,6 +185,8 @@ function(fluid_create_all_targets)
               ${TARGET_LIBRARY_DIRS}
               ${${FLUID_TARGET}_LINK_LIBS}
       DEPENDS ${OBJECT} ${OBJECTS})
+
+    target_link_libraries(${FLUID_TARGET} gtest gtest_main)
 
     #install(
     #  PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/${FLUID_TARGET}

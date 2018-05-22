@@ -53,6 +53,13 @@ class Array {
     fill(this->begin(), this->end(), value);
   }
 
+  /// Initializes the elements in the array to have the values \p values.
+  /// \param[in] values The values to set the array elements to.
+  /// \tparam    Values The types of the values.
+  template <typename... Values>
+  fluidity_host_device constexpr Array(Values&&... values)
+  : _data{ static_cast<value_t>(values)... } {}
+
   /// Copies the contents of the \p other array into a new array.
   /// \param[in] other The other array to copy from.
   constexpr Array(const self_t& other) = default;
