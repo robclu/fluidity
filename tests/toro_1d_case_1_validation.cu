@@ -1,4 +1,4 @@
-//==--- fluidity/validation/toro_1d_case_1_validation.cu --- -*- C++ -*- ---==//
+//==--- fluidity/tests/toro_1d_case_1_validation.cu -------- -*- C++ -*- ---==//
 //            
 //                                Fluidity
 // 

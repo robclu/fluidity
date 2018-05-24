@@ -186,8 +186,6 @@ function(fluid_create_all_targets)
               ${${FLUID_TARGET}_LINK_LIBS}
       DEPENDS ${OBJECT} ${OBJECTS})
 
-    target_link_libraries(${FLUID_TARGET} gtest gtest_main)
-
     #install(
     #  PROGRAMS ${CMAKE_CURRENT_BINARY_DIR}/${FLUID_TARGET}
     #  DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)

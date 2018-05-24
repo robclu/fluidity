@@ -172,22 +172,6 @@ set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} ${CUDA_FLAGS}")
 
 add_subdirectory(googletest)
 
-# NVIDIA IS SO USELESS THAT IT CANNOT SUPPORT ANY NON-ARCHAIC COMPILER VERSION
-# SO WE CANNOT USE ANY NEW c++ FEATURES, PROBABLY FOR THE NEXT 10 YEARS!! =/
-#set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -ccbin ${CMAKE_CXX_COMPILER}")
-#set(CMAKE_CUDA_FLAGS "${CMAKE_CUDA_FLAGS} -Xcompiler ${CMAKE_CXX_FLAGS}")
-
 #==--- Subdirectories -------------------------------------------------------==#
 
-#add_subdirectory(src)
 add_subdirectory(tests)
-add_subdirectory(validation)
-
-#==--- Finish Up ------------------------------------------------------------==#
-
-# This creates all the targets, and is required to be called to enable the
-# functionality which allows both CPU and GPU code to be compiled with either
-# clang or nvcc + gcc
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${fluidity_SOURCE_DIR}/cmake)
-include(fluidity_cmake)
-fluid_create_all_targets()

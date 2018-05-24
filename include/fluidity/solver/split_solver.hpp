@@ -125,7 +125,7 @@ struct SplitSolver {
     return reconstructor_t{}(it.offset(-1, dim_x), mat, dtdh, dim_x);
   }
 
-  /// Returns a reconstructed left input for the flux solver.
+  /// Returns a reconstructed right input for the flux solver.
   template <typename It, typename M, typename T>
   fluidity_device_only auto
   make_recon_input(It&& it, M mat, T dtdh, fwrd_input_t) const
