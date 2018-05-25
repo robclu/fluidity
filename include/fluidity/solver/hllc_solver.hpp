@@ -48,6 +48,8 @@ struct HllcSolver {
     static_assert(is_state_v<state_t>,
       "Attempt to invoke a state function on a type which is not a state");
 
+    constexpr auto dim = Dimension<Value>{};
+
     const auto pl = left.primitive(material),
                pr = right.primitive(material);
     const auto cl = left.conservative(material),
@@ -55,8 +57,6 @@ struct HllcSolver {
 
     const auto al  = material.sound_speed(pl), ar = material.sound_speed(pr);
     const auto adi = q_factor(material);
-
-    constexpr auto dim = Dimension<Value>{};
 
     const auto v = pr.velocity(dim)      - pl.velocity(dim);
     const auto d = pr.density()          - pl.density();

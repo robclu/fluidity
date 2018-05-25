@@ -17,6 +17,8 @@ else()
   set(GTEST_INCLUDE )
 endif()
 
+set(LIBS -lstdc++-fs)
+
 #add_executable(cuda_test cuda_test.cu)
 #set_target_properties(cuda_test PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
 #target_link_libraries(test PRIVATE fluidity_cuda_test)
@@ -78,15 +80,14 @@ fluid_target_link_libraries(
   ${CUDA_LIBRARIES}
 )
 
-#fluid_add_executable(
-#  simulator_tests
-#  ${fluidity_SOURCE_DIR}/tests/simulator_tests.cu
-#)
-#fluid_target_link_libraries(
-#  simulator_tests
-#  ${GTEST_BOTH_LIBRARIES}
-#  ${CUDA_LIBRARIES}
-#)
+fluid_add_executable(
+  simulator_tests
+  ${fluidity_SOURCE_DIR}/tests/simulator_tests.cu
+)
+fluid_target_link_libraries(
+  simulator_tests
+  ${CUDA_LIBRARIES}
+)
 
 #add_executable(solver_host_tests solver_tests_host.cpp)
 #target_link_libraries(solver_host_tests ${GTEST_BOTH_LIBRARIES})
@@ -106,7 +107,7 @@ fluid_target_link_libraries(
 
 fluid_add_executable(
   toro_1d_case_1_validation
-  ${fluidity_SOURCE_DIR}/validation/toro_1d_case_1_validation.cu
+  ${fluidity_SOURCE_DIR}/tests/toro_1d_case_1_validation.cu
 )
 fluid_target_link_libraries(
   toro_1d_case_1_validation

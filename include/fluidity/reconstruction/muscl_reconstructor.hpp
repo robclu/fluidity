@@ -64,7 +64,10 @@ struct MHReconstructor {
   /// \tparam Face  The face to apply reconstruction to.
   template <int Face>
   struct ReconImpl {
-    /// Reconstructs the state data in a single direction, returning new data. 
+    /// Performs the evolution step for MUSCL-Hanconk as per:
+    /// 
+    ///   Toro, page 505, equation 14.34
+    ///   
     /// \param[in]  state      The state to reconstruct around.
     /// \param[in]  mat        The material describing the system.
     /// \param[in]  dtdh       The scaling factor: $\frac{dt}{dx}$.
@@ -73,26 +76,25 @@ struct MHReconstructor {
     /// \tparam     Material   The type of the material.
     /// \tparam     Value      The value which defines the dimension.
     template <typename Iterator, typename Material, std::size_t Value>
-    fluidity_host_device constexpr auto
-    operator()(Iterator&&       state  ,
-               Material&&       mat    ,
-               value_t          dtdh   ,
-               Dimension<Value> /*dim*/) const
+    fluidity_host_device static constexpr auto evolve(Iterator&&       state  ,
+                                                      Material&&       mat    ,
+                                                      value_t          dtdh   ,
+                                                      Dimension<Value> /*dim*/)
     {
       using state_t = std::decay_t<decltype(*state)>;
       static_assert(Face == backward_face || Face == forward_face,
                     "Invalid face for reconstruction");
 
       constexpr auto dim = Dimension<Value>{};
-      const auto eita    = half * limiter_t()(state, dim);
+      const auto delta   = half * limiter_t()(state, dim);
 
-      const auto fwrd_recon = state_t{*state + eita};
-      const auto back_recon = state_t{*state - eita};
-      const auto adjustment = (half * dtdh)
-                            * (fwrd_recon.flux(mat, dim) 
-                            -  back_recon.flux(mat, dim));
+      const auto fwrd_evl  = state_t{*state + delta};
+      const auto back_evl  = state_t{*state - delta};
+      const auto evolution = (half * dtdh)
+                            * (back_evl.flux(mat, dim) 
+                            -  fwrd_evl.flux(mat, dim));
                             
-      return (Face == forward_face ? fwrd_recon : back_recon) - adjustment;
+      return (Face == forward_face ? fwrd_evl : back_evl) + evolution;
     }
   };
 
@@ -120,8 +122,14 @@ struct MHReconstructor {
   /// 
   /// No direction option is provided because this can be done from the calling
   /// code by first offsetting the state iterator which is the input to this
-  /// function, i.e by using ``state = state(-1, dim)`` before the
+  /// function, i.e by using ``state = state.offset(-1, dim)`` before the
   /// reconstruction call.
+  /// 
+  /// This is an implementation of the MUSCL-Hancock method as per:
+  ///   
+  ///   Toro, page 505, Step III
+  ///   
+  /// Returning Ul and Ur.
   /// 
   /// \param[in]  state      The state to reconstruct around.
   /// \param[in]  mat        The material describing the system.
@@ -139,12 +147,11 @@ struct MHReconstructor {
              Dimension<Value> /*dim*/ ) const
   {
     using state_t = std::decay_t<decltype(*state)>;
-
-    // Define the dimension to ensure constexpr functionality:
     constexpr auto dim = Dimension<Value>{};
+
     return make_riemann_input<state_t>(
-      fwrd_recon_t{}(state, material, dtdh, dim),
-      back_recon_t{}(state.offset(1, dim), material, dtdh, dim)
+      fwrd_recon_t::evolve(state, material, dtdh, dim),
+      back_recon_t::evolve(state.offset(1, dim), material, dtdh, dim)
     );
   }
 

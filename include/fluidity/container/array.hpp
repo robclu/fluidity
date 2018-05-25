@@ -56,7 +56,8 @@ class Array {
   /// Initializes the elements in the array to have the values \p values.
   /// \param[in] values The values to set the array elements to.
   /// \tparam    Values The types of the values.
-  template <typename... Values>
+  template <typename... Values,
+            std::enable_if_t<(sizeof...(Values) > 1), int> = 0>
   fluidity_host_device constexpr Array(Values&&... values)
   : _data{ static_cast<value_t>(values)... } {}
 

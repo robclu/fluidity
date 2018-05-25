@@ -93,5 +93,5 @@ int main(int argc, char** argv)
 
   std::cout << "Final data:\n";
   simulator->print_results();
-  simulator->write_results("toro_1d_case_1_results.txt");
+  //simulator->write_results("toro_1d_case_1_results.txt");
 }
