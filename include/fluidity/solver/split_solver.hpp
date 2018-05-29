@@ -70,18 +70,22 @@ struct SplitSolver {
                                   T                     dtdh    ,
                                   const BoundarySetter& setter  ) const
   {
-    auto global_iter  = get_global_iterator(in);
-    auto patch_iter   = get_patch_iterator(in);
+    // Defines the type of a conservative state:
+    using conservative_t = std::decay_t<decltype(in->conservative(material))>;
+
+    auto global_iter = get_global_iterator(in);
+    auto patch_iter  = get_patch_iterator(in);
 
     // Load the global data into the shared data:
     *patch_iter = *global_iter;
+    __syncthreads();
 
     // DPERECATED:
     // loader.load_patch(patch_iter, dim_x);
     
     // Load in the data at the global and patch boundaries:
     loader_t::load_boundary(global_iter, patch_iter, dim_x, setter);
-    __syncthreads();
+    //__syncthreads();
 
     // Run the rest of the sovler .. =D
     auto in_fwrd = make_recon_input(patch_iter, material, dtdh, fwrd_input);
@@ -92,28 +96,11 @@ struct SplitSolver {
     auto b_flux = flux_evaluator(in_back.left, in_back.right, material, dim_x);
     //in_back.left = flux_evaluator(in_back.left, in_back.right, material, dim_x);
     
-    if (f_flux[0] != b_flux[0] || f_flux[1] != b_flux[1])
-    {
-      printf("IN BACK %3lu:\n---------------\n", flattened_id(dim_x));
-      for (auto i = 0; i < f_flux.size(); ++i)
-      {
-        printf("\t%02.4f : %02.4f\n", in_back.left[i], in_back.right[i]);
-      }
-      printf("IN FWRD %3lu:\n---------------\n", flattened_id(dim_x));
-      for (auto i = 0; i < f_flux.size(); ++i)
-      {
-        printf("\t%02.4f : %02.4f\n", in_fwrd.left[i], in_fwrd.right[i]);
-      }
-      printf("FLUXES %3lu:\n---------------\n", flattened_id(dim_x));
-      for (auto i = 0; i < f_flux.size(); ++i)
-      {
-        printf("\t%02.4f : %02.4f\n", b_flux[i], f_flux[i]);
-      }
-    }
+    const auto u_updated = conservative_t{
+      patch_iter->conservative(material) + dtdh * (b_flux - f_flux)};
 
     global_iter  = get_global_iterator(out);
-    *global_iter = *patch_iter - dtdh * (f_flux - b_flux);
-//    *global_iter = *patch_iter - dtdh * (in_fwrd.left - in_back.left);
+    *global_iter = u_updated.primitive(material);
   }
 
  private:

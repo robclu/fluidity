@@ -63,25 +63,26 @@ int main(int argc, char** argv)
   auto simulator = std::make_unique<simulator_t>();
   simulator->configure_dimension(fluid::dim_x, { 0.01, 1.0 })
            ->configure_sim_time(0.1)
-           ->configure_cfl(0.9);
+           ->configure_cfl(0.18);
 
+  constexpr auto membrane = real_t{0.3};
   simulator->fill_data({
     {
       "density", [] (const auto& pos)
       {
-        return pos[0] < 0.5 ? 1.0 : 0.125;
+        return pos[0] < membrane ? 1.0 : 0.125;
       }
     },
     {
       "pressure", [] (const auto& pos)
       {
-        return pos[0] < 0.5 ? 1.0 : 0.1;
+        return pos[0] < membrane ? 1.0 : 0.1;
       }
     },
     {
       "v_x", [] (const auto& pos)
       {
-        return pos[0] < 0.5 ? 0.75 : 0.0;
+        return pos[0] < membrane ? 0.75 : 0.0;
       }
     }
   });
@@ -93,5 +94,5 @@ int main(int argc, char** argv)
 
   std::cout << "Final data:\n";
   simulator->print_results();
-  //simulator->write_results("toro_1d_case_1_results.txt");
+  simulator->write_results("toro_1d_case_1_results");
 }

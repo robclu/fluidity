@@ -113,7 +113,7 @@ class GenericSimulator final : public Simulator<Traits> {
   /// appended to the property which is output. If \p path = "", then the
   /// current working directory is used as the path.
   /// \param[in] file_path   The path (inluding the file prefix) to write to.
-  void write_results(fs::path file_path) const override;
+  void write_results(std::string file_path) const override;
 
  private:
   /// Defines a constexpr instance of a tag which is std::true_type of the batch
@@ -165,12 +165,12 @@ class GenericSimulator final : public Simulator<Traits> {
                    std::size_t   element_idx  ) const;
 
   /// Outputs simulation data to a file with path \p path.
-  /// \param[in] path         The path to output the data to.
+  /// \param[in] prefix       The prefix for the output file.
   /// \param[in] output       Information to output to the stream.
   /// \param[in] offset       The offset into the simulation data to output from.
   /// \param[in] batch_size   The number of elements to output at a single time.
   /// \param[in] element_idx  The index of the element in the state to output.
-  void output_data(fs::path    path         ,
+  void output_data(std::string prefix       ,
                    std::string output       ,
                    std::size_t offset       ,
                    std::size_t batch_size   ,
@@ -209,13 +209,16 @@ void GenericSimulator<Traits>::simulate()
   auto mat     = material_t{};
 
   // For debugging!
-  _params.max_iters = 1;
+  _params.max_iters = 12;
 
   // debug::print::sim_config()
 
+  auto cfl  = _params.cfl;
   auto time = double{0.0};
   while (time < _params.run_time && iters < _params.max_iters)
   {
+    //_params.cfl = iters < 5 ? 0.18 : cfl;
+
     // debug::print::sim_status();
     auto input_it     = _data.input_iterator();
     auto output_it    = _data.output_iterator();
@@ -240,6 +243,11 @@ void GenericSimulator<Traits>::simulate()
 
     time  += _params.dt();
     iters += 1;
+
+    if (iters % 10 == 0)
+    {
+      printf("| ITERATIONS : %03lu | TIME %4.4f |\n", iters, time);
+    }
   }
 
   // Make sure that the state data is accessible on the host.
@@ -325,9 +333,9 @@ void GenericSimulator<Traits>::print_results() const
 
 
 template <typename Traits>
-void GenericSimulator<Traits>::write_results(fs::path file_path) const
+void GenericSimulator<Traits>::write_results(std::string prefix) const
 {
-  stream_output(file_path);
+  stream_output(prefix);
 }
 
 //===== Private ---------------------------------------------------------=====//
@@ -414,14 +422,15 @@ void GenericSimulator<Traits>::output_data(std::ostream& output_stream,
 }
 
 template <typename Traits>
-void GenericSimulator<Traits>::output_data(fs::path    /*path*/   ,
+void GenericSimulator<Traits>::output_data(std::string prefix     ,
                                            std::string output     ,
                                            std::size_t offset     ,
                                            std::size_t batch_size ,
                                            std::size_t element_idx) const
 {
   std::ofstream output_file;
-  output_file.open(output += ".txt", std::fstream::trunc);
+  auto filename = prefix + "-" + output + ".txt";
+  output_file.open(filename, std::fstream::trunc);
   output_batch(output_file, offset, batch_size, element_idx);
   output_file.close();
 }

@@ -37,8 +37,8 @@ struct HllcSolver {
   /// \tparam    Material The type of the Material.
   /// \tparam    Value    The value which defines the dimension.
   template <typename State, typename Material, std::size_t Value>
-  fluidity_host_device auto operator()(const State&     left    ,
-                                       const State&     right   ,
+  fluidity_host_device auto operator()(const State&     l       ,
+                                       const State&     r       ,
                                        Material&&       material,
                                        Dimension<Value> /*dim*/ ) const
   {
@@ -50,23 +50,21 @@ struct HllcSolver {
 
     constexpr auto dim = Dimension<Value>{};
 
-    const auto pl = left.primitive(material),
-               pr = right.primitive(material);
-    const auto cl = left.conservative(material),
-               cr = right.conservative(material);
-
+    // TODO: Use references for the know types, to avoid additional register
+    //       usage.
+    const auto pl  = l.primitive(material)   , pr = r.primitive(material);
+    const auto cl  = l.conservative(material), cr = r.conservative(material);
     const auto al  = material.sound_speed(pl), ar = material.sound_speed(pr);
     const auto adi = q_factor(material);
 
-    const auto v = pr.velocity(dim)      - pl.velocity(dim);
-    const auto d = pr.density()          - pl.density();
-    const auto p = pr.pressure(material) - pl.pressure(material);
+    const auto p_pvrs  = value_t{0.5} *
+      ((pl.pressure(material) + pr.pressure(material)) -
+        value_t{0.25} * (pr.velocity(dim) - pl.velocity(dim))
+                      * (pr.density() + pl.density())
+                      * (al + ar));
 
-    const auto p_star = 
-      std::max(
-        value_t{0},
-        value_t{0.5} * (p - (value_t{0.5} * (al + ar) * v * d))
-      );
+    // Pressure in the star region, as per Toro, Equation 10.67, page 331:
+    const auto p_star = std::max(value_t{0.0}, p_pvrs);
 
     // Test for far left region (outside of the star state):
     const auto wsl   = wavespeed(pl, p_star, -al, adi, material, dim);
@@ -106,7 +104,7 @@ struct HllcSolver {
   /// \param[in] material The material describing the system to solve.
   /// \tparam    Material The type of the material.
   template <typename Material>
-  fluidity_host_device static decltype(auto) q_factor(Material&& material)
+  fluidity_host_device static auto q_factor(Material&& material)
   {
     using value_t = std::decay_t<decltype(material.adiabatic())>;
     return (material.adiabatic() + value_t{1}) /
@@ -132,12 +130,12 @@ struct HllcSolver {
   /// \tparam    Material    The type of the material.
   /// \tparam    Value       The value which defines the dimension.
   template <typename T, typename State, typename Material, std::size_t Value>
-  fluidity_host_device static T wavespeed(const State&     state     ,
-                                          T                pstar     ,
-                                          T                sound_peed,
-                                          T                adi_factor, 
-                                          Material&&       material  ,
-                                          Dimension<Value> /*dim*/   )
+  fluidity_host_device static T wavespeed(const State&     state      ,
+                                          T                pstar      ,
+                                          T                sound_speed,
+                                          T                adi_factor , 
+                                          Material&&       material   ,
+                                          Dimension<Value> /*dim*/    )
   {
     using state_t = std::decay_t<State>;
     static_assert(state_t::format == state::FormType::primitive,
@@ -145,8 +143,6 @@ struct HllcSolver {
 
     // Define the dimension to ensure constexpr functionality:
     constexpr auto dim = Dimension<Value>{};
-
-    const auto sound_speed = material.sound_speed(state);
     // Rarefaction wave:
     if (pstar <= state.pressure(material))
     {
@@ -199,7 +195,7 @@ struct HllcSolver {
     //              dL(SL - vL) - dR(SR - vR)
     return ((stater.pressure(material) - statel.pressure(material))            +
             (statel.velocity(dim) * factorl) - (stater.velocity(dim) * factorr))
-           / (factorl - factorr);  
+           / (factorl - factorr);
   }
 
   /// Computes the star state, UL* or UR*, given by:

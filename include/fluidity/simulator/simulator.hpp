@@ -18,13 +18,9 @@
 
 #include <functional>
 #include <vector>
-#include <experimental/filesystem>
 
 namespace fluid {
 namespace sim   {
-
-// Alias for the filesystem.
-namespace fs = std::experimental::filesystem;
 
 /// The Simulator class defines the interface for simulation objects.
 /// \tparam Traits The traits of the simulator.
@@ -96,7 +92,7 @@ class Simulator {
   /// Writes the results of the simulation to the \p path using the \p prefix
   /// appended to the property which is output.
   /// \param[in] path   The file path (including the prefix) to write to.
-  virtual void write_results(fs::path path) const = 0;
+  virtual void write_results(std::string path) const = 0;
 
 };
 

@@ -107,7 +107,8 @@ TEST_F(muscl_reconstruction_1d_tests, linear_limiting)
   auto right = left.offset(1, dim_x);
 
   // Modify the right input state data:
-  for (const auto offset : range(std::size_t{0}, states.size() - left_offset - 1))
+  const auto range_end - states.size() - left_offset - 1;
+  for (const auto offset : range(std::size_t{0}, range_end))
   {
     auto state = right.offset(offset, dim_x);
     state->set_density(0.125);
@@ -119,7 +120,7 @@ TEST_F(muscl_reconstruction_1d_tests, linear_limiting)
     EXPECT_EQ(state->velocity(dim_x)   , 0.000);
   }
   // Perform the reconstruction:
-  auto  recon = reconstructor(left, material, dtdh, dim_x);
+  auto recon = reconstructor(left, material, dtdh, dim_x);
 
   // Test the results:
   constexpr auto precision = 0.00001;
