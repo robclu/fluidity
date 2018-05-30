@@ -32,11 +32,9 @@ template < typename     State
          >
 struct SimulationTraits {
  private:
-  /// Defines the traits of the solver for the simulation.
-  
+  /// Defines the type of state used to define internal states.
+  using state_internal_t = std::decay_t<State>;  
  public:
-  /// Defines the type of the state used for the simulation.
-  using state_t         = std::decay_t<State>;
   /// Defines the type of material used for the simulation.
   using material_t      = std::decay_t<Material>;
   /// Defines the type of the reconstructor used for the simulation.
@@ -48,16 +46,34 @@ struct SimulationTraits {
   /// Defines the type of the execution policty for the simulation.
   using execution_t     = ExecutionPolicy;
   /// Defines the type of the data used by the state.
-  using value_t         = typename state_t::value_t;
+  using value_t         = typename state_internal_t::value_t;
 
   /// Defines the number of spacial dimensions in the simulation.
-  static constexpr auto spacial_dims     = state_t::dimensions;
+  static constexpr auto spacial_dims     = state_internal_t::dimensions;
   /// Defines and instance of the execution policty.
   static constexpr auto execution_policy = execution_t{};
 
   /// Defines the traits of the solver.
   using solver_traits_t = 
     solver::SolverTraits<loader_t, reconstructor_t, flux_solver_t>;
+
+  /// Defines the type for primitive states for this solver.
+  using primitive_t = state::State< value_t
+                                  , state::FormType::primitive
+                                  , state_internal_t::dimensions
+                                  , state_internal_t::additional_components
+                                  , state_internal_t::storage_layout>;
+
+  /// Defines a type for conservative states for the solver.
+  using conservative_t = state::State< value_t
+                                     , state::FormType::conservative
+                                     , state_internal_t::dimensions
+                                     , state_internal_t::additional_components
+                                     , state_internal_t::storage_layout>;
+
+  /// Defines the type of the state used by the solver. The solver always uses
+  /// the conservative form of the state.
+  using state_t = conservative_t;
 
   /// Defines the type of the solver based on the desired implementation.
   using solver_t = 

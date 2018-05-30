@@ -93,7 +93,6 @@ class Simulator {
   /// appended to the property which is output.
   /// \param[in] path   The file path (including the prefix) to write to.
   virtual void write_results(std::string path) const = 0;
-
 };
 
 }} // namespace fluid::sim

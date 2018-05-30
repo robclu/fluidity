@@ -40,8 +40,8 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
   using storage_t = traits::storage_t<T, Dimensions, Components, Format>;
   /// Defines the type of the data elements in the state.
   using value_t   = std::decay_t<T>;
-/// Defines the type of this state.
-using self_t    = State;
+  /// Defines the type of this state.
+  using self_t    = State;
 
 /// Returns the format of the state.
 static constexpr FormType    format                = Form;

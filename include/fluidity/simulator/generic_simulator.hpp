@@ -50,7 +50,7 @@ class GenericSimulator final : public Simulator<Traits> {
   using dim_spec_t           = typename base_t::DimSpec;
 
  private:
-  /// Defines the type of the state data to store.
+  /// Defines the type of the state data to store, always conservative.
   using state_t     = typename traits_t::state_t;
   /// Defines the data type used in the state vector.
   using value_t     = typename state_t::value_t;
@@ -128,65 +128,16 @@ class GenericSimulator final : public Simulator<Traits> {
   /// Returns the dimension information for the simulator.
   auto dimension_info() const;
 
-  /// Outputs a batch of 1D or 2D data to the \p stream where the batch contains
-  /// \p batch_size number of total elements. The \p offset defines the offset
-  /// into the state container in 1D (flattened) form, and the element which is
-  /// output is the element at position \p element_index in the state vector.
-  /// \param[in] stream        The stream to output the element to.
-  /// \param[in] offset        The offset of the first element in the batch into
-  ///            the state container.
-  /// \param[in] batch_size    The size of the batch to output.
-  /// \param[in] element_index The index of the element in the state container.
-  /// \tparam    Stream        The type of the stream to output to.
-  template <typename Stream>
-  void output_batch(Stream&&    stream       ,
-                    std::size_t offset       ,
-                    std::size_t batch_size   ,
-                    std::size_t element_index) const;
-
   /// Implementation of the outputting functionality. The \p stream parameter
   /// is used to determine if the output is written to a file or if it is
   /// sent to the standard output stream.
+  /// 
+  /// This implementation currently only works for 1D data.
+  /// 
   /// \param[in] stream   The stream to output the results to.
   /// \tparam    Stream   The type of the output stream.
   template <typename Stream>
-  void stream_output(Stream&& stream) const;
-
-  /// Outputs simulation data to an output stream \p stream.
-  /// \param[in] stream       The output stream to send the output to.
-  /// \param[in] output       Information to output to the stream.
-  /// \param[in] offset       The offset into the simulation data to output from.
-  /// \param[in] batch_size   The number of elements to output at a single time.
-  /// \param[in] element_idx  The index of the element in the state to output.
-  void output_data(std::ostream& output_stream,
-                   std::string   output       ,
-                   std::size_t   offset       ,
-                   std::size_t   batch_size   ,
-                   std::size_t   element_idx  ) const;
-
-  /// Outputs simulation data to a file with path \p path.
-  /// \param[in] prefix       The prefix for the output file.
-  /// \param[in] output       Information to output to the stream.
-  /// \param[in] offset       The offset into the simulation data to output from.
-  /// \param[in] batch_size   The number of elements to output at a single time.
-  /// \param[in] element_idx  The index of the element in the state to output.
-  void output_data(std::string prefix       ,
-                   std::string output       ,
-                   std::size_t offset       ,
-                   std::size_t batch_size   ,
-                   std::size_t element_idx  ) const;
-
-  /// Returns the size of an output batch for the 1D case.
-  constexpr std::size_t get_batch_size(std::true_type) const
-  {
-    return dimension_info().size(dim_x);
-  }
-
-  /// Returns the size of an output batch for the case which is not 1D.
-  constexpr std::size_t get_batch_size(std::false_type) const
-  {
-    return dimension_info().size(dim_y);
-  }
+  void stream_output_1d(Stream&& stream) const;
 };
 
 //==--- Implementation -----------------------------------------------------==//
@@ -208,28 +159,21 @@ void GenericSimulator<Traits>::simulate()
   auto solver  = solver_t{};
   auto mat     = material_t{};
 
-  // For debugging!
-  _params.max_iters = 12;
+  // If debugging, set the max number of iterations:
+  //_params.max_iters = 20;
 
-  // debug::print::sim_config()
-
-  auto cfl  = _params.cfl;
-  auto time = double{0.0};
-  while (time < _params.run_time && iters < _params.max_iters)
+  auto cfl = _params.cfl;
+  while (_params.continue_simulation())
   {
-    //_params.cfl = iters < 5 ? 0.18 : cfl;
+    _params.cfl = _params.iters < 5 ? 0.18 : cfl;
 
-    // debug::print::sim_status();
     auto input_it     = _data.input_iterator();
     auto output_it    = _data.output_iterator();
     auto wavespeed_it = _data.wavespeed_iterator();
 
     set_wavespeeds(input_it, wavespeed_it, mat);
-    _params.update(max_element(_data.wavespeeds().begin(),
-                               _data.wavespeeds().end()));
-
-    // Set boundary ghost cells ...
-    // Set patch ghost cells ...
+    _params.update_time_delta(max_element(_data.wavespeeds().begin(),
+                                          _data.wavespeeds().end()));
 
     update(input_it       ,
            output_it      ,
@@ -240,14 +184,13 @@ void GenericSimulator<Traits>::simulate()
            blocks         ,
            _setter        );
     _data.swap_states();
+    _data.finalise_states();
 
-    time  += _params.dt();
-    iters += 1;
+    // If debugging, set option to print based on iterations check:
+    //std::string filename = "Debug_" + std::to_string(_params.iters);
+    //this->write_results(filename);
 
-    if (iters % 10 == 0)
-    {
-      printf("| ITERATIONS : %03lu | TIME %4.4f |\n", iters, time);
-    }
+    _params.update_simulation_info();
   }
 
   // Make sure that the state data is accessible on the host.
@@ -275,15 +218,16 @@ GenericSimulator<Traits>::configure_dimension(std::size_t /*dim*/,
 template <typename Traits>
 Simulator<Traits>* GenericSimulator<Traits>::configure_sim_time(double sim_time)
 {
-  _params.run_time = sim_time;
+  _params.sim_time = sim_time;
   return this;
 }
 
 template <typename Traits>
 void GenericSimulator<Traits>::fill_data(fillinfo_container_t&& fillers)
 {
-  using index_t = typename state_t::index;
-  auto& states  = _data.states();
+  using fill_state_t = typename traits_t::primitive_t;
+  using index_t      = typename fill_state_t::index;
+  auto& states       = _data.states();
 
   std::vector<int> indices = {};
   for (const auto& fillinfo : fillers) 
@@ -299,8 +243,11 @@ void GenericSimulator<Traits>::fill_data(fillinfo_container_t&& fillers)
   }
 
   /// Go over each of the dimensions and fill the data:
-  auto pos      = Array<float, 3>();
-  auto dim_info = dimension_info();
+  auto pos        = Array<float, 3>();
+  auto dim_info   = dimension_info();
+  auto fill_state = fill_state_t();
+  auto material   = material_t();
+
   for (std::size_t i = 0; i < states.total_size(); ++i)
   {
     unrolled_for<dimensions>([&] (auto d)
@@ -313,9 +260,11 @@ void GenericSimulator<Traits>::fill_data(fillinfo_container_t&& fillers)
     std::size_t prop_index = 0;
     for (const auto& filler : fillers)
     {
+
       const auto value = filler.filler(pos);
-      states[i][prop_index++] = value;
+      fill_state[prop_index++] = value;
     }
+    states[i] = fill_state.conservative(material);
   }
 
   // Make sure that the host and device data is
@@ -328,14 +277,18 @@ void GenericSimulator<Traits>::print_results() const
 {
   std::ostream stream(nullptr);
   stream.rdbuf(std::cout.rdbuf());
-  stream_output(stream);
+  stream_output_1d(stream);
 }
 
 
 template <typename Traits>
 void GenericSimulator<Traits>::write_results(std::string prefix) const
 {
-  stream_output(prefix);
+  std::ofstream output_file;
+  auto filename = prefix + ".dat";
+  output_file.open(filename, std::fstream::trunc);
+  stream_output_1d(output_file);
+  output_file.close(); 
 }
 
 //===== Private ---------------------------------------------------------=====//
@@ -352,87 +305,47 @@ auto GenericSimulator<Traits>::dimension_info() const
 }
 
 template <typename Traits> template <typename Stream>
-void GenericSimulator<Traits>::output_batch(Stream&&    stream       ,
-                                            std::size_t offset       ,
-                                            std::size_t batch_size   ,
-                                            std::size_t element_index) const
+void GenericSimulator<Traits>::stream_output_1d(Stream&& stream) const
 {
-  auto  dim_info = dimension_info();
-  auto& states   = _data.states();
-  for (const auto index : range(batch_size))
+  using index_t = typename traits_t::primitive_t::index;
+
+  // Offset to convert dimensions {0, 1, 2} into char values {x, y, z}
+  constexpr auto coord_char_offset = 120;
+  const     auto comment           = std::string("# ");
+
+  // Print the header:
+  stream << comment << "t = " << std::to_string(_params.run_time) << "\n";
+  int column = 1;
+  unrolled_for<dimensions>([&] (auto dim)
   {
-    stream << std::setw(8) << std::right
-           << std::fixed   << std::showpoint << std::setprecision(4)
-           << states[offset + index][element_index]
-           << ((index % dim_info.size(dim_x) == 0 && index != 0) ? "\n" : " ");
+    constexpr auto coord_value = dim + coord_char_offset;
+    stream << comment << "Column " << column++ << ": " 
+           << char{coord_value}    << " coordinate\n";
+  });
+  for (const auto& element_name : index_t::element_names())
+  {
+    stream << comment << "Column " << column++ << ": " << element_name << "\n";
   }
-}
 
-template <typename Traits> template <typename Stream>
-void GenericSimulator<Traits>::stream_output(Stream&& stream) const
-{
-  using index_t = typename state_t::index;
-
-  // We iterate over all dimensions past the first 2, and then output 2D pages
-  // for each of that data.
-  constexpr auto iterations = dimensions <= 2 ? 1 : dimensions - 2;
-
-  auto dim_info = dimension_info();
-  unrolled_for<iterations>([&, this] (auto dim)
+  // Print the state data:
+  auto state_iterator = _data.states().multi_iterator();
+  auto x_coord        = _params.resolution / 2;
+  auto material       = material_t();
+  auto state          = state_iterator->primitive(material);
+  for (const auto offset_x : range(dimension_info().size(dim_x)))
   {
-    const auto element_names = index_t::element_names();
-    const auto batch_size    = get_batch_size(batch_size_tag);
+    state = state_iterator.offset(offset_x, dim_x)->primitive(material);
 
-    for (const auto element_idx : range(element_names.size()))
+    stream << std::setw(8)   << std::left            << std::fixed
+           << std::showpoint << std::setprecision(4) << x_coord << " ";
+    for (const auto& element : state)
     {
-      constexpr auto dim_iterations = dimensions <= 2 ? 1 : dim_info.size(dim);
-
-      // Iterate over the elements in the dimension, and output a page (2D)
-      // matrix of data for that portion of data ...
-      for (const auto dim_idx : range(dim_iterations))
-      {
-        // If the data is 1 or 2 dimensional, then there is no offset, otherwise
-        // an offset is created for the page of 2D data which is being output.
-        constexpr auto page_number = dimensions <= 2 ? 0 : 3;
-
-        // Create the filename / header, which has the form:
-        // <element_name>_<page_number+dim>_<index in dimension>;
-        std::string left   = "_<", comma = ",", right = ">";
-        std::string output = element_names[element_idx]        + left
-                           + "p-" + std::to_string(page_number + dim) + comma
-                           + "d-" + std::to_string(dim_idx)           + right;
-
-        const auto offset = dim_idx * dim_info.offset(Dimension<dim>{});
-        output_data(stream, output, offset, batch_size, element_idx);
-      }
+      stream << std::setw(8)   << std::left            << std::fixed
+             << std::showpoint << std::setprecision(4) << element << " ";
     }
-  }); 
-}
-
-template <typename Traits>
-void GenericSimulator<Traits>::output_data(std::ostream& output_stream,
-                                           std::string   output       ,
-                                           std::size_t   offset       ,
-                                           std::size_t   batch_size   ,
-                                           std::size_t   element_idx  ) const
-{
-  output_stream << output << "\n";
-  output_batch(output_stream, offset, batch_size, element_idx);
-  output_stream << "\n";  
-}
-
-template <typename Traits>
-void GenericSimulator<Traits>::output_data(std::string prefix     ,
-                                           std::string output     ,
-                                           std::size_t offset     ,
-                                           std::size_t batch_size ,
-                                           std::size_t element_idx) const
-{
-  std::ofstream output_file;
-  auto filename = prefix + "-" + output + ".txt";
-  output_file.open(filename, std::fstream::trunc);
-  output_batch(output_file, offset, batch_size, element_idx);
-  output_file.close();
+    stream << "\n";
+    x_coord += _params.resolution;
+  }
 }
 
 }} // namespace fluid::sim

@@ -7,6 +7,7 @@
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 import math
 import os
 import sys
@@ -15,32 +16,37 @@ from matplotlib import rc
 
 if __name__ == "__main__":
   arg_count = len(sys.argv)
-  arg_index = 1
+  comment   = "#"
 
-  while (arg_index < arg_count):
-    file       = sys.argv[arg_index]
-    arg_index += 1
-    if not os.path.exists(file):
-      print("Invalid data file : {0}".format(file))
-      exit()
+  if (arg_count < 2):
+    print("Please specify name of data file.")
+    exit()
 
-    data     = np.genfromtxt(file)
-    data_x   = np.linspace(start=0, stop=data.size, num=data.size)
-    filename = os.path.basename(os.path.splitext(file)[0])
-
-    params      = [filename, "", ""]
-    param_index = 0
-    while (arg_index < arg_count):
-      if os.path.exists(sys.argv[arg_index]):
+  filename = sys.argv[1]
+  skip     = 0
+  time     = ""
+  names    = []
+  with open(filename, "r") as f:
+    for line in f:
+      if line[0] != comment:
         break
-      params[param_index] = sys.argv[arg_index]
-      param_index        += 1
-      arg_index          += 1
-    
-    plt.figure()
-    plt.plot(data_x, data)
-    plt.title(params[0])
-    plt.xlabel(params[1])
-    plt.ylabel(params[2])
+      skip += 1
 
-plt.show()
+      if line.find("t =") != -1:
+        time = line[line.find("t"):].replace(" ", "").replace("\n", "")
+        continue
+
+      names.append(line[line.find(":")+1:].replace(" ", "").replace("\n", ""))
+
+  df = pd.read_csv(filename, delim_whitespace=True, names=names, skiprows=skip)
+
+  position = df[names[0]]
+  for i in range(1, len(names)):
+    name = names[i]
+    plt.figure()
+    plt.plot(position, df[name])
+    plt.title(time)
+    plt.xlabel(names[0])
+    plt.ylabel(name)
+
+  plt.show()

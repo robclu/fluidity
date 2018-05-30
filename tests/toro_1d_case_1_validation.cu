@@ -62,10 +62,10 @@ int main(int argc, char** argv)
 
   auto simulator = std::make_unique<simulator_t>();
   simulator->configure_dimension(fluid::dim_x, { 0.01, 1.0 })
-           ->configure_sim_time(0.1)
+           ->configure_sim_time(0.2)
            ->configure_cfl(0.18);
 
-  constexpr auto membrane = real_t{0.3};
+  constexpr auto membrane = real_t{0.5};
   simulator->fill_data({
     {
       "density", [] (const auto& pos)

@@ -70,9 +70,6 @@ struct SplitSolver {
                                   T                     dtdh    ,
                                   const BoundarySetter& setter  ) const
   {
-    // Defines the type of a conservative state:
-    using conservative_t = std::decay_t<decltype(in->conservative(material))>;
-
     auto global_iter = get_global_iterator(in);
     auto patch_iter  = get_patch_iterator(in);
 
@@ -80,27 +77,20 @@ struct SplitSolver {
     *patch_iter = *global_iter;
     __syncthreads();
 
-    // DPERECATED:
-    // loader.load_patch(patch_iter, dim_x);
-    
     // Load in the data at the global and patch boundaries:
     loader_t::load_boundary(global_iter, patch_iter, dim_x, setter);
-    //__syncthreads();
-
-    // Run the rest of the sovler .. =D
-    auto in_fwrd = make_recon_input(patch_iter, material, dtdh, fwrd_input);
-    auto in_back = make_recon_input(patch_iter, material, dtdh, back_input);
-
-    auto f_flux = flux_evaluator(in_fwrd.left, in_fwrd.right, material, dim_x);
-    //in_fwrd.left = flux_evaluator(in_fwrd.left, in_fwrd.right, material, dim_x);
-    auto b_flux = flux_evaluator(in_back.left, in_back.right, material, dim_x);
-    //in_back.left = flux_evaluator(in_back.left, in_back.right, material, dim_x);
     
-    const auto u_updated = conservative_t{
-      patch_iter->conservative(material) + dtdh * (b_flux - f_flux)};
+    // Backward flux face:
+    auto input = make_recon_input(patch_iter, material, dtdh, back_input);
+    auto flux  = flux_evaluator(input.left, input.right, material, dim_x);
 
+    // Update flux with front face, to make $F_{i - 1/2} - F_{i + 1/2}$:
+    input = make_recon_input(patch_iter, material, dtdh, fwrd_input);
+    flux  = flux - flux_evaluator(input.left, input.right, material, dim_x);
+
+    // Write the output back to the global state data:
     global_iter  = get_global_iterator(out);
-    *global_iter = u_updated.primitive(material);
+    *global_iter = *patch_iter + dtdh * flux;
   }
 
  private:
