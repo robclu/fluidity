@@ -160,7 +160,7 @@ void GenericSimulator<Traits>::simulate()
   auto mat     = material_t{};
 
   // If debugging, set the max number of iterations:
-  //_params.max_iters = 20;
+  //_params.max_iters = 10;
 
   auto cfl = _params.cfl;
   while (_params.continue_simulation())
@@ -184,7 +184,7 @@ void GenericSimulator<Traits>::simulate()
            blocks         ,
            _setter        );
     _data.swap_states();
-    _data.finalise_states();
+    //_data.finalise_states();
 
     // If debugging, set option to print based on iterations check:
     //std::string filename = "Debug_" + std::to_string(_params.iters);

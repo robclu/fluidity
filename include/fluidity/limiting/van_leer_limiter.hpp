@@ -41,7 +41,7 @@ struct VanLeer {
   /// \tparam     Iterator  The type of the state iterator.
   /// \tparam     Value     The value which defines the dimension.
   template <typename Iterator, std::size_t Value>
-  fluidity_host_device constexpr decltype(auto)
+  fluidity_host_device constexpr auto
   operator()(Iterator&& state_it, Dimension<Value> /*dim*/) const
   {
     using state_t = std::decay_t<decltype(*state_it)>;
@@ -50,13 +50,14 @@ struct VanLeer {
     constexpr auto dim = Dimension<Value>{};
     Array<value_t, state_t::elements> limited;
     
-    const auto cent_diff = state_it.central_diff(dim);
     const auto fwrd_diff = state_it.forward_diff(dim);
     const auto back_diff = state_it.backward_diff(dim);
 
     unrolled_for<state_t::elements>([&] (auto i)
     {
-      limited[i] = limit_single(cent_diff[i], back_diff[i], fwrd_diff[i]);
+      limited[i] = value_t{0.5} 
+                 * limit_single(back_diff[i], fwrd_diff[i])
+                 * (back_diff[i] + fwrd_diff[i]);
     });
     return limited;
   }
@@ -68,26 +69,22 @@ struct VanLeer {
   ///   \begin{equation}
   ///     \Eita = 
   ///       \begin{cases}
-  ///         \textrm{min}(2|\alpha_L|, 2|\alpha_R|, \alpha_C)
-  ///         0
   ///       \end{cases}
   ///   \end{equation}
   ///   
-  /// where $\alpha_{L,R,C}$ are the backward, forward, and central differences.
+  /// where $\alpha_{L,R}$ are the backward and forward differences.
   /// 
-  /// \param[in] central The central state to limit on.
   /// \param[in] left    The left state to limit on.
   /// \param[in] right   The right state to limit on.
   template <typename T>
-  fluidity_host_device constexpr auto
-  limit_single(T&& central, T&& left, T&& right) const
+  fluidity_host_device constexpr auto limit_single(T&& left, T&& right) const
   {
     using value_t = std::decay_t<T>;
-    return (left * right < value_t{0})
-           ? value_t{0}
-           : math::signum(central)
-           * std::min(value_t{0.5} * std::abs(central),
-                      value_t{2.0} * std::min(std::abs(left), std::abs(right)));
+    constexpr auto zero = value_t{0}, one = value_t{1}, two = value_t{2};
+
+    const auto r = left / right;
+    return r <= zero || right == zero 
+           ? zero : two * std::min(r, one) / (one + r);
   }
 };
 

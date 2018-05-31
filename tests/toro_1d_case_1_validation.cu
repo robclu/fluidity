@@ -13,7 +13,7 @@
 //
 //==------------------------------------------------------------------------==//
 
-#include <fluidity/limiting/van_leer_limiter.hpp>
+#include <fluidity/limiting/limiters.hpp>
 #include <fluidity/material/ideal_gas.hpp>
 #include <fluidity/reconstruction/muscl_reconstructor.hpp>
 #include <fluidity/solver/hllc_solver.hpp>
@@ -65,7 +65,7 @@ int main(int argc, char** argv)
            ->configure_sim_time(0.2)
            ->configure_cfl(0.18);
 
-  constexpr auto membrane = real_t{0.5};
+  constexpr auto membrane = real_t{0.3};
   simulator->fill_data({
     {
       "density", [] (const auto& pos)
@@ -87,12 +87,6 @@ int main(int argc, char** argv)
     }
   });
 
-  std::cout << "Initial data:\n";
-  simulator->print_results();
-
   simulator->simulate();
-
-  std::cout << "Final data:\n";
-  simulator->print_results();
   simulator->write_results("toro_1d_case_1_results");
 }

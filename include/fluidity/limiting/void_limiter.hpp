@@ -1,4 +1,4 @@
-//==--- fluidity/limiting/linear_limiter.hpp --------------- -*- C++ -*- ---==//
+//==--- fluidity/limiting/void_limiter.hpp ----------------- -*- C++ -*- ---==//
 //            
 //                                Fluidity
 // 
@@ -8,32 +8,27 @@
 //
 //==------------------------------------------------------------------------==//
 //
-/// \file  linear_limiter.hpp
-/// \brief This file defines an implementation of a limiter which performs first
-///        order limiting.
+/// \file  void_limiter.hpp
+/// \brief This file defines an implementation of a limiter which does nothing.
 //
 //==------------------------------------------------------------------------==//
 
-#ifndef FLUIDITY_LIMITING_LINEAR_LIMITER_HPP
-#define FLUIDITY_LIMITING_LINEAR_LIMITER_HPP
+#ifndef FLUIDITY_LIMITING_VOID_LIMITER_HPP
+#define FLUIDITY_LIMITING_VOID_LIMITER_HPP
 
 #include <fluidity/dimension/dimension.hpp>
 #include <fluidity/utility/portability.hpp>
-#include <type_traits>
 
 namespace fluid {
 namespace limit {
 
-/// The Linear limiter class defines a functor which performs linear limiting,
-/// as per:
-/// 
-///   Toro, page 506, equation 14.37, w = 0
-struct Linear {
+/// The Void limiter class defines a functor which just returns the state.
+struct Void {
   /// Defines the type of this class.
-  using self_t = Linear;
+  using self_t = Void;
 
   /// Defines the number of elements required for limiting.
-  static constexpr std::size_t width = 2;
+  static constexpr std::size_t width = 0;
 
   /// Implementation of the linear limiting functionality.
   /// \param[in]  state_it  The state iterator to limit.
@@ -44,15 +39,11 @@ struct Linear {
   fluidity_host_device constexpr auto
   operator()(Iterator&& state_it, Dimension<Value> /*dim*/) const
   {
-    using value_t        = typename std::decay_t<decltype(*state_it)>::value_t;
-    constexpr auto dim   = Dimension<Value>();
-    constexpr auto scale = value_t{0.5};
-
-    return scale * (state_it.backward_diff(dim) + state_it.forward_diff(dim));
+    return *state_it;
   }
 };
 
 }} // namespace fluid::limit
 
 
-#endif // FLUIDITY_LIMITING_LINEAR_LIMITER_HPP
+#endif // FLUIDITY_LIMITING_VOID_LIMITER_HPP

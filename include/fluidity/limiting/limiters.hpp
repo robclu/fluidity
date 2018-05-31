@@ -18,5 +18,6 @@
 
 #include "linear_limiter.hpp"
 #include "van_leer_limiter.hpp"
+#include "void_limiter.hpp"
 
 #endif // FLUIDITY_LIMITING_LIMTIERS_HPP
