@@ -30,7 +30,7 @@ using primitive1d_t   = state::primitive_t<real_t, 1>;
 // Defines the material type to use for the tests.
 using material_t      = material::IdealGas<real_t>;
 // Defines the type of the limiter for the simulations.
-using reconstructor_t = recon::MHReconstructor<real_t, limit::VanLeer>;
+using reconstructor_t = recon::MHReconstructor<real_t, limit::Superbee>;
 /// Defines the execution policy of the solver, CPU / GPU.
 using execution_t     = fluid::exec::gpu_type;
 
@@ -63,18 +63,18 @@ int main(int argc, char** argv)
   auto simulator = std::make_unique<simulator_t>();
   simulator->configure_dimension(fluid::dim_x, { 0.01, 1.0 })
            ->configure_sim_time(0.2)
-           ->configure_cfl(0.18);
+           ->configure_cfl(0.9);
 
   constexpr auto membrane = real_t{0.3};
   simulator->fill_data({
     {
-      "density", [] (const auto& pos)
+      "rho", [] (const auto& pos)
       {
         return pos[0] < membrane ? 1.0 : 0.125;
       }
     },
     {
-      "pressure", [] (const auto& pos)
+      "p", [] (const auto& pos)
       {
         return pos[0] < membrane ? 1.0 : 0.1;
       }

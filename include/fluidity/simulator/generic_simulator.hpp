@@ -184,11 +184,11 @@ void GenericSimulator<Traits>::simulate()
            blocks         ,
            _setter        );
     _data.swap_states();
-    //_data.finalise_states();
+    _data.finalise_states();
 
     // If debugging, set option to print based on iterations check:
-    //std::string filename = "Debug_" + std::to_string(_params.iters);
-    //this->write_results(filename);
+    std::string filename = "Debug_" + std::to_string(_params.iters);
+    this->write_results(filename);
 
     _params.update_simulation_info();
   }

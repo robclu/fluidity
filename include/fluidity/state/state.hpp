@@ -85,8 +85,8 @@ struct index {
     // ASCII offst to char code x:
     constexpr int ascii_offset = 120;
 
-    std::vector<std::string> names = { "density" };
-    names.emplace_back(format == FormType::primitive ? "pressure" : "energy");
+    std::vector<std::string> names = { "rho" };
+    names.emplace_back(format == FormType::primitive ? "p" : "E");
 
     unrolled_for<dimensions>([&names] (auto i)
     {

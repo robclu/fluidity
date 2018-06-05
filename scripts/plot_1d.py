@@ -14,18 +14,15 @@ import sys
 
 from matplotlib import rc
 
-if __name__ == "__main__":
-  arg_count = len(sys.argv)
-  comment   = "#"
 
-  if (arg_count < 2):
-    print("Please specify name of data file.")
-    exit()
-
-  filename = sys.argv[1]
-  skip     = 0
-  time     = ""
-  names    = []
+def get_data(filename):
+  """ Gets the data from the file filename, returing a pandas dataframe with the
+      data and a list of the column names for the dataframe.
+  """
+  comment = "#"
+  skip    = 0
+  time    = ""
+  names   = []
   with open(filename, "r") as f:
     for line in f:
       if line[0] != comment:
@@ -40,7 +37,27 @@ if __name__ == "__main__":
 
   df = pd.read_csv(filename, delim_whitespace=True, names=names, skiprows=skip)
 
-  position = df[names[0]]
+  return df, time, names
+
+if __name__ == "__main__":
+  arg_count         = len(sys.argv)
+  ref_file_provided = False
+
+  if (arg_count < 2):
+    print("Please specify name of data file.")
+    exit()
+
+  if arg_count == 3:
+    ref_file_provided = True
+
+  # Get the data and the data names:
+  df, time, names = get_data(sys.argv[1])
+  position        = df[names[0]]
+
+  # If a reference file is provided, get that data:
+  if ref_file_provided:
+    df_ref, time_ref, names_ref = get_data(sys.argv[2])
+    position_ref                = df_ref[names_ref[0]]
 
   # Max number of plots in X and Y dimensions:
   max_x_plots = 2
@@ -61,10 +78,24 @@ if __name__ == "__main__":
   for i in range(1, len(names)):
     name = names[i]
     plt.subplot(x_plots, y_plots, i)
-    plt.plot(position, df[name])
+    plt.plot(position, df[name], "-o")
+
+    if ref_file_provided:
+      for index in range(len(names_ref)):
+        if names_ref[index].find(name) != -1:
+          break
+
+      if index == len(names_ref):
+        break;
+
+      plt.plot(position_ref, df_ref[names_ref[index]], "-o")
+
     plt.xlabel(names[0])
     plt.ylabel(name)
 
-  title = "Simulation as at " + time
+  title = "Simulation as at " + time 
+  if ref_file_provided:
+    title += ", " + time_ref
+    
   plt.suptitle(title)
   plt.show()
