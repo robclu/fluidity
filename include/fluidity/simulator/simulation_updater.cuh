@@ -64,7 +64,12 @@ fluidity_global void set_wavespeeds_impl(StateIt  state_it    ,
   const auto idx = flattened_id(dim_x);
   if (idx < wavespeed_it.size(dim_x))
   {
-    wavespeed_it[idx] = state_it[idx].max_wavespeed(std::move(mat));
+    wavespeed_it[idx] = state_it[idx].max_wavespeed(mat);
+
+    if (wavespeed_it[idx] > 10)
+    {
+      printf("ERROR: %3lu\n", idx);
+    }
   }
 #endif // __CUDACC__
 }

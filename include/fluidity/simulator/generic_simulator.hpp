@@ -172,8 +172,11 @@ void GenericSimulator<Traits>::simulate()
     auto wavespeed_it = _data.wavespeed_iterator();
 
     set_wavespeeds(input_it, wavespeed_it, mat);
-    _params.update_time_delta(max_element(_data.wavespeeds().begin(),
-                                          _data.wavespeeds().end()));
+    auto max_ws = max_element(_data.wavespeeds().begin(),
+                              _data.wavespeeds().end());
+
+    printf("Max wavespeed: %4.4f\n", max_ws);
+    _params.update_time_delta(max_ws);
 
     update(input_it       ,
            output_it      ,

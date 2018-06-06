@@ -44,11 +44,8 @@ struct Linear {
   fluidity_host_device constexpr auto
   operator()(Iterator&& state_it, Dimension<Value> /*dim*/) const
   {
-    using value_t        = typename std::decay_t<decltype(*state_it)>::value_t;
-    constexpr auto dim   = Dimension<Value>();
-    constexpr auto scale = value_t{0.5};
-
-    return scale * (state_it.backward_diff(dim) + state_it.forward_diff(dim));
+    using value_t = typename std::decay_t<decltype(*state_it)>::value_t;
+    return value_t{0} * *state_it;
   }
 };
 

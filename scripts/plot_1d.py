@@ -86,7 +86,7 @@ if __name__ == "__main__":
           break
 
       if index == len(names_ref):
-        break;
+        break
 
       plt.plot(position_ref, df_ref[names_ref[index]], "-o")
 

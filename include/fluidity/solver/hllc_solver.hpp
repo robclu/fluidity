@@ -245,7 +245,7 @@ struct HllcSolver {
         scale_factor
       * (e_div_rho
       +  (star_speed - state.velocity(dim))
-      *  (star_speed + state.pressure(material) / scale_factor)
+      *  (star_speed + state.pressure(material) / state_factor)
         );
     return temp;
   }

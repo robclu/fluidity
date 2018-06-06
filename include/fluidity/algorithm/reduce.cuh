@@ -56,6 +56,7 @@ fluidity_global void reduce_impl(Iterator    begin  ,
   {
     // Create a shared memory multidimensional iterator:
     auto iter = make_multidim_iterator<value_t, dim_info_t>();
+    iter.shift(thread_id(dim_x), dim_x);
 
     // Load the data into shared memory:
     *iter = begin[index];
@@ -117,9 +118,9 @@ auto reduce(Iterator&& begin, Iterator&& end, Pred&& pred, Args&&... args)
 
   auto host_results = dev_results.as_host();
   value_t result    = host_results[0];
-  for (const auto& e : host_results)
+  for (const auto& i : range(num_blocks.x))
   {
-    pred(result, e);
+    pred(result, host_results[i]);
   }
   return result;
 #endif // __CUDACC__ 

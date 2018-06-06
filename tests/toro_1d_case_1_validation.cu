@@ -30,7 +30,7 @@ using primitive1d_t   = state::primitive_t<real_t, 1>;
 // Defines the material type to use for the tests.
 using material_t      = material::IdealGas<real_t>;
 // Defines the type of the limiter for the simulations.
-using reconstructor_t = recon::MHReconstructor<real_t, limit::Superbee>;
+using reconstructor_t = recon::MHReconstructor<real_t, limit::VanLeer>;
 /// Defines the execution policy of the solver, CPU / GPU.
 using execution_t     = fluid::exec::gpu_type;
 
