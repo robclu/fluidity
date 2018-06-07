@@ -17,6 +17,7 @@
 #ifndef FLUIDITY_LIMITING_LINEAR_LIMITER_HPP
 #define FLUIDITY_LIMITING_LINEAR_LIMITER_HPP
 
+#include <fluidity/container/array.hpp>
 #include <fluidity/dimension/dimension.hpp>
 #include <fluidity/utility/portability.hpp>
 #include <type_traits>
@@ -33,7 +34,7 @@ struct Linear {
   using self_t = Linear;
 
   /// Defines the number of elements required for limiting.
-  static constexpr std::size_t width = 2;
+  static constexpr std::size_t width = 1;
 
   /// Implementation of the linear limiting functionality.
   /// \param[in]  state_it  The state iterator to limit.
@@ -44,8 +45,16 @@ struct Linear {
   fluidity_host_device constexpr auto
   operator()(Iterator&& state_it, Dimension<Value> /*dim*/) const
   {
-    using value_t = typename std::decay_t<decltype(*state_it)>::value_t;
-    return value_t{0} * *state_it;
+    using state_t     = typename std::decay_t<decltype(*state_it)>;
+    using value_t     = typename state_t::value_t;
+    using container_t = Array<value_t, state_t::elements>;
+
+    container_t container;
+    unrolled_for<state_t::elements>([&] (auto i)
+    {
+      container[i] = value_t{0};
+    });
+    return container;
   }
 };
 

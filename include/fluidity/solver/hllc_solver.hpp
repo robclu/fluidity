@@ -80,15 +80,15 @@ struct HllcSolver {
     const auto ws_star = star_speed(pl, pr, wsl, wsr, material, dim);
 
     // Left star region, return FL*
+    auto u_star = star_state(pl, wsl, ws_star, material, dim);
     if (value_t{0} <= ws_star)
     {
-      const auto ul_star = star_state(pl, wsl, ws_star, material, dim);
-      return fluxl + wsl * (ul_star - cl);
+      return fluxl + wsl * (u_star - cl);
     }
 
     // Right star region, return FR*:
-    const auto ur_star = star_state(pr, wsr, ws_star, material, dim);
-    return fluxr + wsr * (ur_star - cr);
+    u_star = star_state(pr, wsr, ws_star, material, dim);
+    return fluxr + wsr * (u_star - cr);
   }
 
  private:

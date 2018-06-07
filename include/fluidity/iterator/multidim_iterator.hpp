@@ -149,8 +149,20 @@ struct MultidimIterator : public DimensionInfo {
     return _ptr;
   }
 
-  /// Overload of operator-> to access the value the iterator points to as const.
+  /// Overload of operator-> to access the value the iterator points to.
   fluidity_host_device constexpr const_pointer_t operator->() const
+  {
+    return _ptr;
+  }
+
+  /// Gets a raw pointer to the data.
+  fluidity_host_device constexpr pointer_t get_ptr()
+  {
+    return _ptr;
+  }
+
+  /// Gets a const raw pointer to the data.
+  fluidity_host_device constexpr const_pointer_t get_ptr() const
   {
     return _ptr;
   }

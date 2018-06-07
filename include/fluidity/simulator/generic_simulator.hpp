@@ -78,10 +78,7 @@ class GenericSimulator final : public Simulator<Traits> {
   GenericSimulator() {}
 
   /// Cleans up all resources acquired by the simulator.
-  ~GenericSimulator() 
-  {
-    printf("Destroying simulator!\n");
-  }
+  ~GenericSimulator() {}
 
   /// Runs the simulation until completion.
   void simulate() override;
@@ -162,6 +159,8 @@ void GenericSimulator<Traits>::simulate()
   // If debugging, set the max number of iterations:
   //_params.max_iters = 10;
 
+  _params.print_complete_summary();
+
   auto cfl = _params.cfl;
   while (_params.continue_simulation())
   {
@@ -171,13 +170,13 @@ void GenericSimulator<Traits>::simulate()
     auto output_it    = _data.output_iterator();
     auto wavespeed_it = _data.wavespeed_iterator();
 
+    // Set the wavespeed data based on the updated state data from the previous
+    // iteration, and then update sim time delta based on max wavespeed:
     set_wavespeeds(input_it, wavespeed_it, mat);
-    auto max_ws = max_element(_data.wavespeeds().begin(),
-                              _data.wavespeeds().end());
+    _params.update_time_delta(
+      max_element(_data.wavespeeds().begin(),_data.wavespeeds().end()));
 
-    printf("Max wavespeed: %4.4f\n", max_ws);
-    _params.update_time_delta(max_ws);
-
+    _params.print_current_status();
     update(input_it       ,
            output_it      ,
            solver         ,
@@ -186,14 +185,14 @@ void GenericSimulator<Traits>::simulate()
            threads        ,
            blocks         ,
            _setter        );
+    _params.update_simulation_info();
     _data.swap_states();
-    _data.finalise_states();
 
+    // Debugging ...
+    _data.finalise_states();
     // If debugging, set option to print based on iterations check:
     std::string filename = "Debug_" + std::to_string(_params.iters);
     this->write_results(filename);
-
-    _params.update_simulation_info();
   }
 
   // Make sure that the state data is accessible on the host.
@@ -339,12 +338,12 @@ void GenericSimulator<Traits>::stream_output_1d(Stream&& stream) const
   {
     state = state_iterator.offset(offset_x, dim_x)->primitive(material);
 
-    stream << std::setw(8)   << std::left            << std::fixed
-           << std::showpoint << std::setprecision(4) << x_coord << " ";
+    stream << std::setw(12)   << std::left            << std::fixed
+           << std::showpoint << std::setprecision(8) << x_coord << " ";
     for (const auto& element : state)
     {
-      stream << std::setw(8)   << std::left            << std::fixed
-             << std::showpoint << std::setprecision(4) << element << " ";
+      stream << std::setw(12)   << std::left            << std::fixed
+             << std::showpoint << std::setprecision(8) << element << " ";
     }
     stream << "\n";
     x_coord += _params.resolution;

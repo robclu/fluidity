@@ -84,6 +84,35 @@ struct Parameters {
     return _dt / resolution;
   }
 
+  /// Prints the status of the parameters which change during a simulation.
+  void print_current_status() const
+  {
+    printf(
+      "------------------------------------------------------------\n"
+      "| ITERATION      | %39lu |\n"
+      "| TIME DELTA     | %39.4f |\n"
+      "| DT/DH          | %39.4f |\n"
+      "| RUN TIME       | %39.4f |\n"
+      "------------------------------------------------------------\n",
+      iters, _dt, dt_dh(), run_time
+    );
+  }
+
+  /// Prints a summary of the parameters, useful for debugging.
+  void print_complete_summary() const
+  {
+    printf(
+      "------------------------------------------------------------\n"
+      "| RESOLUTION     | %39.4f |\n"
+      "| CFL            | %39.4f |\n"
+      "| SIM TIME       | %39.4f |\n"
+      "| MAX ITERATIONS | %39lu |\n"
+      "------------------------------------------------------------\n",
+      resolution, cfl, sim_time, max_iters
+    );
+    print_current_status();
+  }
+
  private:
   value_t _dt = 0.0; //!< Time delta for the simulation.
 };

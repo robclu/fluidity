@@ -14,6 +14,10 @@ import sys
 
 from matplotlib import rc
 
+plt.rc('xtick', labelsize=25) 
+plt.rc('ytick', labelsize=25) 
+plt.rc('text', usetex=True)
+plt.rc('font', family='serif')
 
 def get_data(filename):
   """ Gets the data from the file filename, returing a pandas dataframe with the
@@ -43,20 +47,35 @@ if __name__ == "__main__":
   arg_count         = len(sys.argv)
   ref_file_provided = False
 
+  separate_plots = False
+  sep_plots_arg  = 0
+  file_index     = 1
+  for i in range(arg_count):
+    if (sys.argv[i] == '--sepplots'):
+      separate_plots = True
+      sep_plots_arg  = i
+
   if (arg_count < 2):
     print("Please specify name of data file.")
     exit()
 
-  if arg_count == 3:
+  if arg_count == 3 + separate_plots:
     ref_file_provided = True
+    ref_file_index = 3 if separate_plots else 2
+
+  for i in range(1, arg_count):
+    if i == sep_plots_arg:
+      continue
+    file_index = i
+    break
 
   # Get the data and the data names:
-  df, time, names = get_data(sys.argv[1])
+  df, time, names = get_data(sys.argv[file_index])
   position        = df[names[0]]
 
   # If a reference file is provided, get that data:
   if ref_file_provided:
-    df_ref, time_ref, names_ref = get_data(sys.argv[2])
+    df_ref, time_ref, names_ref = get_data(sys.argv[ref_file_index])
     position_ref                = df_ref[names_ref[0]]
 
   # Max number of plots in X and Y dimensions:
@@ -77,7 +96,11 @@ if __name__ == "__main__":
   # Create the subplots:
   for i in range(1, len(names)):
     name = names[i]
-    plt.subplot(x_plots, y_plots, i)
+
+    if separate_plots:
+      plt.figure()
+    else:
+      plt.subplot(x_plots, y_plots, i)
     plt.plot(position, df[name], "-o")
 
     if ref_file_provided:
@@ -92,6 +115,9 @@ if __name__ == "__main__":
 
     plt.xlabel(names[0])
     plt.ylabel(name)
+
+    if separate_plots:
+      plt.savefig(name + ".png", Transparent=True)
 
   title = "Simulation as at " + time 
   if ref_file_provided:

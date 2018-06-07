@@ -79,7 +79,7 @@ struct SplitSolver {
 
     // Load in the data at the global and patch boundaries:
     loader_t::load_boundary(global_iter, patch_iter, dim_x, setter);
-    
+
     // Backward flux face:
     auto input = make_recon_input(patch_iter, material, dtdh, back_input);
     auto flux  = flux_evaluator(input.left, input.right, material, dim_x);
@@ -88,9 +88,7 @@ struct SplitSolver {
     input = make_recon_input(patch_iter, material, dtdh, fwrd_input);
     flux  = flux - flux_evaluator(input.left, input.right, material, dim_x);
 
-    // Write the output back to the global state data:
-    global_iter  = get_global_iterator(out);
-    *global_iter = *patch_iter + dtdh * flux;
+    *get_global_iterator(out) = *patch_iter + dtdh * flux;
   }
 
  private:
@@ -118,7 +116,7 @@ struct SplitSolver {
   fluidity_device_only auto get_global_iterator(Iterator&& it) const
   {
     using dim_info_t = DimInfo<num_dimensions>;
-    auto output_it   = make_multidim_iterator(&(*it)                    ,
+    auto output_it   = make_multidim_iterator(it.get_ptr()              ,
                                               dim_info_t{it.size(dim_x)});
     return output_it.offset(flattened_id(dim_x), dim_x);
   }
