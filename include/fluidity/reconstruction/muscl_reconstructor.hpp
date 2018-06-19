@@ -21,144 +21,223 @@
 #include <fluidity/dimension/thread_index.hpp>
 #include <fluidity/utility/portability.hpp>
 
+#include "reconstructor.hpp"
+
 namespace fluid {
 namespace recon {
 
-/// The MusclHancock struct defines a functor which uses the MUSCL-Hancock
-/// scheme to reconstruct a given state vector. The implementation overloads
-/// the function call operator to invoke the reconstructor.
-/// 
-/// The class is templated on the slope limiter so that different versions of
-/// the MUSCL reconstructor can be composed.
-/// 
-/// \tparam SlopeLimter The type of the sloper limiter to use.
-template <typename T, typename SlopeLimiter>
-struct MHReconstructor {
+/// The MHReconstructor struct implements the reconstruction interface to allow
+/// the reconstruction of state data using the MUSCL-Hancock method.
+/// \tparam Limter The type of the sloper limiter to use.
+template <typename Limiter>
+struct MHReconstructor : public Reconstructor<MHReconstructor<Limiter>> {
   /// Defines the type of the slope limiter used by the reconstructor.
-  using limiter_t = SlopeLimiter;
-  /// Defines the data type used by the slope limiter, and hence the
-  /// reconstructor.
-  using value_t   = std::decay_t<T>;
+  using limiter_t = Limiter;
 
   /// Sets the number of elements which are required in the backward and forward
   /// directions during the reconstruction process.
   static constexpr size_t width = 2;
 
  private:
-  /// Defines the value of the reconstruction application to a forward face.
-  static constexpr int  forward_face  = 1;
-  /// Defiens the value of the reconstruction application to a backward face.
-  static constexpr int  backward_face = -1;
-  /// Defines a vector with all its values being a quarter.
-  static constexpr auto quarter       = value_t{0.25};
-  /// Defines a vector with all its values being a half.
-  static constexpr auto half          = value_t{0.5};
-  /// Defines a vector with all its values being one.
-  static constexpr auto one           = value_t{1.0};
+  /// Defines the value of the reconstruction application to a right face.
+  static constexpr auto right_face = int{1};
+  /// Defiens the value of the reconstruction application to a left face.
+  static constexpr auto left_face  = int{-1};
+
+  /// Defines a struct which can be used to overload implementations of the
+  /// reconstruction for different faces.
+  /// \tparam Face The face to overload for.
+  template <int Face> struct FaceSelector {};
+
+  /// Defines an alias for a right face overload.
+  using right_face_t = FaceSelector<right_face>;
+  /// Defines an alias for a left face overload.
+  using left_face_t  = FaceSelector<left_face>;
+
+  /// Defines an intance of a left face overload type.
+  static constexpr auto left_face_select  = left_face_t{};
+  /// Defines an intance of a right face overload type.
+  static constexpr auto right_face_select = right_face_t{};
+
+  /// Creates the evolution of the data, returning the appropriate reconstructed
+  /// data. This overload returns the evolved data for the right face in the
+  /// x-direction (up face in the y dimension, in face in the z direction).
+  /// \param[in] state_it An iterator over the state data.
+  /// \param[in] mat      The material in which the faces lie.
+  /// \param[in] dtdh     The space time scaling factor.
+  /// \tparam    Iterator The type of the state iterator.
+  /// \tparam    Material The type of the material.
+  /// \tparam    T        The type of the scaling factor.
+  /// \tparam    V        The value which defines the the dimension.
+  template <typename Iterator, typename Material, typename T, std::size_t V> 
+  fluidity_host_device static auto evolve(Iterator&&       state_it, 
+                                          Material&&       mat     ,
+                                          T                dtdh    ,
+                                          Dimension<V>     /*dim*/ ,
+                                          right_face_t     /*face*/)
+  {
+    using state_t = std::decay_t<decltype(*state_it)>;
+    using value_t = std::decay_t<T>;
+
+    constexpr auto half  = value_t{0.5};
+    constexpr auto dim   = Dimension<V>{};
+    const auto     delta = half * limiter_t()(state_it, dim);
+
+    // Boundary extrapolated value:
+    // U_i^n \pm \frac{1}{2} \delta \eita i
+    const auto bev = state_t{*state_it + delta};
+
+    // Evolve BEV in time:
+    return state_t{
+      bev + 
+      (half * dtdh) * 
+      (state_t{*state_it - delta}.flux(mat, dim) - bev.flux(mat, dim))
+    };
+  }
+
+  /// Creates the evolution of the data, returning the appropriate reconstructed
+  /// data. This overload returns the evolved data for the left face in the
+  /// x-direction (down face in the y dimension, out face in the z direction).
+  /// \param[in] state_it An iterator over the state data.
+  /// \param[in] mat      The material in which the faces lie.
+  /// \param[in] dtdh     The space time scaling factor.
+  /// \tparam    Iterator The type of the state iterator.
+  /// \tparam    Material The type of the material.
+  /// \tparam    T        The type of the scaling factor.
+  /// \tparam    V        The value which defines the the dimension.
+  template <typename Iterator, typename Material, typename T, std::size_t V> 
+  fluidity_host_device static auto evolve(Iterator&&       state_it, 
+                                          Material&&       mat     ,
+                                          T                dtdh    ,
+                                          Dimension<V>     /*dim*/ ,
+                                          left_face_t      /*face*/)
+  {
+    using state_t = std::decay_t<decltype(*state_it)>;
+    using value_t = std::decay_t<T>;
+
+    constexpr auto half  = value_t{0.5};
+    constexpr auto dim   = Dimension<V>{};
+    const auto     delta = half * limiter_t()(state_it, dim);
+
+    // Boundary extrapolated value:
+    const auto bev = state_t{*state_it - delta};
+    
+    // Evolve BEV in time:
+    return state_t{
+      bev +
+      (half * dtdh) *
+      (bev.flux(mat, dim) - state_t{*state_it + delta}.flux(mat, dim))
+    };
+  }
 
  public:
-  /// The ReconImpl struct applies reconstruction of a state for a specific face
-  /// a single dimension. The face to apply the reconstruction to us defined by
-  /// the compile time value Face, where positive indicates faces in the
-  /// forward direction, and negative in the backward direction.
-  /// \tparam Face  The face to apply reconstruction to.
-  template <int Face>
-  struct ReconImpl {
-    /// Performs the evolution step for MUSCL-Hanconk as per:
-    /// 
-    ///   Toro, page 505, equation 14.34
-    ///   
-    /// \param[in]  state      The state to reconstruct around.
-    /// \param[in]  mat        The material describing the system.
-    /// \param[in]  dtdh       The scaling factor: $\frac{dt}{dx}$.
-    /// \param[in]  dim        The dimension to update over.
-    /// \tparam     Iterator   The type of the state iterator.
-    /// \tparam     Material   The type of the material.
-    /// \tparam     Value      The value which defines the dimension.
-    template <typename Iterator, typename Material, std::size_t Value>
-    fluidity_host_device static constexpr auto evolve(Iterator&&       state  ,
-                                                      Material&&       mat    ,
-                                                      value_t          dtdh   ,
-                                                      Dimension<Value> /*dim*/)
-    {
-      using state_t = std::decay_t<decltype(*state)>;
-      static_assert(Face == backward_face || Face == forward_face,
-                    "Invalid face for reconstruction");
+  /// Constructor, required so that the reconstructor can be created on both the
+  /// host and the device.
+  fluidity_host_device constexpr MHReconstructor() {}
 
-      constexpr auto dim = Dimension<Value>{};
-      const auto delta   = half * limiter_t()(state, dim);
-
-      const auto fwrd_evl  = state_t{*state + delta};
-      const auto back_evl  = state_t{*state - delta};
-      const auto evolution = (half * dtdh)
-                            * (back_evl.flux(mat, dim) 
-                            -  fwrd_evl.flux(mat, dim));
-                            
-      return (Face == forward_face ? fwrd_evl : back_evl) + evolution;
-    }
-  };
-
-  /// Defines the type of the forward reconstructor.
-  using fwrd_recon_t = ReconImpl<forward_face>;
-  /// Defines the type of the backward reconstructor.
-  using back_recon_t = ReconImpl<backward_face>;
-
-  /// Intiializes the constants used by the reconstructor.
-  /// \param[in] omega   The scaling factor for the state differences, i.e
-  ///                       $ (1 + \omega)\delta_{i - .5}) $ and
-  ///                       $ (1 - \omega)\delta_{i + .5}  $
-  ///                    and must be in the range [-1, 1].
-  fluidity_host_device constexpr MHReconstructor(value_t omega = 0)
-  :   _alpha{half * (one + omega)}, _beta{half * (one - omega)}, _omega{omega}
-  {
-    assert(_omega >= value_t{-1.0} && omega <= value_t{1.0} &&
-           "Omega must be in the range [-1.0, 1.0]");
-  }
-
-  /// Reconstructs the state data, returning new data. This reconstructs between
-  /// the cell defined by \p state and the one in the forward direction, and
-  /// returns the two state types which are the reconstructed states in the
-  /// forward direction.
+  /// Returns the left input state in the forward direction, where the forward
+  /// direction is one of:
+  ///
+  ///   { right (x-dim), up (y-dim), inward (z-dim) }
   /// 
-  /// No direction option is provided because this can be done from the calling
-  /// code by first offsetting the state iterator which is the input to this
-  /// function, i.e by using ``state = state.offset(-1, dim)`` before the
-  /// reconstruction call.
-  /// 
-  /// This is an implementation of the MUSCL-Hancock method as per:
-  ///   
-  ///   Toro, page 505, Step III
-  ///   
-  /// Returning Ul and Ur.
-  /// 
-  /// \param[in]  state      The state to reconstruct around.
-  /// \param[in]  mat        The material describing the system.
-  /// \param[in]  dtdh       The scaling factor: $\frac{dt}{dx}$.
-  /// \param[in]  dim        The dimension to update over.
-  /// \tparam     Iterator   The type of the iterator, which must be a block
-  ///                        iterator over a State.
+  /// \param[in]  state_it   The state iterator to reconstruct from.
+  /// \param[in]  material   The material for the system.
+  /// \param[in]  dtdh       The space time scaling factor.
+  /// \tparam     Iterator   The type of the iterator, which must be
+  ///                        multi-dimensional 
   /// \tparam     Material   The type of the material.
+  /// \tparam     T          The type of the scaling factor.
   /// \tparam     Value      The value which defines the dimension.
-  template <typename Iterator, typename Material, std::size_t Value>
+  template <typename Iterator, typename Material, typename T, std::size_t Value>
   fluidity_host_device constexpr auto
-  operator()(Iterator&&       state   ,
-             Material&&       material,
-             value_t          dtdh    ,
-             Dimension<Value> /*dim*/ ) const
+  input_fwrd_left(Iterator&&        state_it,
+                  Material&&        material, 
+                  T                 dtdh    , 
+                  Dimension<Value>  /*dim*/ ) const
   {
-    using state_t = std::decay_t<decltype(*state)>;
     constexpr auto dim = Dimension<Value>{};
-
-    return make_riemann_input<state_t>(
-      fwrd_recon_t::evolve(state, material, dtdh, dim),
-      back_recon_t::evolve(state.offset(1, dim), material, dtdh, dim)
-    );
+    return evolve(state_it, material, dtdh, dim, right_face_select);
   }
 
- private:
-  value_t _alpha  = 0;  //!< Backward state scale     : $(1 + \omega)$.
-  value_t _beta   = 0;  //!< Forward state scale      : $(1 - \omega)$.
-  value_t _omega  = 0;  //!< General scaling factor   : $\omega$.
+  /// Returns the left right state in the forward direction, where the forward
+  /// direction is one of:
+  ///
+  ///   { right (x-dim), up (y-dim), inward (z-dim) }
+  /// 
+  /// \param[in]  state_it   The state iterator to reconstruct from.
+  /// \param[in]  material   The material for the system.
+  /// \param[in]  dtdh       The space time scaling factor.
+  /// \tparam     Iterator   The type of the iterator, which must be
+  ///                        multi-dimensional 
+  /// \tparam     Material   The type of the material.
+  /// \tparam     T          The type of the scaling factor.
+  /// \tparam     Value      The value which defines the dimension.
+  template <typename Iterator, typename Material, typename T, std::size_t Value>
+  fluidity_host_device constexpr auto
+  input_fwrd_right(Iterator&&       state_it,
+                   Material&&       material,
+                   T                dtdh    ,
+                   Dimension<Value> /*dim*/ ) const
+  {
+    constexpr auto dim = Dimension<Value>{};
+    return evolve(state_it.offset(right_face, dim),
+                  material                        ,
+                  dtdh                            ,
+                  dim                             ,
+                  left_face_select                );
+  }
+
+  /// Returns the left input state in the backward direction, where the backward
+  /// direction is one of:
+  ///
+  ///   { left (x-dim), down (y-dim), outward (z-dim) }
+  /// 
+  /// \param[in]  state_it   The state iterator to reconstruct from.
+  /// \param[in]  material   The material for the system.
+  /// \param[in]  dtdh       The space time scaling factor.
+  /// \tparam     Iterator   The type of the iterator, which must be
+  ///                        multi-dimensional 
+  /// \tparam     Material   The type of the material.
+  /// \tparam     T          The type of the scaling factor.
+  /// \tparam     Value      The value which defines the dimension.
+  template <typename Iterator, typename Material, typename T, std::size_t Value>
+  fluidity_host_device constexpr auto
+  input_back_left(Iterator&&       state_it,
+                  Material&&       material,
+                  T                dtdh    ,
+                  Dimension<Value> /*dim*/ ) const
+  {
+    constexpr auto dim = Dimension<Value>{};
+    return evolve(state_it.offset(left_face, dim),
+                  material                       ,
+                  dtdh                           ,
+                  dim                            ,
+                  right_face_select              ); 
+  }
+
+  /// Returns the right state in the backward direction, where the backward
+  /// direction is one of:
+  ///
+  ///   { left (x-dim), down (y-dim), outward (z-dim) }
+  /// 
+  /// \param[in]  state_it   The state iterator to reconstruct from.
+  /// \param[in]  material   The material for the system.
+  /// \param[in]  dtdh       The space time scaling factor.
+  /// \tparam     Iterator   The type of the iterator, which must be
+  ///                        multi-dimensional 
+  /// \tparam     Material   The type of the material.
+  /// \tparam     T          The type of the scaling factor.
+  /// \tparam     Value      The value which defines the dimension.
+  template <typename Iterator, typename Material, typename T, std::size_t Value>
+  fluidity_host_device constexpr auto
+  input_back_right(Iterator&&       state_it,
+                   Material&&       material,
+                   T                dtdh    ,
+                   Dimension<Value> /*dim*/ ) const
+  {
+    constexpr auto dim = Dimension<Value>{};
+    return evolve(state_it, material, dtdh, dim, left_face_select);
+  }
 };
 
 }} // namespace fluid::recon

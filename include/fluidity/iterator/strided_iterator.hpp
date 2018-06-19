@@ -48,7 +48,9 @@ struct StridedIterator {
   using exec_t        = Exec;
 
   /// Defines the number of dimensions for the iterator.
-  static constexpr std::size_t dimensions = 1;
+  static constexpr std::size_t dimensions    = 1;
+  /// Defines that the iterator is multi-dimensional.
+  static constexpr auto is_multi_dimensional = false;
 
   /// Sets the element the iterator points to, and the offset to the next 
   /// \param[in] ptr The pointer to iterate from.

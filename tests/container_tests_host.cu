@@ -14,11 +14,11 @@
 //==------------------------------------------------------------------------==//
 
 #include <fluidity/algorithm/fill.hpp>
-#include <fluidity/container/host_tensor.hpp>
 #include <fluidity/container/array.hpp>
+#include <fluidity/container/host_tensor.hpp>
 #include <gtest/gtest.h>
 
-using array_t       = fluid::Array<int, 3>;
+using array_t = fluid::Array<int, 3>;
 using namespace fluid;
 
 TEST(container_host_tensor, can_create_tensor)

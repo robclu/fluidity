@@ -14,11 +14,14 @@
 //==------------------------------------------------------------------------==//
 
 #include <fluidity/algorithm/fill.hpp>
+#include <fluidity/container/array.hpp>
 #include <fluidity/container/device_tensor.hpp>
 #include <fluidity/container/host_tensor.hpp>
 #include <gtest/gtest.h>
 
 using namespace fluid;
+using type_t  = float;
+using array_t = Array<type_t, 3>;
 
 TEST(container_device_tensor, can_create_tensor)
 {
@@ -27,6 +30,7 @@ TEST(container_device_tensor, can_create_tensor)
   EXPECT_EQ(t.size(), static_cast<decltype(t.size())>(20));
 }
 
+/*
 TEST(container_host_tensor, can_create_and_initialize_tensor)
 {
   const float v = 3.0f;
@@ -38,12 +42,12 @@ TEST(container_host_tensor, can_create_and_initialize_tensor)
     EXPECT_EQ(e, v);
   }
 }
+*/
 
 TEST(container_device_tensor, can_fill_tensor)
 {
   device_tensor1d<int> t(20);
   fluid::fill(t.begin(), t.end(), 2);
-
 
   auto host_tensor = host_tensor1d<int>(t);
   for (const auto& element : host_tensor)
@@ -98,6 +102,27 @@ TEST(container_device_tensor, can_get_device_tensor_as_host_tensor)
   {
     EXPECT_EQ(element, count++);
   }
+}
+
+fluidity_global void array_multiplication()
+{
+  constexpr auto value = type_t{2};
+  array_t a{value};
+  for (const auto& e : a)
+  {
+    assert(e == value && "Assertation failed!\n");
+  }
+  auto b = value * a;
+  for (const auto& e : b)
+  {
+    assert(e == value * value && "Assertation failed!\n");
+  }  
+}
+
+TEST(container_device_array, can_create_and_multiply_device_arrays)
+{
+  array_multiplication<<<1, 1>>>();
+  fluidity_check_cuda_result(cudaDeviceSynchronize());
 }
 
 int main(int argc, char** argv)

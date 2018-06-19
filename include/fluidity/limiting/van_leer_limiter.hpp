@@ -89,7 +89,7 @@ struct VanLeer {
     constexpr auto zero = value_t{0}, one = value_t{1}, two = value_t{2};
 
     const auto r = left / right;
-    return r <= zero || right == zero 
+    return (r <= zero || right == zero) 
            ? zero : two * std::min(r, one) / (one + r);
   }
 };

@@ -13,10 +13,11 @@
 //
 //==------------------------------------------------------------------------==//
 
+#include <fluidity/flux_method/flux_force.hpp>
 #include <fluidity/limiting/limiters.hpp>
 #include <fluidity/material/ideal_gas.hpp>
+#include <fluidity/reconstruction/basic_reconstructor.hpp>
 #include <fluidity/reconstruction/muscl_reconstructor.hpp>
-#include <fluidity/solver/hllc_solver.hpp>
 #include <fluidity/simulator/generic_simulator.hpp>
 #include <fluidity/state/state.hpp>
 #include <memory>
@@ -30,7 +31,7 @@ using primitive1d_t   = state::primitive_t<real_t, 1>;
 // Defines the material type to use for the tests.
 using material_t      = material::IdealGas<real_t>;
 // Defines the type of the limiter for the simulations.
-using reconstructor_t = recon::MHReconstructor<real_t, limit::VanLeer>;
+using reconstructor_t = recon::MHReconstructor<limit::Linear>;
 /// Defines the execution policy of the solver, CPU / GPU.
 using execution_t     = fluid::exec::gpu_type;
 
@@ -40,7 +41,7 @@ using sim_traits_gpu_t =
   < primitive1d_t
   , material_t
   , reconstructor_t
-  , solver::HllcSolver
+  , flux::Force
   , solver::Type::split
   , exec::gpu_type
   >;
@@ -51,7 +52,7 @@ using sim_traits_cpu_t =
   < primitive1d_t
   , material_t
   , reconstructor_t
-  , solver::HllcSolver
+  , flux::Force
   , solver::Type::split
   , exec::cpu_type
   >;
@@ -63,7 +64,8 @@ int main(int argc, char** argv)
   auto simulator = std::make_unique<simulator_t>();
   simulator->configure_dimension(fluid::dim_x, { 0.01, 1.0 })
            ->configure_sim_time(0.2)
-           ->configure_cfl(0.9);
+           ->configure_cfl(0.9)
+           ->configure_max_iterations(100);
 
   constexpr auto membrane = real_t{0.3};
   simulator->fill_data({

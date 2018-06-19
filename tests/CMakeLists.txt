@@ -12,7 +12,7 @@ include(fluidity_cmake)
 if (EXISTS ${fluidity_SOURCE_DIR}/googletest)
   set(GTEST_INCLUDE  ${fluidity_SOURCE_DIR}/googletest/googletest/include)
   set(GTEST_LIB_DIRS ${fluidity_SOURCE_DIR}/build/googletest/googlemock/gtest)
-  set(GTEST_BOTH_LIBRARIES -lgtest -lgtest_main)
+  set(GTEST_BOTH_LIBRARIES -lgtestd -lgtest_maind)
 else()
   set(GTEST_INCLUDE )
 endif()
@@ -69,6 +69,16 @@ fluid_library_directories(${CUDA_LIB_DIRS} ${GTEST_LIB_DIRS})
 
 #add_executable(iterator_host_tests iterator_tests_host.cpp)
 #target_link_libraries(iterator_host_tests ${GTEST_BOTH_LIBRARIES})
+
+fluid_add_executable(
+  container_device_tests
+  ${fluidity_SOURCE_DIR}/tests/container_tests_device.cu
+)
+fluid_target_link_libraries(
+  container_device_tests
+  ${GTEST_BOTH_LIBRARIES}
+  ${CUDA_LIBRARIES}
+)
 
 fluid_add_executable(
   reconstruction_tests

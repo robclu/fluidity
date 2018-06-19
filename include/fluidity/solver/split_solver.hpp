@@ -30,13 +30,15 @@ namespace solver {
 /// case.
 /// \tparam Traits     The components used by the solver.
 /// \tparam Dimensions The number of dimensions to solve over.
-template <typename Traits, std::size_t Dimensions = 1>
+template <typename FluxSolver, typename Loader, std::size_t Dimensions = 1>
 struct SplitSolver {
  private:
-  /// Defines the traits of the solver.
-  using traits_t         = std::decay_t<Traits>;
+  /// Defines the type of the flux solver.
+  using flux_solver_t    = std::decay_t<FluxSolver>;
   /// Defines the type of the loader for the data.
-  using loader_t         = typename traits_t::loader_t;
+  using loader_t         = std::decay_t<Loader>;
+
+/*
   /// Defines the type of the reconstructor of the data.
   using reconstructor_t  = typename traits_t::reconstructor_t;
   /// Defines the type of the evaluator for the fluxes between cells.
@@ -49,27 +51,29 @@ struct SplitSolver {
   static constexpr auto back_input = back_input_t{};
   /// Aliad for creating a right input state.
   static constexpr auto fwrd_input = fwrd_input_t{};
-
+*/
   /// Defines the number of dimensions to solve over.
   static constexpr std::size_t num_dimensions = 1;
   /// Defines the amount of padding in the data loader.
   static constexpr std::size_t padding        = loader_t::padding;
 
  public:
-  /// Solve function which invokes the solver.
-  /// \param[in] data     The iterator which points to the start of the global
-  ///            state data. If the iterator does not have 1 dimension then a
-  ///            compile time error is generated.
-  /// \param[in] flux     An iterator which points to the flux to update. 
+  /// Solve function which invokes the split solver to use the \p in input data
+  /// to compute the new state data and write the new data to \p out.
+  /// \param[in] in       The input state data.
+  /// \param[in] out      The output state data to write the results to.
+  /// \param[in] material The material for the system.
+  ///
   /// \tparam    Iterator The type of the iterator.
-  /// \tparam    Flux     The type of the flux iterator.
-  template <typename It, typename M, typename T>
-  fluidity_device_only void solve(It&&                  in      ,
-                                  It&&                  out     ,
-                                  M                     material,
+  template <typename Iterator, typename Material, typename T>
+  fluidity_device_only void solve(Iterator&&            in      ,
+                                  Iterator&&            out     ,
+                                  Material              material,
                                   T                     dtdh    ,
                                   const BoundarySetter& setter  ) const
   {
+    const auto flux_solver = flux_solver_t(material, dtdh);
+    
     auto global_iter = get_global_iterator(in);
     auto patch_iter  = get_patch_iterator(in);
 
@@ -80,34 +84,12 @@ struct SplitSolver {
     // Load in the data at the global and patch boundaries:
     loader_t::load_boundary(global_iter, patch_iter, dim_x, setter);
 
-    // Backward flux face:
-    auto input = make_recon_input(patch_iter, material, dtdh, back_input);
-    auto flux  = flux_evaluator(input.left, input.right, material, dim_x);
-
-    // Update flux with front face, to make $F_{i - 1/2} - F_{i + 1/2}$:
-    input = make_recon_input(patch_iter, material, dtdh, fwrd_input);
-    flux  = flux - flux_evaluator(input.left, input.right, material, dim_x);
-
-    *get_global_iterator(out) = *patch_iter + dtdh * flux;
+    // Update states as : U_i + dt/dh * [F_{i-1/2} - F_{i+1/2}]
+    *get_global_iterator(out) = 
+      *patch_iter + dtdh * flux_solver.flux_delta(patch_iter, dim_x);
   }
 
  private:
-  /// Returns a reconstructed left input for the flux solver.
-  template <typename It, typename M, typename T>
-  fluidity_device_only auto
-  make_recon_input(It&& it, M mat, T dtdh, back_input_t) const
-  {
-    return reconstructor_t{}(it.offset(-1, dim_x), mat, dtdh, dim_x);
-  }
-
-  /// Returns a reconstructed right input for the flux solver.
-  template <typename It, typename M, typename T>
-  fluidity_device_only auto
-  make_recon_input(It&& it, M mat, T dtdh, fwrd_input_t) const
-  {
-    return reconstructor_t{}(it, mat, dtdh, dim_x);
-  }
-
   /// Returns a global multi dimensional iterator which is shifted to the global
   /// thread index in the x-dimension.
   /// \param[in] it       The iterator to the start of the global data.

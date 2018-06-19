@@ -44,7 +44,7 @@ template < typename Iterator
          >
 fluidity_global void fill_impl(Iterator begin, T value)
 {
-  *(begin[flattened_id(dim_x)]) = value;
+  begin[flattened_id(dim_x)] = value;
 }
 
 /// Kernel implementation which fills an iterator element \p begin using the
@@ -64,7 +64,7 @@ template < typename    Iterator
          >
 fluidity_global void fill_impl(Iterator begin, Pred pred, Args... args)
 {
-  pred(*begin[flattened_id(dim_x)], args...);
+  pred(begin[flattened_id(dim_x)], args...);
 }
 
 /// Fills the range of values defined by { end - begin } using \p pred to set

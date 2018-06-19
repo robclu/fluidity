@@ -62,18 +62,44 @@ struct HllcSolver {
         value_t{0.25} * (pr.velocity(dim) - pl.velocity(dim))
                       * (pr.density() + pl.density())
                       * (al + ar));
-
+    
     // Pressure in the star region, as per Toro, Equation 10.67, page 331:
     const auto p_star = std::max(value_t{0.0}, p_pvrs);
 
+    bool print = thread_id(dim_x) == 30;
+
+    if (print)
+    {
+      printf("P*: %5.5f\n", p_star);
+    }
     // Test for far left region (outside of the star state):
     const auto wsl   = wavespeed(pl, p_star, -al, adi, material, dim);
     const auto fluxl = cl.flux(material, dim);
+
+    if (print)
+    {
+      printf("WSL : %5.5f\n", wsl);
+      for (const auto e : fluxl)
+      {
+        printf("\t%4.4f\n", e);
+      }
+    } 
+
     if (value_t{0} <= wsl) { return fluxl; }
 
     // Test for far right region (outside of the star state):
     const auto wsr   = wavespeed(pr, p_star, ar, adi, material, dim);
     const auto fluxr = cr.flux(material, dim);
+
+    if (print)
+    {
+      printf("WSR : %5.5f\n", wsr);
+      for (const auto e : fluxr)
+      {
+        printf("\t%4.4f\n", e);
+      }
+    } 
+
     if (0 >= wsr) { return fluxr; }
 
     // Somewhere in the star region, need to find left or right:
@@ -81,6 +107,15 @@ struct HllcSolver {
 
     // Left star region, return FL*
     auto u_star = star_state(pl, wsl, ws_star, material, dim);
+
+    if (print)
+    {
+      printf("WSSL : %5.5f\n", ws_star);
+      for (const auto e : u_star)
+      {
+        printf("\t%4.4f\n", e);
+      }
+    }
     if (value_t{0} <= ws_star)
     {
       return fluxl + wsl * (u_star - cl);
@@ -88,6 +123,15 @@ struct HllcSolver {
 
     // Right star region, return FR*:
     u_star = star_state(pr, wsr, ws_star, material, dim);
+
+    if (print)
+    {
+      printf("WSSR : %5.5f\n", ws_star);
+      for (const auto e : u_star)
+      {
+        printf("\t%4.4f\n", e);
+      }
+    }
     return fluxr + wsr * (u_star - cr);
   }
 
@@ -148,7 +192,7 @@ struct HllcSolver {
     {
       return state.velocity(dim) + sound_speed;
     }
-
+    
     // Shock wave:
     return state.velocity(dim) 
          + sound_speed
@@ -193,9 +237,11 @@ struct HllcSolver {
     //    pR - pL + dL * vL(SL - vL) - dR * vR(SR - vR)
     //    ---------------------------------------------
     //              dL(SL - vL) - dR(SR - vR)
-    return ((stater.pressure(material) - statel.pressure(material))            +
-            (statel.velocity(dim) * factorl) - (stater.velocity(dim) * factorr))
-           / (factorl - factorr);
+    return (stater.pressure(material)      - 
+            statel.pressure(material)      +
+            statel.velocity(dim) * factorl - 
+            stater.velocity(dim) * factorr ) /
+           (factorl - factorr);
   }
 
   /// Computes the star state, UL* or UR*, given by:

@@ -97,7 +97,11 @@ class GenericSimulator final : public Simulator<Traits> {
   /// Configures the simulator to set size and resolution of a dimension \p dim.
   /// \param[in] dim  The dimension to specify.
   /// \param[in] spec The specification of the dimension.
-  base_t* configure_dimension(std::size_t dim, dim_spec_t spec) override; 
+  base_t* configure_dimension(std::size_t dim, dim_spec_t spec) override;
+
+  /// Configures the simulator to simulate for a maximum number of iterations.
+  /// \param[in] iters  The maximum number of iterations to simulate for.
+  base_t* configure_max_iterations(std::size_t iters) override;  
 
   /// Configures the simulator to simulate until a certain simulation time.
   /// \param[in] sim_time The time to run the simulation until.
@@ -174,7 +178,7 @@ void GenericSimulator<Traits>::simulate()
     // iteration, and then update sim time delta based on max wavespeed:
     set_wavespeeds(input_it, wavespeed_it, mat);
     _params.update_time_delta(
-      max_element(_data.wavespeeds().begin(),_data.wavespeeds().end()));
+    max_element(_data.wavespeeds().begin(),_data.wavespeeds().end()));
 
     _params.print_current_status();
     update(input_it       ,
@@ -221,6 +225,14 @@ template <typename Traits>
 Simulator<Traits>* GenericSimulator<Traits>::configure_sim_time(double sim_time)
 {
   _params.sim_time = sim_time;
+  return this;
+}
+
+template <typename Traits>
+Simulator<Traits>*
+GenericSimulator<Traits>::configure_max_iterations(std::size_t iters)
+{
+  _params.max_iters = iters;
   return this;
 }
 

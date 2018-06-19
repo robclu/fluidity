@@ -27,22 +27,11 @@ namespace solver {
 /// case.
 /// \tparam Traits     The componenets used by the solver.
 /// \tparam Dimensions The number of dimensions to solve over.
-template <typename Traits, std::size_t Dimensions = 1>
+template <typename FluxSolver, typename Loader, std::size_t Dimensions = 1>
 struct UnsplitSolver {
  private:
-  /// Defines the traits of the solver.
-  using traits_t         = std::decay_t<Traits>;
   /// Defines the type of the loader for the data.
-  using loader_t         = typename traits_t::loader_t;
-  /// Defines the type of the reconstructor of the data.
-  using reconstructor_t  = typename traits_t::reconstructor_t;
-  /// Defines the type of the evaluator for the fluxes between cells.
-  using flux_evaluator_t = typename traits_t::flux_evaluator_t;
-
-  /// Alias for creating a left input state.
-  static constexpr auto back_input = back_input_t{};
-  /// Aliad for creating a right input state.
-  static constexpr auto fwrd_input = fwrd_input_t{};
+  using loader_t = std::decay_t<Loader>;
 
   /// Defines the number of dimensions to solve over.
   static constexpr std::size_t num_dimensions = 1;

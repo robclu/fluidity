@@ -28,7 +28,7 @@ struct Void {
   using self_t = Void;
 
   /// Defines the number of elements required for limiting.
-  static constexpr std::size_t width = 0;
+  static constexpr std::size_t width = 1;
 
   /// Implementation of the linear limiting functionality.
   /// \param[in]  state_it  The state iterator to limit.

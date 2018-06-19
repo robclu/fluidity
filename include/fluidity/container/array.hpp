@@ -43,6 +43,11 @@ class Array {
   /// Defines the type of a const iterator.
   using const_iterator_t  = StridedIterator<value_t, true>;
 
+  /// Defines the cutoff size for small versions of the array.
+  static constexpr auto small_size = std::size_t{8};
+  /// Defines the number of elements in the array.
+  static constexpr auto elements   = Elements;
+
   /// The default constructor uses the default initialization.
   constexpr Array() = default;
 
@@ -50,7 +55,7 @@ class Array {
   /// \param[in] value The value to set the array elements to.
   fluidity_host_device constexpr Array(value_t value)
   {
-    fill(this->begin(), this->end(), value);
+    initialize<elements>(value);
   }
 
   /// Initializes the elements in the array to have the values \p values.
@@ -59,7 +64,7 @@ class Array {
   template <typename... Values,
             std::enable_if_t<(sizeof...(Values) > 1), int> = 0>
   fluidity_host_device constexpr Array(Values&&... values)
-  : _data{ static_cast<value_t>(values)... } {}
+  : _data{static_cast<value_t>(values)...} {}
 
   /// Copies the contents of the \p other array into a new array.
   /// \param[in] other The other array to copy from.
@@ -151,12 +156,42 @@ class Array {
 
  private:
   value_t _data[Elements] = {0};  //!< Data for the array.
+
+  /// Fill implementation for small arrays, where all elements of the array are
+  /// filled with the value \p value in an unrolled manner.
+  /// \param[in] value The value to set the array elements to.
+  /// \tparam    E     The number of elements in the array.
+  template <std::size_t E, std::enable_if_t<(E < small_size), int> = 0>
+  fluidity_host_device constexpr void initialize(T value)
+  {
+    unrolled_for<E>([&, this] fluidity_host_device (auto i)
+    {
+      this->_data[i] = value;
+    });
+  }
+
+  /// Fill implementation for large arrays, where all elements of the array are
+  /// filled with the value \p value.
+  /// \param[in] value The value to set the array elements to.
+  /// \tparam    E     The number of elements in the array.
+  template <std::size_t E, std::enable_if_t<(E >= small_size), int> = 0>
+  fluidity_host_device constexpr void initialize(T value)
+  {
+    fill(begin(), end(), value);
+  }
 };
 
 //==--- Array Implementation -----------------------------------------------==//
 
 //===== Operator --------------------------------------------------------=====//
 
+/// Overload of multiplication operator to perform elementwise multiplication of
+/// a scalar constant to an array. This implementation is enabled if the array
+/// has less elements than the maximum allowed unrolling depth.
+/// \param[in] scalar The scalar to multiply to each element of the array.
+/// \param[in] a      The array to multiply with the scalar.
+/// \tparam    T      The type of the scalar and array data.
+/// \tparam    S      The size of the array.
 template < typename    T
          , std::size_t S
          , std::enable_if_t<(S < max_unroll_depth), int> = 0>
@@ -170,6 +205,13 @@ fluidity_host_device constexpr auto operator*(T scalar, const Array<T, S>& a)
   return result;
 } 
 
+/// Overload of multiplication operator to perform elementwise multiplication of
+/// a scalar constant to an array. This implementation is enabled if the array
+/// has more elements than the maximum allowed unrolling depth.
+/// \param[in] scalar The scalar to multiply to each element of the array.
+/// \param[in] a      The array to multiply with the scalar.
+/// \tparam    T      The type of the scalar and array data.
+/// \tparam    S      The size of the array.
 template < typename    T
          , std::size_t S
          , std::enable_if_t<!(S < max_unroll_depth), int> = 0>
@@ -182,11 +224,6 @@ fluidity_host_device constexpr auto operator*(T scalar, const Array<T, S>& a)
   }
   return result;
 } 
-
-//===== Public ----------------------------------------------------------=====//
-
-//===== Private ---------------------------------------------------------=====//
-
 
 } // namespace fluid
 

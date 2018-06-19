@@ -55,7 +55,11 @@ struct MultidimIterator : public DimensionInfo {
   using exec_t          = Exec;
 
   /// Defines if the strides are constexpr computed.
-  static constexpr auto constexpr_strides = dim_info_t::constexpr_offsets;
+  static constexpr auto constexpr_strides    = dim_info_t::constexpr_offsets;
+  /// Defines the number of dimensions for the iterator.
+  static constexpr std::size_t dimensions    = dim_info_t::dimensions;
+  /// Defines that the iterator is multi-dimensional.
+  static constexpr auto is_multi_dimensional = true;
 
  private:
   pointer_t _ptr; //!< A pointer to the data to iterate over.
