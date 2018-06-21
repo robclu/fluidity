@@ -43,7 +43,7 @@ using sim_traits_gpu_t =
   < primitive1d_t
   , material_t
   , reconstructor_t
-  , flux::Hllc
+  , flux::Force
   , solver::Type::split
   , exec::gpu_type
   >;
@@ -64,10 +64,10 @@ int main(int argc, char** argv)
   using simulator_t = fluid::sim::GenericSimulator<sim_traits_gpu_t>;
 
   auto simulator = std::make_unique<simulator_t>();
-  simulator->configure_dimension(fluid::dim_x, { 0.01, 1.0 })
+  simulator->configure_dimension(fluid::dim_x, { 0.001, 1.0 })
            ->configure_sim_time(0.2)
-           ->configure_cfl(0.9)
-           ->configure_max_iterations(100);
+           ->configure_cfl(0.9);
+//           ->configure_max_iterations(500);
 
   constexpr auto membrane = real_t{0.3};
   simulator->fill_data({

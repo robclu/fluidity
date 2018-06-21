@@ -162,6 +162,8 @@ void GenericSimulator<Traits>::simulate()
 
   _params.print_complete_summary();
 
+  printf("Threads : %3u | Blocks : %3u\n", threads.x, blocks.x);
+
   auto cfl = _params.cfl;
   while (_params.continue_simulation())
   {
@@ -190,10 +192,10 @@ void GenericSimulator<Traits>::simulate()
     _data.swap_states();
 
     // Debugging ...
-    _data.finalise_states();
+    //_data.finalise_states();
     // If debugging, set option to print based on iterations check:
-    std::string filename = "Debug_" + std::to_string(_params.iters);
-    this->write_results(filename);
+    //std::string filename = "Debug_" + std::to_string(_params.iters);
+    //this->write_results(filename);
   }
 
   // Make sure that the state data is accessible on the host.
@@ -337,6 +339,8 @@ void GenericSimulator<Traits>::stream_output_1d(Stream&& stream) const
   {
     stream << comment << "Column " << column++ << ": " << element_name << "\n";
   }
+  // Internal energy:
+  stream << comment << "Column " << column << " : " << "internal energy (e)\n";
 
   // Print the state data:
   auto state_iterator = _data.states().multi_iterator();
@@ -347,13 +351,23 @@ void GenericSimulator<Traits>::stream_output_1d(Stream&& stream) const
   {
     state = state_iterator.offset(offset_x, dim_x)->primitive(material);
 
-    stream << std::setw(12)   << std::left            << std::fixed
-           << std::showpoint << std::setprecision(8) << x_coord << " ";
+    auto append_element = [&stream] (auto element)
+    {
+      stream << std::setw(12)   << std::left           << std::fixed
+             << std::showpoint << std::setprecision(8) << element << " ";
+    };
+
+//    stream << std::setw(12)   << std::left           << std::fixed
+//           << std::showpoint << std::setprecision(8) << x_coord << " ";
+
+    append_element(x_coord);
     for (const auto& element : state)
     {
-      stream << std::setw(12)   << std::left            << std::fixed
-             << std::showpoint << std::setprecision(8) << element << " ";
+      append_element(element);
+//      stream << std::setw(12)   << std::left           << std::fixed
+//             << std::showpoint << std::setprecision(8) << element << " ";
     }
+    append_element(material.eos(state));
     stream << "\n";
     x_coord += _params.resolution;
   }

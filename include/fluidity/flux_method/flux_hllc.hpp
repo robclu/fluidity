@@ -79,10 +79,10 @@ struct Hllc {
     /// \param[in] adi_scale   Scaling factor computed from the adiabatic index.
     /// \tparam    State       The type of the state.
     template <typename State>
-    fluidity_host_device value_t wavespeed(const State&     state      ,
-                                           value_t          pstar      ,
-                                           value_t          sound_speed,
-                                           value_t          adi_scale  ) const
+    fluidity_host_device value_t wavespeed(const State& state      ,
+                                           value_t      pstar      ,
+                                           value_t      sound_speed,
+                                           value_t      adi_scale  ) const
     {
       // Rarefaction wave:
       if (pstar <= state.pressure(_mat))
@@ -90,8 +90,8 @@ struct Hllc {
         return state.velocity(dim) + sound_speed;
       } 
     
-      constexpr auto one = value_t{1};
       // Shock wave:
+      constexpr auto one = value_t{1};
       return state.velocity(dim) 
             + sound_speed
             * std::sqrt(one + adi_scale * (pstar / state.pressure(_mat) - one));
@@ -110,10 +110,10 @@ struct Hllc {
     /// \param[in] wavespeedr The right wave speed: SR.
     /// \tparam    State      The type of the states.
     template <typename State>
-    fluidity_host_device value_t star_speed(const State&     statel    ,
-                                            const State&     stater    ,
-                                            value_t          wavespeedl,
-                                            value_t          wavespeedr) const
+    fluidity_host_device value_t star_speed(const State& statel    ,
+                                            const State& stater    ,
+                                            value_t      wavespeedl,
+                                            value_t      wavespeedr) const
     {
       const auto vl = statel.velocity(dim);
       const auto vr = stater.velocity(dim);
@@ -145,9 +145,9 @@ struct Hllc {
     /// \param[in] star_speed  The wave speed in the star region.
     /// \tparam    State       The type of the state.
   template <typename State>
-  fluidity_host_device auto star_state(const State&     state      ,
-                                       value_t          state_speed,
-                                       value_t          star_speed ) const
+  fluidity_host_device auto star_state(const State& state      ,
+                                       value_t      state_speed,
+                                       value_t      star_speed ) const
   {
     using state_t  = std::decay_t<State>;
     using index_t  = typename state_t::index;

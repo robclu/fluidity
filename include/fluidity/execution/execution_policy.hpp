@@ -163,6 +163,25 @@ dim3 get_thread_sizes(Iterator&& it, dispatch_tag_3d_t)
                 ? it.size(dim_z) : default_threads_3d_z);
 }
 
+/// Returns the number of blocks required based on the number of \p cells and
+/// the number of \p threads available. This does all the necessary type
+/// conversions.
+/// \param[in] cells    The number of cells in the domain.
+/// \param[in] threads  The number of threads available.
+/// \tparam    Cells    The type of the cell variable.
+/// \tparam    Threads  The type of the threads variable.
+template <typename Cells, typename Threads>
+auto get_num_blocks(Cells cells, Threads threads)
+{
+   return static_cast<std::size_t>(
+     std::max(
+       static_cast<std::size_t>(
+         std::ceil(static_cast<double>(cells) / static_cast<double>(threads))),
+       std::size_t{1}
+     )
+   );  
+}
+
 /// Returns the size of the block based on the size of the space defined by the
 /// \p iterator and the thread sizes. This overload is for a 1D space.
 /// \param[in] it           The iterator for the multi dimensional space.
@@ -171,8 +190,7 @@ dim3 get_thread_sizes(Iterator&& it, dispatch_tag_3d_t)
 template <typename Iterator>
 dim3 get_block_sizes(Iterator&& it, dim3 thread_sizes, dispatch_tag_1d_t)
 {
-  constexpr auto default_value = std::size_t{1};
-  return dim3(std::max(it.size(dim_x) / thread_sizes.x, default_value));
+  return dim3(get_num_blocks(it.size(dim_x), thread_sizes.x));
 }
 
 /// Returns the size of the block based on the size of the space defined by the
@@ -183,9 +201,8 @@ dim3 get_block_sizes(Iterator&& it, dim3 thread_sizes, dispatch_tag_1d_t)
 template <typename Iterator>
 dim3 get_block_sizes(Iterator&& it, dim3 thread_sizes, dispatch_tag_2d_t)
 {
-  constexpr auto default_value = std::size_t{1};
-  return dim3(std::max(it.size(dim_x) / thread_sizes.x, default_value),
-              std::max(it.size(dim_y) / thread_sizes.y, default_value));
+  return dim3(get_num_blocks(it.size(dim_x), thread_sizes.x),
+              get_num_blocks(it.size(dim_y), thread_sizes.y));
 }
 
 /// Returns the size of the block based on the size of the space defined by the
@@ -196,10 +213,9 @@ dim3 get_block_sizes(Iterator&& it, dim3 thread_sizes, dispatch_tag_2d_t)
 template <typename Iterator>
 dim3 get_block_sizes(Iterator&& it, dim3 thread_sizes, dispatch_tag_3d_t)
 {
-  constexpr auto default_value = std::size_t{1};
-  return dim3(std::max(it.size(dim_x) / thread_sizes.x, default_value),
-              std::max(it.size(dim_y) / thread_sizes.y, default_value),
-              std::max(it.size(dim_z) / thread_sizes.z, default_value));
+  return dim3(get_num_blocks(it.size(dim_x), thread_sizes.x),
+              get_num_blocks(it.size(dim_y), thread_sizes.y),
+              get_num_blocks(it.size(dim_z), thread_sizes.z));
 }
 
 } // namespace detail

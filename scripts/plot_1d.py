@@ -70,12 +70,14 @@ if __name__ == "__main__":
     break
 
   # Get the data and the data names:
-  df, time, names = get_data(sys.argv[file_index])
+  file_name       = sys.argv[file_index]
+  df, time, names = get_data(file_name)
   position        = df[names[0]]
 
   # If a reference file is provided, get that data:
   if ref_file_provided:
-    df_ref, time_ref, names_ref = get_data(sys.argv[ref_file_index])
+    ref_file_name               = sys.argv[ref_file_index]
+    df_ref, time_ref, names_ref = get_data(ref_file_name)
     position_ref                = df_ref[names_ref[0]]
 
   # Max number of plots in X and Y dimensions:
@@ -92,6 +94,10 @@ if __name__ == "__main__":
 
   while data_fields > x_plots * y_plots:
     y_plots += 1
+
+  legend_names = [ os.path.splitext(file_name)[0].replace("_", "") ]
+  if ref_file_provided:
+    legend_names.append(os.path.splitext(ref_file_name)[0].replace("_", ""))
 
   # Create the subplots:
   for i in range(1, len(names)):
@@ -115,6 +121,8 @@ if __name__ == "__main__":
 
     plt.xlabel(names[0])
     plt.ylabel(name)
+    plt.legend(legend_names)
+    plt.grid(which="major")
 
     if separate_plots:
       plt.savefig(name + ".png", Transparent=True)
