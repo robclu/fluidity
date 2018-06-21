@@ -13,7 +13,9 @@
 //
 //==------------------------------------------------------------------------==//
 
+#include <fluidity/flux_method/flux_hllc.hpp>
 #include <fluidity/flux_method/flux_force.hpp>
+#include <fluidity/flux_method/flux_lax_friedrichs.hpp>
 #include <fluidity/limiting/limiters.hpp>
 #include <fluidity/material/ideal_gas.hpp>
 #include <fluidity/reconstruction/basic_reconstructor.hpp>
@@ -31,7 +33,7 @@ using primitive1d_t   = state::primitive_t<real_t, 1>;
 // Defines the material type to use for the tests.
 using material_t      = material::IdealGas<real_t>;
 // Defines the type of the limiter for the simulations.
-using reconstructor_t = recon::MHReconstructor<limit::Linear>;
+using reconstructor_t = recon::MHReconstructor<limit::VanLeer>;
 /// Defines the execution policy of the solver, CPU / GPU.
 using execution_t     = fluid::exec::gpu_type;
 
@@ -41,7 +43,7 @@ using sim_traits_gpu_t =
   < primitive1d_t
   , material_t
   , reconstructor_t
-  , flux::Force
+  , flux::Hllc
   , solver::Type::split
   , exec::gpu_type
   >;
@@ -52,7 +54,7 @@ using sim_traits_cpu_t =
   < primitive1d_t
   , material_t
   , reconstructor_t
-  , flux::Force
+  , flux::Hllc
   , solver::Type::split
   , exec::cpu_type
   >;

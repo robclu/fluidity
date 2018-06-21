@@ -160,9 +160,6 @@ void GenericSimulator<Traits>::simulate()
   auto solver  = solver_t{};
   auto mat     = material_t{};
 
-  // If debugging, set the max number of iterations:
-  //_params.max_iters = 10;
-
   _params.print_complete_summary();
 
   auto cfl = _params.cfl;
@@ -178,7 +175,7 @@ void GenericSimulator<Traits>::simulate()
     // iteration, and then update sim time delta based on max wavespeed:
     set_wavespeeds(input_it, wavespeed_it, mat);
     _params.update_time_delta(
-    max_element(_data.wavespeeds().begin(),_data.wavespeeds().end()));
+      max_element(_data.wavespeeds().begin(),_data.wavespeeds().end()));
 
     _params.print_current_status();
     update(input_it       ,

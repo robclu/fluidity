@@ -29,19 +29,36 @@ using namespace traits;
 /// for a state.
 /// \param[in]  state The state to calculate the squared velocity sum for.
 /// \tparam     State The type of the state.
-template <typename State>
-fluidity_host_device inline constexpr auto
-v_squared_sum(State&& state) noexcept
+template <typename State, primitive_enable_t<State> = 0>
+fluidity_host_device inline constexpr auto v_squared_sum(State&& state) noexcept
 {
   using state_t = std::decay_t<State>;
   using value_t = typename state_t::value_t;
-  static_assert(is_state_v<state_t>,
-    "Attempt to invoke a state function on a type which is not a state");
 
   value_t sum = 0;
   unrolled_for<state_t::dimensions>([&sum, &state] (auto i) 
   {
     const auto& v = state[state_t::index::velocity(i)];
+    sum += v * v;
+  });
+  return sum;
+}
+
+/// Returns the sum of the square velocity of each of the velocity conponents
+/// for a state.
+/// \param[in]  state The state to calculate the squared velocity sum for.
+/// \tparam     State The type of the state.
+template <typename State, conservative_enable_t<State> = 0>
+fluidity_host_device inline constexpr auto v_squared_sum(State&& state) noexcept
+{
+  using state_t = std::decay_t<State>;
+  using value_t = typename state_t::value_t;
+
+  value_t sum = 0;
+  unrolled_for<state_t::dimensions>([&sum, &state] (auto i) 
+  {
+    const auto v = state[state_t::index::velocity(i)]
+                 / state[state_t::index::density];
     sum += v * v;
   });
   return sum;
@@ -209,7 +226,6 @@ max_wavespeed(State&& state, Material&& mat) noexcept
   return max_velocity + mat.sound_speed(state);
 }
 
-
 /// Modifies additional fluxes for a primitive state. When the state is
 /// primitive some of the fluxes need to be multiplied by the density, which
 /// this function does for a flux at a specific index.
@@ -327,22 +343,8 @@ flux(State&& state, Material&& mat, Dimension<Value> /*dim*/)
     is_primitive_v<State> ? index_t::pressure : index_t::energy;
 
   flux[index_p_or_e] = v * (e + p);
+  make_other_fluxes(std::forward<State>(state), flux, dim);
 
-/*
-  if constexpr (state_t::format == FormType::primitive)
-  {
-    flux[index_t::pressure] = v * (e + p);
-  }
-  else
-  {
-    flux[index_t::energy] = v * (e + p);
-  }
-*/
-
-  //if constexpr (state_t::dimensions > 1 || state_t::additional_components > 0)
-  //{
-    make_other_fluxes(std::forward<State>(state), flux, dim);
-  //}
   return flux;
 }
 
@@ -356,7 +358,6 @@ fluidity_host_device inline constexpr auto
 primitive(State&& state, Material&& mat)
 {
   return state;
-
 }
 
 /// Returns the primitive form of the state when the state is conservative.

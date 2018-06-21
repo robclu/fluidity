@@ -70,7 +70,7 @@ static constexpr dimy_t dim_y = dimy_t{};
 static constexpr dimz_t dim_z = dimz_t{};
 
 /// Defines the default number of threads per block.
-static constexpr std::size_t default_threads_per_block = 256;
+static constexpr std::size_t default_threads_per_block = 512;
 
 } // namespace fluid
 
