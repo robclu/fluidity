@@ -150,7 +150,6 @@ void GenericSimulator<Traits>::simulate()
   using namespace std::chrono;
 
   // Variables for debug info:
-  auto iters = std::size_t{0};
   auto start = high_resolution_clock::now();
   auto end   = high_resolution_clock::now();
 
@@ -160,9 +159,7 @@ void GenericSimulator<Traits>::simulate()
   auto solver  = solver_t{};
   auto mat     = material_t{};
 
-  _params.print_complete_summary();
-
-  printf("Threads : %3u | Blocks : %3u\n", threads.x, blocks.x);
+  _params.print_static_summary();
 
   auto cfl = _params.cfl;
   while (_params.continue_simulation())
@@ -173,13 +170,14 @@ void GenericSimulator<Traits>::simulate()
     auto output_it    = _data.output_iterator();
     auto wavespeed_it = _data.wavespeed_iterator();
 
+    _params.print_current_status();
+
     // Set the wavespeed data based on the updated state data from the previous
     // iteration, and then update sim time delta based on max wavespeed:
     set_wavespeeds(input_it, wavespeed_it, mat);
     _params.update_time_delta(
       max_element(_data.wavespeeds().begin(),_data.wavespeeds().end()));
 
-    _params.print_current_status();
     update(input_it       ,
            output_it      ,
            solver         ,
@@ -197,6 +195,10 @@ void GenericSimulator<Traits>::simulate()
     //std::string filename = "Debug_" + std::to_string(_params.iters);
     //this->write_results(filename);
   }
+
+  end = high_resolution_clock::now();
+  printf("Simulation time : %8lu ms\n", 
+    std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count());
 
   // Make sure that the state data is accessible on the host.
   _data.finalise_states();

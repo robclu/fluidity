@@ -37,17 +37,17 @@ struct Parameters {
 
   /// Resolution of the computational domain. These parameters use the same
   /// resolution for each of the dimensions.
-  value_t resolution = 0.1;
+  value_t resolution  = 0.1;
   /// CFL number for the simulation.
-  value_t cfl        = 0.9;
+  value_t cfl         = 0.9;
   /// The time for which a simulation has been running.
-  value_t run_time   = 0.0;
+  value_t run_time    = 0.0;
   /// The time for which a simulation must run until.
-  value_t sim_time   = 0.0;
+  value_t sim_time    = 0.0;
   /// The number of iterations performed during a simulation.
-  iter_t iters       = 0;
+  iter_t iters        = 0;
   /// Maximum number of iterations for the simulation.
-  iter_t max_iters   = default_iters;
+  iter_t max_iters    = default_iters;
 
   /// Updates the parameter values based on the \p max_wavespeed in the
   /// simulation domain.
@@ -98,8 +98,8 @@ struct Parameters {
     );
   }
 
-  /// Prints a summary of the parameters, useful for debugging.
-  void print_complete_summary() const
+  /// Prints a summary of the constant parameters.
+  void print_static_summary() const
   {
     printf(
       "------------------------------------------------------------\n"
@@ -110,11 +110,17 @@ struct Parameters {
       "------------------------------------------------------------\n",
       resolution, cfl, sim_time, max_iters
     );
+  }
+
+  /// Prints a summary of the parameters, useful for debugging.
+  void print_complete_summary() const
+  {
+    print_static_summary();
     print_current_status();
   }
 
  private:
-  value_t _dt = 0.0; //!< Time delta for the simulation.
+  value_t _dt = 0.0;  //!< Time delta for the simulation.
 };
 
 }} // namespace fluid::sim
