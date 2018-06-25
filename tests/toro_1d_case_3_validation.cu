@@ -26,7 +26,7 @@
 using namespace fluid;
 
 // Defines the type of data to use.
-using real_t          = double;
+using real_t           = double;
 // Defines a 1 dimensional primitive state.
 using primitive1d_t   = state::primitive_t<real_t, 1>;
 // Defines the material type to use for the tests.
@@ -64,9 +64,8 @@ int main(int argc, char** argv)
 
   auto simulator = std::make_unique<simulator_t>();
   simulator->configure_dimension(fluid::dim_x, { 0.01, 1.0 })
-           ->configure_sim_time(0.15)
-           ->configure_cfl(0.9)
-           ->configure_max_iterations(6);
+           ->configure_sim_time(0.012)
+           ->configure_cfl(0.9);
 
   constexpr auto membrane = real_t{0.5};
   simulator->fill_data({
@@ -79,17 +78,17 @@ int main(int argc, char** argv)
     {
       "p", [] (const auto& pos)
       {
-        return 0.4;
+        return pos[0] < membrane ? 1000.0 : 0.01;
       }
     },
     {
       "v_x", [] (const auto& pos)
       {
-        return pos[0] < membrane ? -2.0 : 2.0;
+        return 0.0;
       }
     }
   });
 
   simulator->simulate();
-  simulator->write_results("toro_1d_case_2_results");
+  simulator->write_results("toro_1d_case_3_results");
 }

@@ -38,22 +38,8 @@ struct SplitSolver {
   /// Defines the type of the loader for the data.
   using loader_t         = std::decay_t<Loader>;
 
-/*
-  /// Defines the type of the reconstructor of the data.
-  using reconstructor_t  = typename traits_t::reconstructor_t;
-  /// Defines the type of the evaluator for the fluxes between cells.
-  using flux_evaluator_t = typename traits_t::flux_evaluator_t;
-
-  /// Defines an instance of the flux evaluator.
-  static constexpr auto flux_evaluator = flux_evaluator_t{};
-
-  /// Alias for creating a left input state.
-  static constexpr auto back_input = back_input_t{};
-  /// Aliad for creating a right input state.
-  static constexpr auto fwrd_input = fwrd_input_t{};
-*/
   /// Defines the number of dimensions to solve over.
-  static constexpr std::size_t num_dimensions = 1;
+  static constexpr std::size_t num_dimensions = Dimensions;
   /// Defines the amount of padding in the data loader.
   static constexpr std::size_t padding        = loader_t::padding;
 

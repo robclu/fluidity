@@ -171,7 +171,8 @@ struct Hllc {
     //      [ E_k / rho_k + (S_* - u_k) * [S_* + (p_k / (rho_k *(S_k - u_k)))]
     //
     // Currently stored is \rho_k * U_k, so add the rest:
-    u[index_t::energy] +=
+    u[index_t::energy] =
+      state.energy(_mat) * scale_factor   +
       scale_factor                        * 
       state.density()                     *
       (star_speed - state.velocity(dim))  *
@@ -206,7 +207,7 @@ struct Hllc {
                         * (al + ar));
     
       // Pressure in the star region, as per Toro, Equation 10.67, page 331:
-      const auto p_star = std::max(value_t{0.0}, p_pvrs);
+      const auto p_star = std::max(value_t{0}, p_pvrs);
 
       // Test for far left region (outside of the star state):
       const auto wsl   = wavespeed(ul, p_star, -al, adi);

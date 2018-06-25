@@ -1,4 +1,4 @@
-//==--- fluidity/tests/toro_1d_case_2_validation.cu -------- -*- C++ -*- ---==//
+//==--- fluidity/tests/toro_1d_case_5_validation.cu -------- -*- C++ -*- ---==//
 //            
 //                                Fluidity
 // 
@@ -64,11 +64,10 @@ int main(int argc, char** argv)
 
   auto simulator = std::make_unique<simulator_t>();
   simulator->configure_dimension(fluid::dim_x, { 0.01, 1.0 })
-           ->configure_sim_time(0.15)
-           ->configure_cfl(0.9)
-           ->configure_max_iterations(6);
+           ->configure_sim_time(0.012)
+           ->configure_cfl(0.9);
 
-  constexpr auto membrane = real_t{0.5};
+  constexpr auto membrane = real_t{0.8};
   simulator->fill_data({
     {
       "rho", [] (const auto& pos)
@@ -79,17 +78,17 @@ int main(int argc, char** argv)
     {
       "p", [] (const auto& pos)
       {
-        return 0.4;
+        return pos[0] < membrane ? 1000.0 : 0.01;
       }
     },
     {
       "v_x", [] (const auto& pos)
       {
-        return pos[0] < membrane ? -2.0 : 2.0;
+        return -19.59745;
       }
     }
   });
 
   simulator->simulate();
-  simulator->write_results("toro_1d_case_2_results");
+  simulator->write_results("toro_1d_case_5_results");
 }
