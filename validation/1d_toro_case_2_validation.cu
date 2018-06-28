@@ -1,4 +1,4 @@
-//==--- fluidity/tests/toro_1d_case_2_validation.cu -------- -*- C++ -*- ---==//
+//==--- fluidity/tests/1d_toro_case_2_validation.cu -------- -*- C++ -*- ---==//
 //            
 //                                Fluidity
 // 
@@ -8,7 +8,7 @@
 //
 //==------------------------------------------------------------------------==//
 //
-/// \file  toro_1d_case_2_validation.cu
+/// \file  1d_toro_case_2_validation.cu
 /// \brief This file defines a validation test against the 1d toro test case 2.
 //
 //==------------------------------------------------------------------------==//
@@ -80,5 +80,5 @@ int main(int argc, char** argv)
   });
 
   simulator->simulate();
-  simulator->write_results("toro_1d_case_2_results");
+  simulator->write_results("1d_toro_case_2_results");
 }

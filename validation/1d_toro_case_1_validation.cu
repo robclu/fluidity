@@ -1,4 +1,4 @@
-//==--- fluidity/tests/toro_1d_case_5_validation.cu -------- -*- C++ -*- ---==//
+//==--- fluidity/tests/1d_toro_case_1_validation.cu -------- -*- C++ -*- ---==//
 //            
 //                                Fluidity
 // 
@@ -8,16 +8,15 @@
 //
 //==------------------------------------------------------------------------==//
 //
-/// \file  toro_1d_case_2_validation.cu
-/// \brief This file defines a validation test against the 1d toro test case 2.
+/// \file  1d_toro_case_1_validation.cu
+/// \brief This file defines a validation test against the 1d toro test case 1.
 //
 //==------------------------------------------------------------------------==//
 
 #include <fluidity/flux_method/flux_methods.hpp>
 #include <fluidity/limiting/limiters.hpp>
 #include <fluidity/material/ideal_gas.hpp>
-#include <fluidity/reconstruction/basic_reconstructor.hpp>
-#include <fluidity/reconstruction/muscl_reconstructor.hpp>
+#include <fluidity/reconstruction/reconstructors.hpp>
 #include <fluidity/simulator/generic_simulator.hpp>
 #include <fluidity/state/state.hpp>
 #include <memory>
@@ -53,32 +52,32 @@ int main(int argc, char** argv)
   using simulator_t = fluid::sim::GenericSimulator<sim_traits_t>;
 
   auto simulator = std::make_unique<simulator_t>();
-  simulator->configure_dimension(fluid::dim_x, { 0.01, 1.0 })
-           ->configure_sim_time(0.012)
+  simulator->configure_dimension(fluid::dim_x, { 0.001, 1.0 })
+           ->configure_sim_time(0.2)
            ->configure_cfl(0.9);
 
-  constexpr auto membrane = real_t{0.8};
+  constexpr auto membrane = real_t{0.3};
   simulator->fill_data({
     {
       "rho", [] (const auto& pos)
       {
-        return 1.0;
+        return pos[0] < membrane ? 1.0 : 0.125;
       }
     },
     {
       "p", [] (const auto& pos)
       {
-        return pos[0] < membrane ? 1000.0 : 0.01;
+        return pos[0] < membrane ? 1.0 : 0.1;
       }
     },
     {
       "v_x", [] (const auto& pos)
       {
-        return -19.59745;
+        return pos[0] < membrane ? 0.75 : 0.0;
       }
     }
   });
 
   simulator->simulate();
-  simulator->write_results("toro_1d_case_5_results");
+  simulator->write_results("1d_toro_case_1_results");
 }
