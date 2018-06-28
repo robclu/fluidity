@@ -1,4 +1,4 @@
-#==--- src/CMakeLists.txt ---------------------------------------------------==#
+#==--- tests/CMakeLists.txt -------------------------------------------------==#
 #
 #                      Copyright (c) 2018 Rob Clucas.
 #
@@ -112,58 +112,6 @@ fluid_target_link_libraries(
   #  TARGET test PROPERTY BUILD_RPATH ${CMAKE_CUDA_IMPLICIT_LINK_DIRECTORIES}
   #)
 #endif()
-
-#==--- Validation tests -----------------------------------------------------==#
-
-# TORO test case 1:
-fluid_add_executable(
-  toro_1d_case_1_validation
-  ${fluidity_SOURCE_DIR}/tests/toro_1d_case_1_validation.cu
-)
-fluid_target_link_libraries(
-  toro_1d_case_1_validation
-  ${CUDA_LIBRARIES}
-)
-
-# TORO test case 2:
-fluid_add_executable(
-  toro_1d_case_2_validation
-  ${fluidity_SOURCE_DIR}/tests/toro_1d_case_2_validation.cu
-)
-fluid_target_link_libraries(
-  toro_1d_case_2_validation
-  ${CUDA_LIBRARIES}
-)
-
-# TORO test case 3:
-fluid_add_executable(
-  toro_1d_case_3_validation
-  ${fluidity_SOURCE_DIR}/tests/toro_1d_case_3_validation.cu
-)
-fluid_target_link_libraries(
-  toro_1d_case_3_validation
-  ${CUDA_LIBRARIES}
-)
-
-# TORO test case 4:
-fluid_add_executable(
-  toro_1d_case_4_validation
-  ${fluidity_SOURCE_DIR}/tests/toro_1d_case_4_validation.cu
-)
-fluid_target_link_libraries(
-  toro_1d_case_4_validation
-  ${CUDA_LIBRARIES}
-)
-
-# TORO test case 5:
-fluid_add_executable(
-  toro_1d_case_5_validation
-  ${fluidity_SOURCE_DIR}/tests/toro_1d_case_5_validation.cu
-)
-fluid_target_link_libraries(
-  toro_1d_case_5_validation
-  ${CUDA_LIBRARIES}
-)
 
 #==--- Finish Up ------------------------------------------------------------==#
 

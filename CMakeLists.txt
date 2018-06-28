@@ -175,3 +175,4 @@ add_subdirectory(googletest)
 #==--- Subdirectories -------------------------------------------------------==#
 
 add_subdirectory(tests)
+add_subdirectory(validation)
