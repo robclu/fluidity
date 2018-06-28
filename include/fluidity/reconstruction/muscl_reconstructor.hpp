@@ -17,11 +17,10 @@
 #ifndef FLUIDITY_RECONSTRUCTION_MUSCL_RECONSTRUCTOR_HPP
 #define FLUIDITY_RECONSTRUCTION_MUSCL_RECONSTRUCTOR_HPP
 
-#include "riemann_input.hpp"
+#include "reconstructor.hpp"
+
 #include <fluidity/dimension/thread_index.hpp>
 #include <fluidity/utility/portability.hpp>
-
-#include "reconstructor.hpp"
 
 namespace fluid {
 namespace recon {
@@ -31,14 +30,14 @@ namespace recon {
 /// \tparam Limter The type of the sloper limiter to use.
 template <typename Limiter>
 struct MHReconstructor : public Reconstructor<MHReconstructor<Limiter>> {
+ private:
   /// Defines the type of the slope limiter used by the reconstructor.
   using limiter_t = Limiter;
 
   /// Sets the number of elements which are required in the backward and forward
   /// directions during the reconstruction process.
-  static constexpr size_t width = 2;
+  static constexpr size_t width = limiter_t::width;
 
- private:
   /// Defines the value of the reconstruction application to a right face.
   static constexpr auto right_face = int{1};
   /// Defiens the value of the reconstruction application to a left face.
@@ -79,9 +78,10 @@ struct MHReconstructor : public Reconstructor<MHReconstructor<Limiter>> {
     using state_t = std::decay_t<decltype(*state_it)>;
     using value_t = std::decay_t<T>;
 
-    constexpr auto half  = value_t{0.5};
-    constexpr auto dim   = Dimension<V>{};
-    const auto     delta = half * limiter_t()(state_it, dim);
+    constexpr auto half    = value_t{0.5};
+    constexpr auto dim     = Dimension<V>{};
+    const auto     limiter = limiter_t();
+    const auto     delta   = half * limiter.limit(state_it, mat, dim);
 
     // Boundary extrapolated value:
     // U_i^n \pm \frac{1}{2} \delta \eita i
@@ -115,9 +115,10 @@ struct MHReconstructor : public Reconstructor<MHReconstructor<Limiter>> {
     using state_t = std::decay_t<decltype(*state_it)>;
     using value_t = std::decay_t<T>;
 
-    constexpr auto half  = value_t{0.5};
-    constexpr auto dim   = Dimension<V>{};
-    const auto     delta = half * limiter_t()(state_it, dim);
+    constexpr auto half    = value_t{0.5};
+    constexpr auto dim     = Dimension<V>{};
+    const auto     limiter = limiter_t();
+    const auto     delta   = half * limiter.limit(state_it, mat, dim);
 
     // Boundary extrapolated value:
     const auto bev = state_t{*state_it - delta};

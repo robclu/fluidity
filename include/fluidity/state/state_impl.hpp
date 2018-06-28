@@ -241,7 +241,7 @@ template < typename State
 fluidity_host_device inline constexpr auto
 modify_other_fluxes(State&& state, Flux&& flux, std::size_t index)
 {
-  flux[index] = state.density();
+  flux[index] *= state.density();
 }
 
 /// Modifies additional fluxes for a primitive state. This function is enabled
@@ -322,7 +322,41 @@ make_other_fluxes(State&& state, Flux&& flux, Dimension<Value> /*dim*/) {}
 /// \tparam    State    The type of the state.
 /// \tparam    Material The type of the material.
 /// \tparam    Value    The value of the dimension.
-template <typename State, typename Material, std::size_t Value>
+template < typename State
+         , typename Material
+         , std::size_t Value
+         , primitive_enable_t<State> = 0>
+fluidity_host_device inline constexpr auto
+flux(State&& state, Material&& mat, Dimension<Value> /*dim*/)
+{
+  using state_t   = std::decay_t<State>;
+  using index_t   = typename state_t::index;
+  using storage_t = typename state_t::storage_t;
+
+  constexpr auto dim = Dimension<Value>{};
+  const auto&    v   = state.velocity(dim);
+
+  storage_t flux;
+  flux[index_t::density]       = state.density() * v;
+  flux[index_t::pressure]      = v * (state.energy(mat) + state.pressure(mat));
+  flux[index_t::velocity(dim)] = flux[index_t::density] * v 
+                               + state.pressure(mat);
+
+  make_other_fluxes(std::forward<State>(state), flux, dim);
+  return flux;
+}
+
+/// Computes the flux for a state.
+/// \param[in] state    The state to compute the flux for.
+/// \param[in] mat      The material for the system.
+/// \param[in] dim      The dimension to compute the flux in terms of.
+/// \tparam    State    The type of the state.
+/// \tparam    Material The type of the material.
+/// \tparam    Value    The value of the dimension.
+template < typename State
+         , typename Material
+         , std::size_t Value
+         , conservative_enable_t<State> = 0>
 fluidity_host_device inline constexpr auto
 flux(State&& state, Material&& mat, Dimension<Value> /*dim*/)
 {
@@ -333,18 +367,13 @@ flux(State&& state, Material&& mat, Dimension<Value> /*dim*/)
   constexpr auto dim = Dimension<Value>{};
   const     auto v   = state.velocity(dim);
   const     auto p   = state.pressure(mat);
-  const     auto e   = state.energy(mat);
 
   storage_t flux;
-  flux[index_t::density]       = state.density() * v;
-  flux[index_t::velocity(dim)] = flux[index_t::density] * v + p;
+  flux[index_t::density]       = state[index_t::velocity(dim)];
+  flux[index_t::velocity(dim)] = state[index_t::velocity(dim)] * v + p;
+  flux[index_t::energy]        = v * (state.energy(mat) + p);
 
-  constexpr auto index_p_or_e = 
-    is_primitive_v<State> ? index_t::pressure : index_t::energy;
-
-  flux[index_p_or_e] = v * (e + p);
   make_other_fluxes(std::forward<State>(state), flux, dim);
-
   return flux;
 }
 

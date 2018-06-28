@@ -230,25 +230,6 @@ struct StridedIterator {
   /// auto new_iterator = t[4];
   /// \endcode
   /// 
-  /// \param[in] offset The offset of the iterator to access, from this
-  ///                   iterator.
-  //fluidity_host_device self_t operator[](difference_t offset) const
-  //{
-  //  return *this + offset * _stride;
-  //}
-
-  /// Overload of access operator to return the value of a specific element
-  /// the iterator iterates over, at \p offset from the starting element to
-  /// iterate over. For example:
-  /// 
-  /// \code{cpp}
-  /// tensor_iterator_t t;
-  /// 
-  /// // new_iterator is a tensor_iterator_t pointer to the element 4 positions
-  /// // from the element t points to.
-  /// auto new_iterator = t[4];
-  /// \endcode
-  /// 
   /// \param[in] offset The offset of the iterator element to access, from this
   ///                   iterator.
   fluidity_host_device value_t& operator[](difference_t offset)

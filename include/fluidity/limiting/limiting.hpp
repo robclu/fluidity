@@ -17,48 +17,83 @@
 #ifndef FLUIDITY_LIMITING_LIMITING_HPP
 #define FLUIDITY_LIMITING_LIMITING_HPP
 
-#include <fluidity/state/state_traits.hpp>
-#include <fluidity/utility/type_traits.hpp>
+#include "limiting_impl.hpp"
 
 namespace fluid  {
 namespace limit  {
 
-/// Used to enable overloads when the state type held by the iterator has the
-/// same form as that requested by the calling function.
-/// \tparam Iterator      The type of the state iterator.
-/// \tparam RequestedForm The requested form for the state.
-template <typename Iterator, state::FormType RequestedForm>
-using enable_same_t = 
-  std::enable_if_t<
-    is_same_v<iter_value_t<Iterator>::format, RequestedForm>, int
-  >;
-
-/// Used to enable overloads when the state type held by the iterator does not
-/// have the same form as that requested by the calling function.
-/// \tparam Iterator      The type of the state iterator.
-/// \tparam RequestedForm The requested form for the state.
-template <typename Iterator, state::FormType RequestedForm>
-using enable_different_t =
-  std::enable_if_t<
-    !is_same_v<iter_value_t<Iterator>::format, RequestedForm>, int
-  >;
-
 /// Computes the backward difference of the state pointed to by the iterator and
-/// state ahead of it, in the given dimension. The state variables are
+/// state behind it, in the given dimension. The state variables are  
 /// differenced in the \p requested_form. If the form of the state is different
 /// from the \p requested_form, then they are trasformed before the differencing
-/// and then transformed back afterwards.
-/// \param[in] state_it   An iterator to the state.
+/// and are returned in the \p requested_form.
+/// \param[in] state_it       An iterator to the state.
+/// \param[in] mat            The material for the system.
+/// \param[in] requested_form The form of the state for differencing.
+/// \tparam    Form           The form of the variables to limit on.
+/// \tparam    Iterator       The type of the state iterator.
+/// \tparam    Material       The type of the material
+/// \tparam    Value          The value which defines the dimension. 
+template < typename    Form
+         , typename    Iterator
+         , typename    Material
+         , std::size_t Value>
+fluidity_host_device constexpr auto
+backward_diff(Iterator&& state_it, Material&& mat, Dimension<Value>)
+{
+  return detail::backward_diff<Form>(std::forward<Iterator>(state_it),
+                                     std::forward<Material>(mat)     ,
+                                     Dimension<Value>{}              );
+}
+
+/// Computes the forward difference between the state ahead of the state
+/// pointed to by the iterator and the state pointed to by the iterator, in the
+/// given dimension. The state variables are differenced in the \p 
+/// requested_form. If the form of the state is different from the \p
+/// requested_form, then they are trasformed before the differencing
+/// and are returned in the \p requested_form.
+/// \param[in] state_it       An iterator to the state.
+/// \param[in] mat            The material for the system.
+/// \param[in] requested_form The form of the state for differencing.
+/// \tparam    Form           The form of the variables to limit on.
+/// \tparam    Iterator       The type of the state iterator.
+/// \tparam    Material       The type of the material
+/// \tparam    Value          The value which defines the dimension. 
+template < typename    Form
+         , typename    Iterator
+         , typename    Material
+         , std::size_t Value>
+fluidity_host_device constexpr auto
+forward_diff(Iterator&& state_it, Material&& mat, Dimension<Value>)
+{
+  return detail::forward_diff<Form>(std::forward<Iterator>(state_it),
+                                    std::forward<Material>(mat)     ,
+                                    Dimension<Value>{}              );
+}
+
+/// Computes the central difference between the state ahead of the state
+/// pointed to by the iterator and the state behind the state pointed to by the
+/// iterator, in the given dimension. The state variables are differenced in
+/// the \p requested_form. If the form of the state is different from the \p
+/// requested_form, then they are trasformed before the differencing
+/// and are returned in the \p requested_form.
+/// \param[in] state_it       An iterator to the state.
+/// \param[in] mat            The material for the system.
 /// \param[in] requested_form The form of the state for differencing.
 /// \tparam    Iterator       The type of the state iterator.
+/// \tparam    Material       The type of the material
+/// \tparam    Form           The form of the variables to limit on.
 /// \tparam    Value          The value which defines the dimension. 
-template <typename Iterator, std::size_t Value>
+template < typename    Form
+         , typename    Iterator
+         , typename    Material
+         , std::size_t Value>
 fluidity_host_device constexpr auto
-backward_diff(Iterator&&      state_it      ,
-              state::FormType requested_form,
-              Dimension<Value> /*dim*/      )
+central_diff(Iterator&& state_it, Material&& mat, Dimension<Value>)
 {
-  // Forward to the appropriate overload ...
+  return detail::central_diff<Form>(std::forward<Iterator>(state_it),
+                                    std::forward<Material>(mat)     ,
+                                    Dimension<Value>{}              );
 }
 
 }} // namespace fluid::limit

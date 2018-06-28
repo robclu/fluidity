@@ -16,11 +16,7 @@
 #ifndef FLUIDITY_LIMITING_VAN_LEER_LIMITER_HPP
 #define FLUIDITY_LIMITING_VAN_LEER_LIMITER_HPP
 
-#include <fluidity/algorithm/unrolled_for.hpp>
-#include <fluidity/container/array.hpp>
-#include <fluidity/dimension/thread_index.hpp>
-#include <fluidity/math/math.hpp>
-#include <fluidity/utility/portability.hpp>
+#include "limiter.hpp"
 #include <algorithm>
 
 namespace fluid {
@@ -29,55 +25,46 @@ namespace limit {
 /// The VanLeer class defines a functor which implements VanLeer limiting as
 /// per: Toro, page 510, equation 14.54, which is:
 /// 
-///   \begin{equation}
-///     \Eita_{vl}(r) = 
-///       \begin{cases}
-///         0           &, if r \le 0   \\
-///         min\{L, R\} &, if r \ge 0
-///       \end{cases}
-///   \end{equation}
+/// \begin{equation}
+///   \Eita_{vl}(r) = 
+///     \begin{cases}
+///       0           &, if r \le 0   \\
+///       min\{L, R\} &, if r \ge 0
+///     \end{cases}
+/// \end{equation}
+/// where:
+///  $ L = \frac{2r}{1 + r} $
+///  $ R = \Eita_R(r)       $
 ///
-///   where:
-///
-///    $ L = \frac{2r}{1 + r} $
-///    $ R = \Eita_R(r)       $
-struct VanLeer {
-  /// Defines the type of this class.
-  using self_t = VanLeer;
-
-  /// Defines the number of elements required for limiting.
-  static constexpr std::size_t width = 2;
+/// \tparam Form The form of the state variables to limit on.
+template <typename Form>
+struct VanLeer : public Limiter<VanLeer<Form>> {
+  /// Defines the form of the variables to limit on.
+  using form_t = Form;
 
   /// Implementation of the limit function which applies the limiting to an
   /// iterator, calling the limit method on each of the iterator elements.
   /// \param[in]  state_it  The state iterator to limit.
-  /// \param[in]  dim       The (spacial) dimension to limit over.
+  /// \param[in]  material  The material for the system.
   /// \tparam     Iterator  The type of the state iterator.
+  /// \tparam     Material  The type of the material.
   /// \tparam     Value     The value which defines the dimension.
-  template <typename Iterator, std::size_t Value>
+  template <typename Iterator, typename Material, std::size_t Value>
   fluidity_host_device constexpr auto
-  operator()(Iterator&& state_it, Dimension<Value> /*dim*/) const
+  limit_impl(Iterator&& state_it, Material&& mat, Dimension<Value>) const
   {
-    using state_t = std::decay_t<decltype(*state_it)>;
-    using value_t = typename state_t::value_t;
-    Array<value_t, state_t::elements> limited;
-
-    constexpr auto dim   = Dimension<Value>{};
-    constexpr auto scale = value_t{0.5};
-    
-    const auto fwrd_diff = state_it.forward_diff(dim);
-    const auto back_diff = state_it.backward_diff(dim);
-
-    unrolled_for<state_t::elements>([&] (auto i)
-    {
-      limited[i] = scale
-                 * limit_single(back_diff[i], fwrd_diff[i])
-                 * (back_diff[i] + fwrd_diff[i]);
-    });
-    return limited;
+    return this->limit_generic(std::forward<Iterator>(state_it),
+                               std::forward<Material>(mat)     ,
+                               Dimension<Value>{}              );
   }
 
  private:
+  /// Defines the type of the base class.
+  using base_t = Limiter<VanLeer<Form>>;
+
+  /// Make the base class a friend so that it can use implementation detrails.
+  friend base_t;
+
   /// Returns the limited value of a single element, as defined in the class
   /// description. 
   /// \param[in] left    The left state to limit on.

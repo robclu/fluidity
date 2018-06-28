@@ -194,8 +194,8 @@ struct MultidimIterator : public DimensionInfo {
   /// 
   /// ~~~cpp
   /// // The following is the same:
-  /// auto diff = state->backward_diff(fluid::dim_x);
-  /// auto diff = state->backward_diff(fluid::dim_x, 1);
+  /// auto diff = state.backward_diff(fluid::dim_x);
+  /// auto diff = state.backward_diff(fluid::dim_x, 1);
   /// ~~~
   /// 
   /// \param[in]  amount  The amount to offset the iterator by.
@@ -206,6 +206,35 @@ struct MultidimIterator : public DimensionInfo {
   backward_diff(Dimension<Value> /*dim*/, unsigned int amount = 1) const
   {
     return *_ptr - *(_ptr - amount * stride(Dimension<Value>{}));
+  }
+
+  /// Returns the backward difference between this iterator and the iterator \p
+  /// amount places from from this iterator in dimension \p dim, for the Nth
+  /// element of the data which the iterator points to. This method can only be
+  /// used when the iterated data has overloaded operator[]. I.e
+  /// 
+  /// \begin{equation}
+  ///   \Delta U = U_\textrm{dim}(i)[n] -
+  ///            - U_{\textrm{dim}(i - \texrm{amount})}[n]
+  /// \end{equation}
+  /// 
+  /// The default is that \p amount is 1, i.e:
+  /// 
+  /// ~~~cpp
+  /// // The following is the same:
+  /// auto diff = state.backward_diff<N>(fluid::dim_x);
+  /// auto diff = state.backward_diff<N>(fluid::dim_x, 1);
+  /// ~~~
+  /// 
+  /// \param[in]  amount  The amount to offset the iterator by.
+  /// \param[in]  dim     The dimension to offset in.
+  /// \tparam     N       The index of the element to compute the difference of.
+  /// \tparam     Value   The value which defines the dimension.
+  template <std::size_t N, std::size_t Value>
+  fluidity_host_device constexpr auto
+  backward_diff(unsigned int amount = 1) const
+  {
+    return (*_ptr)[N] - (*(_ptr - amount * stride(Dimension<Value>{})))[N];
   }
 
   /// Returns the central difference between this iterator and the iterators \p
@@ -220,8 +249,8 @@ struct MultidimIterator : public DimensionInfo {
   /// 
   /// ~~~cpp
   /// // The following is the same:
-  /// auto diff = state->centralDiff(fluid::dim_z);
-  /// auto diff = state->centralDiff(fluid::dim_z, 1);
+  /// auto diff = state.centralDiff(fluid::dim_z);
+  /// auto diff = state.centralDiff(fluid::dim_z, 1);
   /// ~~~
   /// 
   /// \param[in]  amount  The amount to offset the iterator by.
@@ -235,6 +264,36 @@ struct MultidimIterator : public DimensionInfo {
     return *(_ptr + shift) - *(_ptr - shift);
   }
 
+  /// Returns the central difference between this iterator and the iterators \p
+  /// amount places forward and backward from this iterator in dimension \p dim,
+  /// for the Nth element of the iterated over data. This method can only be
+  /// used when the iterated data overloads operator[].
+  /// 
+  /// \begin{equation}
+  ///   \Delta U = U_{\textrm{dim}(i + \texrm{amount})}[N] 
+  ///            - U_{\textrm{dim}(i - \texrm{amount})}[N]
+  /// \end{equation}
+  /// 
+  /// The default is that \p amount is 1, i.e:
+  /// 
+  /// ~~~cpp
+  /// // The following is the same:
+  /// auto diff = state.centralDiff<N>(fluid::dim_z);
+  /// auto diff = state.centralDiff<N>(fluid::dim_z, 1);
+  /// ~~~
+  /// 
+  /// \param[in]  amount  The amount to offset the iterator by.
+  /// \param[in]  dim     The dimension to offset in.
+  /// \tparam     N       The index of the element to difference.
+  /// \tparam     Value   The value which defines the dimension.
+  template <std::size_t N, std::size_t Value>
+  fluidity_host_device constexpr auto
+  central_diff(unsigned int amount = 1) const
+  {
+    const auto shift = amount * stride(Dimension<Value>{});
+    return (*(_ptr + shift))[N] - (*(_ptr - shift))[N];
+  }
+
   /// Returns the forward difference between this iterator and the iterator \p
   /// amount places from from this iterator in dimension \p dim. I.e
   /// 
@@ -246,13 +305,13 @@ struct MultidimIterator : public DimensionInfo {
   /// 
   /// ~~~cpp
   /// // The following is the same:
-  /// auto diff = state->forward_diff(fluid::dim_y);
-  /// auto diff = state->forward_diff(fluid::dim_y, 1);
+  /// auto diff = state.forward_diff(fluid::dim_y);
+  /// auto diff = state.forward_diff(fluid::dim_y, 1);
   /// 
   /// // But is different from (as this returns the forward difference between
   /// // the element 2 positions ahead of the iterator's element and the
   /// // iterator's element):
-  /// auto diff = state->forward_diff(fluid::dim_y, 2);
+  /// auto diff = state.forward_diff(fluid::dim_y, 2);
   /// ~~~
   /// 
   /// \param[in]  amount  The amount to offset the iterator by.
@@ -263,6 +322,41 @@ struct MultidimIterator : public DimensionInfo {
   forward_diff(Dimension<Value> /*dim*/, unsigned int amount = 1) const
   {
     return *(_ptr + amount * stride(Dimension<Value>{})) - *_ptr;
+  }
+
+  /// Returns the forward difference between this iterator and the iterator \p
+  /// amount places from from this iterator in dimension \p dim, for the Nth
+  /// element in the data pointed to by the iterator. This function can only be
+  /// used when the iterator iterates over data which overloads operator[]. The
+  /// forward difference is:
+  /// 
+  /// \begin{equation}
+  ///   \Delta U = U_{\textrm{dim}(i + \texrm{amount})}[N] 
+  ///            - U_\textrm{dim}(i)[N]
+  /// \end{equation}
+  /// 
+  /// The default is that \p amount is 1, i.e:
+  /// 
+  /// ~~~cpp
+  /// // The following is the same:
+  /// auto diff = state.forward_diff<N>(fluid::dim_y);
+  /// auto diff = state.forward_diff<N>(fluid::dim_y, 1);
+  /// 
+  /// // But is different from (as this returns the forward difference between
+  /// // the element 2 positions ahead of the iterator's element and the
+  /// // iterator's element):
+  /// auto diff = state.forward_diff<N>(fluid::dim_y, 2);
+  /// ~~~
+  /// 
+  /// \param[in]  amount  The amount to offset the iterator by.
+  /// \tparam     Value   The value which defines the dimension.
+  /// \tparam     N       The index of the element to to difference.
+  /// \tparam     Value   The value which defines the dimension.
+  template <std::size_t N, std::size_t Value>
+  fluidity_host_device constexpr auto
+  forward_diff(unsigned int amount = 1) const
+  {
+    return (*(_ptr + amount * stride(Dimension<Value>{})))[N] - (*_ptr)[N];
   }
 
   /// Returns the number of dimensions which can be iterated over.

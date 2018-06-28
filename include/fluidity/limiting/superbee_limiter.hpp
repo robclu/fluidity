@@ -17,11 +17,7 @@
 #ifndef FLUIDITY_LIMITING_SUPERBEE_LIMITER_HPP
 #define FLUIDITY_LIMITING_SUPERBEE_LIMITER_HPP
 
-#include <fluidity/algorithm/unrolled_for.hpp>
-#include <fluidity/container/array.hpp>
-#include <fluidity/dimension/dimension.hpp>
-#include <fluidity/math/math.hpp>
-#include <fluidity/utility/portability.hpp>
+#include "limiter.hpp"
 #include <algorithm>
 
 namespace fluid {
@@ -30,6 +26,7 @@ namespace limit {
 /// The Superbee limiter class defines a functor which performs superbee
 /// limiting as per: Toro, page 510, equation 14.53, which is:
 ///  
+/// \begin{equation}
 ///   \Eita_{sb}(r) = 
 ///     \begin{cases}
 ///       0                       &, if r \le 0                   \\
@@ -37,43 +34,37 @@ namespace limit {
 ///       1                       &, if \frac{1}{2} \le r \le 1   \\
 ///       min\{r, \Eita_R(r), 2\} &, if r \ge 1
 ///     \end{cases}
-struct Superbee {
-  /// Defines the type of this class.
-  using self_t = Superbee;
+/// \end{equation}
+///
+/// \tparam Form The form of the variables to limit on.
+template <typename Form>
+struct Superbee : public Limiter<Superbee<Form>> {
+  /// Defines the form of the limiting.
+  using form_t = Form;
 
-  /// Defines the number of elements (on one side) for limiting.
-  static constexpr std::size_t width = 2;
-
-  /// Implementation of the SUPERBEE limiting functionality.
+  /// Implementation of the limit function which applies the limiting to an
+  /// iterator, calling the limit method on each of the iterator elements.
   /// \param[in]  state_it  The state iterator to limit.
-  /// \param[in]  dim       The (spacial) dimension to limit over.
+  /// \param[in]  material  The material for the system.
   /// \tparam     Iterator  The type of the state iterator.
+  /// \tparam     Material  The type of the material.
   /// \tparam     Value     The value which defines the dimension.
-  template <typename Iterator, std::size_t Value>
+  template <typename Iterator, typename Material, std::size_t Value>
   fluidity_host_device constexpr auto
-  operator()(Iterator&& state_it, Dimension<Value> /*dim*/) const
+  limit_impl(Iterator&& state_it, Material&& mat, Dimension<Value>) const
   {
-    using state_t = std::decay_t<decltype(*state_it)>;
-    using value_t = typename state_t::value_t;
-    Array<value_t, state_t::elements> limited;
-
-    constexpr auto dim   = Dimension<Value>();
-    constexpr auto scale = value_t{0.5};
-
-    const auto fwrd_diff = state_it.forward_diff(dim);
-    const auto back_diff = state_it.backward_diff(dim);
-
-    // Limit each of the variables:
-    unrolled_for<state_t::elements>([&] (auto i)
-    {
-      limited[i] = scale 
-                 * limit_single(back_diff[i], fwrd_diff[i])
-                 * (back_diff[i] + fwrd_diff[i]);
-    });
-    return limited;
+    return this->limit_generic(std::forward<Iterator>(state_it),
+                               std::forward<Material>(mat)     ,
+                               Dimension<Value>{}              );
   }
 
  private:
+  /// Defines the type of the base class.
+  using base_t = Limiter<Superbee<Form>>;
+
+  /// Allow the base class to use the implementation details.
+  friend base_t;
+
   /// Returns the limited value of a single element, as defined in the class
   /// description. 
   /// \param[in] left    The left state to limit on.

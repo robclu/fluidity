@@ -20,6 +20,7 @@
 
 #include <fluidity/container/array.hpp>
 #include <fluidity/dimension/dimension.hpp>
+#include <fluidity/dimension/thread_index.hpp>
 #include <fluidity/utility/portability.hpp>
 #include <fluidity/utility/type_traits.hpp>
 
@@ -84,8 +85,9 @@ struct Hllc {
                                            value_t      sound_speed,
                                            value_t      adi_scale  ) const
     {
+      const auto pressure = state.pressure(_mat);
       // Rarefaction wave:
-      if (pstar <= state.pressure(_mat))
+      if (pstar <= pressure)
       {
         return state.velocity(dim) + sound_speed;
       } 
@@ -93,8 +95,8 @@ struct Hllc {
       // Shock wave:
       constexpr auto one = value_t{1};
       return state.velocity(dim) 
-            + sound_speed
-            * std::sqrt(one + adi_scale * (pstar / state.pressure(_mat) - one));
+             + sound_speed 
+             * std::sqrt(one + adi_scale * (pstar / pressure - one));
     }
 
     /// Computes the wavespeed in the star region, S*, as follows:
@@ -172,11 +174,11 @@ struct Hllc {
     //
     // Currently stored is \rho_k * U_k, so add the rest:
     u[index_t::energy] =
-      state.energy(_mat) * scale_factor   +
-      scale_factor                        * 
-      state.density()                     *
-      (star_speed - state.velocity(dim))  *
-      (star_speed + state.pressure(_mat) / (state.density() * state_factor));
+      scale_factor                        *
+      (state.energy(_mat)                 +
+       state.density()                    *
+       (star_speed - state.velocity(dim)) *
+       (star_speed + state.pressure(_mat) / (state.density() * state_factor)));
 
     return u;
   }
@@ -200,7 +202,7 @@ struct Hllc {
       const auto ar  = _mat.sound_speed(ur);
       const auto adi = q_factor();
 
-      const auto p_pvrs  = value_t{0.5} *
+      const auto p_pvrs = value_t{0.5} *
         ((ul.pressure(_mat) + ur.pressure(_mat)) -
           value_t{0.25} * (ur.velocity(dim) - ul.velocity(dim))
                         * (ur.density()     + ul.density())
@@ -223,12 +225,13 @@ struct Hllc {
       const auto ws_star = star_speed(ul, ur, wsl, wsr);
 
       // Left star region, return FL*
-      auto u_star = star_state(ul, wsl, ws_star);
-      if (value_t{0} <= ws_star) { return fluxl + wsl * (u_star - ul); }
+      if (value_t{0} <= ws_star) 
+      {
+        return fluxl + wsl * (star_state(ul, wsl, ws_star) - ul);
+      }
 
       // Right star region, return FR*:
-      u_star = star_state(ur, wsr, ws_star);
-      return fluxr + wsr * (u_star - ur);
+      return fluxr + wsr * (star_state(ur, wsr, ws_star) - ur);
     }
   };
 

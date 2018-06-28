@@ -38,12 +38,12 @@ struct Linear {
 
   /// Implementation of the linear limiting functionality.
   /// \param[in]  state_it  The state iterator to limit.
-  /// \param[in]  dim       The (spacial) dimension to limit over.
   /// \tparam     Iterator  The type of the state iterator.
+  /// \tparam     Material  The type of the material for the system.
   /// \tparam     Value     The value which defines the dimension.
-  template <typename Iterator, std::size_t Value>
+  template <typename Iterator, typename Material, std::size_t Value>
   fluidity_host_device constexpr auto
-  operator()(Iterator&& state_it, Dimension<Value> /*dim*/) const
+  operator()(Iterator&& state_it, Material&&, Dimension<Value>) const
   {
     using state_t     = typename std::decay_t<decltype(*state_it)>;
     using value_t     = typename state_t::value_t;

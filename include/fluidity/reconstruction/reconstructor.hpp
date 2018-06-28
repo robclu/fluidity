@@ -17,6 +17,7 @@
 #ifndef FLUIDITY_RECONSTRUCTION_RECONSTRUCTOR_HPP
 #define FLUIDITY_RECONSTRUCTION_RECONSTRUCTOR_HPP
 
+#include "reconstructor_traits.hpp"
 #include <fluidity/state/state_traits.hpp>
 #include <fluidity/utility/portability.hpp>
 
@@ -30,7 +31,9 @@ template <typename ReconImpl>
 class Reconstructor
 {
   /// Defines the type of the reconstructor implementation.
-  using impl_t = ReconImpl;
+  using impl_t   = ReconImpl;
+  /// Defines the type of the traits for the limiter.
+  using traits_t = ReconstructorTraits<impl_t>;
 
   /// See constructor comment, need to allow onl RecomImpl to call constructor.
   friend ReconImpl;
@@ -58,6 +61,11 @@ class Reconstructor
   }
 
  public:
+  /// Defines the type of the limiter used for the reconstruction.
+  using limiter_t = typename traits_t::limiter_t;
+  /// Defines the number of elements required for reconstruction.
+  static constexpr auto width = traits_t::width;
+
   /// Returns the left input state in the forward direction, where the forward
   /// direction is one of:
   ///
@@ -185,6 +193,5 @@ class Reconstructor
 };
 
 }} // namespace fluid::recon
-
 
 #endif // FLUIDITY_RECONSTRUCTION_RECONSTRUCTOR_HPP

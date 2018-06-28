@@ -21,7 +21,7 @@
 namespace fluid {
 
 template <typename Iterator>
-using iter_value_t = std::decay_t<Iterator>::value_t;
+using iter_value_t = typename std::decay_t<Iterator>::value_t;
 
 } // namespace fluid
 
