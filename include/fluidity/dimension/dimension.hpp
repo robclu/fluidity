@@ -69,9 +69,59 @@ static constexpr dimy_t dim_y = dimy_t{};
 /// Defines a compile time type for the x spacial dimension.
 static constexpr dimz_t dim_z = dimz_t{};
 
-/// Defines the default number of threads per block.
-static constexpr std::size_t default_threads_per_block = 512;
+#if !defined(FLUIDITY_DEFAULT_THREADS_1D_X)
+  /// Defines the default number of threads per block.
+  static constexpr std::size_t threads_per_block_1d_x = 512;
+#else
+  /// Defines the default number of threads per block.
+  static constexpr std::size_t threads_per_block_1d_x = 
+    FLUIDITY_DEFAULT_THREADS_1D_X
+#endif
 
+#if !defined(FLUIDITY_DEFAULT_THREADS_2D_X)
+  /// Defines the default number of threads per block.
+  static constexpr std::size_t threads_per_block_2d_x = 32;
+#else
+  /// Defines the default number of threads per block.
+  static constexpr std::size_t threads_per_block_2d_x =
+    FLUIDITY_DEFAULT_THREADS_2D_X;
+#endif
+
+#if !defined(FLUIDITY_DEFAULT_THREADS_2D_Y)
+  /// Defines the default number of threads per block.
+  static constexpr std::size_t threads_per_block_2d_y = 16;
+#else
+  /// Defines the default number of threads per block.
+  static constexpr std::size_t threads_per_block_2d_y =
+    FLUIDITY_DEFAULT_THREADS_2D_Y;
+#endif
+
+#if !defined(FLUIDITY_DEFAULT_THREADS_3D_X)
+  /// Defines the default number of threads per block.
+  static constexpr std::size_t threads_per_block_3d_x = 8;
+#else
+  /// Defines the default number of threads per block.
+  static constexpr std::size_t threads_per_block_3d_x = 
+    FLUIDITY_DEFAULT_THREADS_3D_X;
+#endif
+
+#if !defined(FLUIDITY_DEFAULT_THREADS_3D_Y)
+  /// Defines the default number of threads per block.
+  static constexpr std::size_t threads_per_block_3d_y = 8;
+#else
+  /// Defines the default number of threads per block.
+  static constexpr std::size_t threads_per_block_3d_y = 
+    FLUIDITY_DEFAULT_THREADS_3D_Y;
+#endif
+
+#if !defined(FLUIDITY_DEFAULT_THREADS_3D_Z)
+  /// Defines the default number of threads per block.
+  static constexpr std::size_t threads_per_block_3d_z = 8;
+#else
+  /// Defines the default number of threads per block.
+  static constexpr std::size_t threads_per_block_3d_z = 
+    FLUIDITY_DEFAULT_THREADS_3D_Z;
+#endif
 } // namespace fluid
 
 #endif // FLUIDITY_DIMENSION_DIMENSION_HPP

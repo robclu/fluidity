@@ -450,13 +450,7 @@ fluidity_device_only auto make_multidim_iterator()
 {
   using iter_t = MultidimIterator<T, DimInfo, exec::gpu_type>;
   __shared__ T buffer[DimInfo().template total_size<Padding>()];
-  iter_t iter{buffer};
-
-  // Move the iterator to the current thread.
-  //iter.shift(dim_x, thread_id(dim_x))
-  //    .shift(dim_y, thread_id(dim_y))
-  //    .shift(dim_z, thread_id(dim_z));
-  return iter;
+  return iter_t{buffer};
 }
 
 /// Makes a multidimensional iterator over a multidimensional space, where the
@@ -465,18 +459,13 @@ fluidity_device_only auto make_multidim_iterator()
 /// generated.
 /// \param[in] ptr     A pointer to the start of data to iterate over.      
 /// \tparam    T       The type of the data to iterate over.
-/// \tparam    DimInfo The information which defines the multi dimensional space.
+/// \tparam    DimInfo The information which defines the multi dimensional
+///                    space.
 template <typename T, typename DimInfo>
 fluidity_device_only constexpr auto make_multidim_iterator(T* ptr)
 {
   using iter_t = MultidimIterator<T, DimInfo, exec::gpu_type>;
-  iter_t iter{ptr};
-
-  // Move the iterator to the current thread.
-  //iter.shift(dim_x, thread_id(dim_x))
-  //    .shift(dim_y, thread_id(dim_y))
-  //    .shift(dim_z, thread_id(dim_z));
-  return iter;
+  return iter_t{ptr};
 }
 
 /// Makes a multidimensional iterator over a multidimensional space, where the
@@ -490,14 +479,10 @@ template <typename T, typename DimInfo>
 fluidity_device_only constexpr auto make_multidim_iterator(T* ptr, DimInfo info)
 {
   using iter_t = MultidimIterator<T, DimInfo, exec::gpu_type>;
-  iter_t iter{ptr, info};
-
-  // Move the iterator to the current thread.
-  //iter.shift(dim_x, thread_id(dim_x))
-  //    .shift(dim_y, thread_id(dim_y))
-  //    .shift(dim_z, thread_id(dim_z));
-  return iter;
+  return iter_t{ptr, info};
 }
+
+
 
 #else
 
@@ -514,13 +499,7 @@ fluidity_host_only auto make_multidim_iterator()
   static_assert(fluid::is_same_v<DimInfo, DimInfoCt>,
                 "DimInfo must be DimInfoCt type to make a multidim iterator!");
   static thread_local T buffer[DimInfo::total_size()];
-  iter_t iter{buffer};
-
-  // Move the iterator to the current thread.
-  iter.shift(dim_x, thread_id(dim_x))
-      .shift(dim_y, thread_id(dim_y))
-      .shift(dim_z, thread_id(dim_z));
-  return iter;
+  return iter_t{buffer};
 }
 
 #endif // __CUDACC__

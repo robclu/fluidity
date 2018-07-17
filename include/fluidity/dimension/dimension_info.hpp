@@ -41,9 +41,15 @@ using dispatch_tag_3d_t = detail::DimDispatchTag<3>;
 /// Creates a constexpr instance of a dimension dispatch tag from a type which
 /// contains a constexpr dimensions trait.
 /// \tparam T The type which has dimension information.
-template <typename T>
-static constexpr auto dim_dispatch_tag = 
-  detail::DimDispatchTag<std::decay_t<T>::dimensions>{};
+//template <typename T>
+//static constexpr auto dim_dispatch_tag = 
+//  detail::DimDispatchTag<std::decay_t<T>::dimensions>{};
+
+/// Creats a contexpr instance of a dimension dispatch tag from a number of
+/// dimensions.
+/// \tparam Dims The number of dimensions.
+template <std::size_t Dims>
+static constexpr auto dim_dispatch_tag = detail::DimDispatchTag<Dims>{};
 
 /// The DimInfoCt struct defines dimension information which is known at compile
 /// time, where the dimension sizes are built into the type via the template
@@ -55,7 +61,6 @@ struct DimInfoCt {
   static constexpr auto constexpr_offsets = true;
   /// Defines the number of dimensions which can be used with the type.
   static constexpr auto dimensions        = sizeof...(Sizes);
-
 
   /// Returns the number of dimensions in the space.
   constexpr auto num_dimensions() const

@@ -226,8 +226,9 @@ dim3 get_block_sizes(Iterator&& it, dim3 thread_sizes, dispatch_tag_3d_t)
 template <typename Iterator>
 dim3 get_thread_sizes(Iterator&& it)
 {
-  return detail::get_thread_sizes(std::forward<Iterator>(it),
-                                  dim_dispatch_tag<Iterator>);
+  using iter_t = std::decay_t<Iterator>;
+  return detail::get_thread_sizes(std::forward<Iterator>(it)          ,
+                                  dim_dispatch_tag<iter_t::dimensions>);
 }
 
 /// Returns the size of the block based on the size of the space defined by the
@@ -238,9 +239,10 @@ dim3 get_thread_sizes(Iterator&& it)
 template <typename Iterator>
 dim3 get_block_sizes(Iterator&& it, dim3 thread_sizes)
 {
-  return detail::get_block_sizes(std::forward<Iterator>(it),
-                                 thread_sizes              ,
-                                 dim_dispatch_tag<Iterator>);
+  using iter_t = std::decay_t<Iterator>;
+  return detail::get_block_sizes(std::forward<Iterator>(it)           ,
+                                 thread_sizes                         ,
+                                 dim_dispatch_tag<iter_t::dimensions>);
 }
 
 #else
