@@ -45,6 +45,13 @@ fluid_target_link_libraries(1d_toro_case_4 ${CUDA_LIBRARIES})
 fluid_add_executable(1d_toro_case_5 ${SOURCE_DIR}/1d_toro_case_5_validation.cu)
 fluid_target_link_libraries(1d_toro_case_5 ${CUDA_LIBRARIES})
 
+# 2D Shock bubble test case:
+fluid_add_executable(
+  2d_shock_bubble
+  ${SOURCE_DIR}/2d_shock_bubble_validation.cu
+)
+fluid_target_link_libraries(2d_shock_bubble ${CUDA_LIBRARIES})
+
 #==--- Finish Up ------------------------------------------------------------==#
 
 # This creates all the targets, and is required to be called to enable the

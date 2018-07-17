@@ -64,7 +64,8 @@ int main(int argc, char** argv)
   simulator->configure_dimension(fluid::dim_x, { res, size_x },
                                  fluid::dim_y, { res, size_y })
            ->configure_sim_time(0.4)
-           ->configure_cfl(0.9);
+           ->configure_cfl(0.9)
+           ->configure_max_iterations(1);
 
   constexpr auto shock_start = real_t{0.1} / real_t{1.6};
 

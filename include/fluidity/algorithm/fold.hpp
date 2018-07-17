@@ -146,7 +146,7 @@ struct Folder<FoldOp::sub> {
 /// \tparam Op     The operation to use while folding.
 /// \tparam Values The list of values to fold.
 template <FoldOp Op, int... Values>
-constexpr decltype(auto) fold()
+fluidity_host_device constexpr auto fold()
 {
   return detail::Folder<Op, Values...>::apply();
 }

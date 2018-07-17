@@ -482,8 +482,6 @@ fluidity_device_only constexpr auto make_multidim_iterator(T* ptr, DimInfo info)
   return iter_t{ptr, info};
 }
 
-
-
 #else
 
 /// Makes a multidimensional iterator over a multidimensional space, where the

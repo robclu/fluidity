@@ -16,6 +16,7 @@
 #ifndef FLUIDITY_ALGORITHM_ALGORITHM_HPP
 #define FLUIDITY_ALGORITHM_ALGORITHM_HPP
 
+#include "accumulate.hpp"
 #include "if_constexpr.hpp"
 #include "fill.hpp"
 #include "max_element.hpp"

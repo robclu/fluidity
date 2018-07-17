@@ -83,32 +83,32 @@ class HostTensor;
 /// Alias for a 1-dimensional host side tensor.
 /// \tparam T The type of the data for the tensor.
 template <typename T>
-using host_tensor1d = HostTensor<T, 1>;
+using host_tensor_1d_t = HostTensor<T, 1>;
 
 /// Alias for a 1-dimensional device side tensor.
 /// \tparam T The type of the data for the tensor.
 template <typename T>
-using device_tensor1d = DeviceTensor<T, 1>;
+using device_tensor_1d_t = DeviceTensor<T, 1>;
 
 /// Alias for a 2-dimensional host side tensor.
 /// \tparam T The type of the data for the tensor.
 template <typename T>
-using host_tensor2d = HostTensor<T, 2>;
+using host_tensor_2d_t = HostTensor<T, 2>;
 
 /// Alias for a 2-dimensional device side tensor.
 /// \tparam T The type of the data for the tensor.
 template <typename T>
-using device_tensor2d = DeviceTensor<T, 2>;
+using device_tensor_2d_t = DeviceTensor<T, 2>;
 
 /// Alias for a 3-dimensional host side tensor.
 /// \tparam T The type of the data for the tensor.
 template <typename T>
-using host_tensor3d = HostTensor<T, 3>;
+using host_tensor_3d_t = HostTensor<T, 3>;
 
 /// Alias for a 3-dimensional device side tensor.
 /// \tparam T The type of the data for the tensor.
 template <typename T>
-using device_tensor3d = DeviceTensor<T, 3>;
+using device_tensor_3d_t = DeviceTensor<T, 3>;
 
 } // namespace fluid
 
