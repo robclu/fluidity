@@ -25,6 +25,9 @@
 
 namespace fluid {
 
+/// Defines a type if the type T is integral, which can be used to enable a
+/// parameter pack if the pack types are integral.
+/// \tparam T The type to check if integral.
 template <typename T>
 using size_enable_t = 
   std::enable_if_t<std::is_integral<std::decay_t<T>>::value, int>;
@@ -39,12 +42,10 @@ template <typename T, std::size_t Dimensions>
 class BaseTensor {
  private:
   /// Allows device tensor to create base tensors.
-  template <typename TT, std::size_t D>
-  friend class DeviceTensor;
+  template <typename TT, std::size_t D> friend class DeviceTensor;
 
   /// Make the HostTensor a friend to allow it to create base tensors.
-  template <typename TT, std::size_t D>
-  friend class HostTensor;
+  template <typename TT, std::size_t D> friend class HostTensor;
 
   /// Defines the type of the data being stored in the tensor.
   using value_t           = std::decay_t<T>;
@@ -66,7 +67,7 @@ class BaseTensor {
 
   /// Initializes the size of each of the dimensions in the tensor, and the
   /// total number of elements in the tensor. This is only enabled when the
-  /// types of the paramters are size types.
+  /// types of the paramters are integral types.
   /// \param[in] size_0     The size of dimension 0.
   /// \param[in] size_other The sizes of the other dimensions.
   /// \tparam    Size0      The type of the size of dimension 0.
@@ -94,7 +95,7 @@ class BaseTensor {
 
  public:
   /// Returns a reference to the element at position i in the tensor. This
-  /// is independent of the dimensionality of the tensor, it treads the tensor
+  /// is independent of the dimensionality of the tensor, it treats the tensor
   /// as flattened.
   /// \param[in] i The index of the element to get.
   fluidity_host_device reference_t operator[](int i)
