@@ -290,6 +290,7 @@ void DeviceTensor<T, N>::cleanup()
   if (this->_data != nullptr && this->_must_free)
   {
     util::cuda::free(this->_data);
+    this->_data = nullptr;
   }
 }
 

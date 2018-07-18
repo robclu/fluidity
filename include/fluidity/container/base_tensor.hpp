@@ -210,9 +210,6 @@ fluidity_host_device std::size_t BaseTensor<T, D>::total_size() const
   return size;
 }
 
-
-
-
 } // namespace fluid
 
 #endif // FLUIDITY_CONTAINER_BASE_TENSOR_HPP

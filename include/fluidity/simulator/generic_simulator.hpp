@@ -225,6 +225,7 @@ GenericSimulator<Traits>::configure_dimension(std::size_t dim  ,
                                               double      start,
                                               double      end  )
 {
+  printf("CDIM: %3lu\n", dim);
   _params.domain.set_dimension(dim, start, end);
   _data.resize_dim(dim, _params.domain.elements(dim));
   return this;
@@ -271,7 +272,6 @@ void GenericSimulator<Traits>::fill_data(fillinfo_container_t&& fillers)
       );
     }
   }
-
   /// Go over each of the dimensions and fill the data:
   auto pos        = Array<float, 3>();
   auto dim_info   = dimension_info();
@@ -288,9 +288,9 @@ void GenericSimulator<Traits>::fill_data(fillinfo_container_t&& fillers)
 
     // Invoke each of the fillers on the each state data property:
     std::size_t prop_index = 0;
+    
     for (const auto& filler : fillers)
     {
-
       const auto value = filler.filler(pos);
       fill_state[prop_index++] = value;
     }

@@ -259,6 +259,7 @@ void HostTensor<T, N>::cleanup()
   if (this->_data != nullptr)
   {
     free(this->_data);
+    this->_data = nullptr;
   }
 }
 
