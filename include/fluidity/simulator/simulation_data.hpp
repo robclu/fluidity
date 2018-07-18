@@ -77,9 +77,14 @@ class SimulationData<Traits, exec::DeviceKind::gpu> {
     return _states;
   }
 
-  /// Returns a reference to finalised simulation output states (the host state
-  /// data filled from the device states used for the computation).
-  void finalise_states()
+  /// Initializes the data.
+  void initialize()
+  {
+    _wavespeeds.resize(_states.total_size());
+  }
+
+  /// Ensures that the data is on the host.
+  void finalise()
   {
     _states = _states_in.as_host();
   }
@@ -121,13 +126,15 @@ class SimulationData<Traits, exec::DeviceKind::gpu> {
     return _wavespeeds;
   }
 
-  /// Resizes the state data to contain \p elements elements;
-  void resize(std::size_t elements)
+  /// Resizes the state data to contain \p elements elements in the \p dim.
+  /// dimension.
+  /// \param[in] dim      The dimension to resize.
+  /// \param[in] elements The number of elements for the dimension.
+  void resize_dim(std::size_t dim, std::size_t elements)
   {
-    _states.resize(elements);
-    _states_in.resize(elements);
-    _states_out.resize(elements);
-    _wavespeeds.resize(elements);
+    _states.resize_dim(dim, elements);
+    _states_in.resize_dim(dim, elements);
+    _states_out.resize_dim(dim, elements);
   }
 
   /// Synchronizes the data, making sure that the device data is the same as the

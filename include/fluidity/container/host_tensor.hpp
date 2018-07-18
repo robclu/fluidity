@@ -131,7 +131,7 @@ class HostTensor : public BaseTensor<T, N> {
 
   /// Returns a multi dimensional iterator over the tensor data, which is
   /// initialized to point to the start of the tensor data.
-  fluidity_host_device multi_iterator_t multi_iterator() const
+  multi_iterator_t multi_iterator() const
   {
     return multi_iterator_t{this->_data, this->dim_info()};
   }
@@ -141,6 +141,11 @@ class HostTensor : public BaseTensor<T, N> {
   /// \tparam    Elements The type of the elements in each dimension.
   template <typename... Elements>
   void resize(Elements&&... elements);
+
+  /// Resizes the dimension \p dim to have \p elements number of elements.
+  /// \param[in] dim      The dimension to resize.
+  /// \param[in] elements The number of elements for the dimension.
+  void resize_dim(std::size_t dim, std::size_t elements);
 
  private:
   /// Allocates memory for the array.
@@ -225,6 +230,14 @@ void HostTensor<T, N>::resize(DimSizes&&... dim_sizes)
 {
   cleanup();
   this->reset_dim_sizes(std::forward<DimSizes>(dim_sizes)...);
+  allocate();
+}
+
+template <typename T, std::size_t N>
+void HostTensor<T, N>::resize_dim(std::size_t dim, std::size_t elements)
+{
+  cleanup();
+  this->_dim_sizes[dim] = elements;
   allocate();
 }
 

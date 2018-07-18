@@ -46,8 +46,6 @@ class GenericSimulator final : public Simulator<Traits> {
   using base_t               = Simulator<traits_t>;
   /// Defines the type of the filler container .
   using fillinfo_container_t = typename base_t::fillinfo_container_t;
-  /// Defines the type used for dimension information specification.
-  using dim_spec_t           = typename base_t::DimSpec;
 
  private:
   /// Defines the type of the state data to store, always conservative.
@@ -75,7 +73,7 @@ class GenericSimulator final : public Simulator<Traits> {
   static constexpr auto dimensions = state_t::dimensions;
 
   /// Creates the simulator.
-  GenericSimulator() {}
+  GenericSimulator() : _params{dimensions} {}
 
   /// Cleans up all resources acquired by the simulator.
   ~GenericSimulator() {}
@@ -95,13 +93,19 @@ class GenericSimulator final : public Simulator<Traits> {
   base_t* configure_cfl(double cfl) override;
 
   /// Configures the simulator to set size and resolution of a dimension \p dim.
-  /// \param[in] dim  The dimension to specify.
-  /// \param[in] spec The specification of the dimension.
-  base_t* configure_dimension(std::size_t dim, dim_spec_t spec) override;
+  /// \param[in] dim   The dimension to specify.
+  /// \param[in] start The start value of the dimension.
+  /// \param[in] end   The end value of the dimension.
+  base_t* 
+  configure_dimension(std::size_t dim, double start, double end) override;
 
   /// Configures the simulator to simulate for a maximum number of iterations.
   /// \param[in] iters  The maximum number of iterations to simulate for.
   base_t* configure_max_iterations(std::size_t iters) override;  
+
+  /// Configures the simulator to use the \p resolution for the domain.
+  /// \param[in] resolution The resolution to use for the domain.
+  base_t* configure_resolution(double resolution) override;
 
   /// Configures the simulator to simulate until a certain simulation time.
   /// \param[in] sim_time The time to run the simulation until.
@@ -161,6 +165,9 @@ void GenericSimulator<Traits>::simulate()
 
   _params.print_static_summary();
 
+  // Initialize the data:
+  _data.initialize();
+
   auto cfl = _params.cfl;
   while (_params.continue_simulation())
   {
@@ -200,8 +207,8 @@ void GenericSimulator<Traits>::simulate()
   printf("Simulation time : %8lu ms\n", 
     std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count());
 
-  // Make sure that the state data is accessible on the host.
-  _data.finalise_states();
+  // Finalise the data, making sure it is all available on the host.
+  _data.finalise();
 }
 
 template <typename Traits>
@@ -214,11 +221,19 @@ GenericSimulator<Traits>::configure_cfl(double cfl)
 
 template <typename Traits>
 Simulator<Traits>*
-GenericSimulator<Traits>::configure_dimension(std::size_t /*dim*/, 
-                                              dim_spec_t  spec   )
+GenericSimulator<Traits>::configure_dimension(std::size_t dim  ,
+                                              double      start,
+                                              double      end  )
 {
-  _data.resize(spec.elements());
-  _params.resolution = spec.resolution;
+  _params.domain.set_dimension(dim, start, end);
+  _data.resize_dim(dim, _params.domain.elements(dim));
+  return this;
+}
+
+template <typename Traits>
+Simulator<Traits>* GenericSimulator<Traits>::configure_resolution(double res)
+{
+  _params.domain.set_resolution(res);
   return this;
 }
 

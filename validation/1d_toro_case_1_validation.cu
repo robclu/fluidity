@@ -52,7 +52,8 @@ int main(int argc, char** argv)
   using simulator_t = fluid::sim::GenericSimulator<sim_traits_t>;
 
   auto simulator = std::make_unique<simulator_t>();
-  simulator->configure_dimension(fluid::dim_x, { 0.001, 1.0 })
+  simulator->configure_resolution(0.001)
+           ->configure_dimension(fluid::dim_x, 0.0, 1.0)
            ->configure_sim_time(0.2)
            ->configure_cfl(0.9);
 

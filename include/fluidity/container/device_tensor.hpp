@@ -167,6 +167,11 @@ class DeviceTensor : public BaseTensor<T, N> {
   template <typename... DimSizes>
   void resize(DimSizes&&... dim_sizes);
 
+  /// Resizes the dimension \p dim to have \p elements number of elements.
+  /// \param[in] dim      The dimension to resize.
+  /// \param[in] elements The number of elements for the dimension.
+  void resize_dim(std::size_t dim, std::size_t elements);
+
  private:
   bool _must_free = true; //!< Sets if the memory must be freed.
 
@@ -255,6 +260,14 @@ void DeviceTensor<T, N>::resize(DimSizes&&... dim_sizes)
 {
   cleanup();
   this->reset_dim_sizes(std::forward<DimSizes>(dim_sizes)...);
+  allocate();
+}
+
+template <typename T, std::size_t N>
+void DeviceTensor<T, N>::resize_dim(std::size_t dim, std::size_t elements)
+{
+  cleanup();
+  this->_dim_sizes[dim] = elements;
   allocate();
 }
 

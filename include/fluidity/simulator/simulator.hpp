@@ -44,17 +44,6 @@ class Simulator {
     filler_t    filler;     //!< Callable object to get a value to fill with.
   };
 
-  /// Defines the specification for each of the simulation dimensions.
-  struct DimSpec {
-    double resolution;
-    double size;
-
-    std::size_t elements() const
-    {
-      return static_cast<std::size_t>(size / resolution);
-    }
-  };
-
   /// Defines the type of the container used to store filling information.
   using fillinfo_container_t = std::vector<FillInfo>;
 
@@ -70,9 +59,15 @@ class Simulator {
   virtual self_t* configure_cfl(double cfl) = 0;
 
   /// Configures the simulator to set size and resolution of a dimension \p dim.
-  /// \param[in] dim  The dimension to specify.
-  /// \param[in] spec The specification of the dimension.
-  virtual self_t* configure_dimension(std::size_t dim, DimSpec spec) = 0;
+  /// \param[in] dim   The dimension to specify.
+  /// \param[in] start The start value of the dimension.
+  /// \param[in] end   The end value of the dimension.
+  virtual self_t*
+  configure_dimension(std::size_t dim, double start, double end) = 0;
+
+  /// Configures the simulator to use the \p resolution for the domain.
+  /// \param[in] resolution The resolution to use for the domain.
+  virtual self_t* configure_resolution(double resolution) = 0;
 
   /// Configures the simulator to simulate until a certain simulation time.
   /// \param[in] sim_time The time to run the simulation until.

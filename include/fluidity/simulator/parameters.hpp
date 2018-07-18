@@ -17,6 +17,7 @@
 #ifndef FLUIDITY_SIMULATOR_PARAMETERS_HPP
 #define FLUIDITY_SIMULATOR_PARAMETERS_HPP
 
+#include "domain.hpp"
 #include <type_traits>
 
 namespace fluid {
@@ -48,13 +49,19 @@ struct Parameters {
   iter_t iters        = 0;
   /// Maximum number of iterations for the simulation.
   iter_t max_iters    = default_iters;
+  /// Defines the domain information.
+  ::fluid::sim::Domain domain;
+
+  /// Constructor to set the number of dimensions for the paramters.
+  /// \param[in] num_dimensions The number of dimensions for the domain.
+  Parameters(std::size_t num_dimensions) : domain(num_dimensions) {}
 
   /// Updates the parameter values based on the \p max_wavespeed in the
   /// simulation domain.
   /// \param[in] max_wavespeed The maximum wavespeed in the simulation domain.
   void update_time_delta(value_t max_wavespeed)
   {
-    _dt = cfl * resolution / max_wavespeed;
+    _dt = cfl * domain.resolution() / max_wavespeed;
   }
 
   /// Updates the simulation information, which is the run time and the
@@ -81,7 +88,7 @@ struct Parameters {
   /// commonly referred to as ($\lambda$) in the literature.
   fluidity_host_device value_t dt_dh() const
   {
-    return _dt / resolution;
+    return _dt / domain.resolution();
   }
 
   /// Prints the status of the parameters which change during a simulation.
@@ -108,7 +115,7 @@ struct Parameters {
       "| SIM TIME       | %39.4f |\n"
       "| MAX ITERATIONS | %39lu |\n"
       "------------------------------------------------------------\n",
-      resolution, cfl, sim_time, max_iters
+      domain.resolution(), cfl, sim_time, max_iters
     );
   }
 

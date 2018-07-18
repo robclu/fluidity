@@ -170,33 +170,6 @@ fluidity_host_device std::size_t BaseTensor<T, D>::mem_requirement() const
   return sizeof(value_t) * total_size();
 }
 
-template <typename T, std::size_t D>
-fluidity_host_device std::size_t BaseTensor<T, D>::total_size() const
-{
-  std::size_t size = 1;
-  unrolled_for<dimensions>([&] (auto i)
-  {
-    size *= _dim_sizes[i];
-  });
-  return size;
-}
-
-template <typename T, std::size_t D>
-fluidity_host_device std::size_t BaseTensor<T, D>::size(std::size_t n) const
-{
-  return _dim_sizes[n];
-}
-
-template <typename T, std::size_t D>
-fluidity_host_device void
-BaseTensor<T, D>::set_dim_sizes(const BaseTensor<T, D>& other)
-{
-  unrolled_for<dimensions>([&] (auto i)
-  {
-    _dim_sizes[i] = other.size(i);
-  });
-}
-
 template <typename T, std::size_t D> template <typename... DimSizes>
 fluidity_host_device void
 BaseTensor<T, D>::reset_dim_sizes(DimSizes&&... dim_sizes)
@@ -209,6 +182,36 @@ BaseTensor<T, D>::reset_dim_sizes(DimSizes&&... dim_sizes)
     _dim_sizes[i] = sizes[i];
   });
 }
+
+template <typename T, std::size_t D>
+fluidity_host_device void
+BaseTensor<T, D>::set_dim_sizes(const BaseTensor<T, D>& other)
+{
+  unrolled_for<dimensions>([&] (auto i)
+  {
+    _dim_sizes[i] = other.size(i);
+  });
+}
+
+template <typename T, std::size_t D>
+fluidity_host_device std::size_t BaseTensor<T, D>::size(std::size_t n) const
+{
+  return _dim_sizes[n];
+}
+
+template <typename T, std::size_t D>
+fluidity_host_device std::size_t BaseTensor<T, D>::total_size() const
+{
+  std::size_t size = 1;
+  unrolled_for<dimensions>([&] (auto i)
+  {
+    size *= _dim_sizes[i];
+  });
+  return size;
+}
+
+
+
 
 } // namespace fluid
 
