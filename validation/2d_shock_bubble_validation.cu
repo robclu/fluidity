@@ -66,7 +66,7 @@ int main(int argc, char** argv)
            ->configure_dimension(fluid::dim_y, 0.0, size_y)
            ->configure_sim_time(0.4)
            ->configure_cfl(0.9)
-           ->configure_max_iterations(1);
+           ->configure_max_iterations(0);
 
   // Returns the value based on whether the pos is inside the bubble,
   // or before or after the shock wave.

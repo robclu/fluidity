@@ -137,12 +137,14 @@ class GenericSimulator final : public Simulator<Traits> {
   /// is used to determine if the output is written to a file or if it is
   /// sent to the standard output stream.
   /// 
-  /// This implementation currently only works for 1D data.
+  /// This implementation will print the data in columns, with a column for the
+  /// position of the cell in each dimension, and then columns for each element
+  /// in the state vector.
   /// 
   /// \param[in] stream   The stream to output the results to.
   /// \tparam    Stream   The type of the output stream.
   template <typename Stream>
-  void stream_output_1d(Stream&& stream) const;
+  void stream_output_ascii(Stream&& stream) const;
 };
 
 //==--- Implementation -----------------------------------------------------==//
@@ -225,7 +227,6 @@ GenericSimulator<Traits>::configure_dimension(std::size_t dim  ,
                                               double      start,
                                               double      end  )
 {
-  printf("CDIM: %3lu\n", dim);
   _params.domain.set_dimension(dim, start, end);
   _data.resize_dim(dim, _params.domain.elements(dim));
   return this;
@@ -288,7 +289,6 @@ void GenericSimulator<Traits>::fill_data(fillinfo_container_t&& fillers)
 
     // Invoke each of the fillers on the each state data property:
     std::size_t prop_index = 0;
-    
     for (const auto& filler : fillers)
     {
       const auto value = filler.filler(pos);
@@ -307,9 +307,8 @@ void GenericSimulator<Traits>::print_results() const
 {
   std::ostream stream(nullptr);
   stream.rdbuf(std::cout.rdbuf());
-  stream_output_1d(stream);
+  stream_output_ascii(stream);
 }
-
 
 template <typename Traits>
 void GenericSimulator<Traits>::write_results(std::string prefix) const
@@ -317,7 +316,7 @@ void GenericSimulator<Traits>::write_results(std::string prefix) const
   std::ofstream output_file;
   auto filename = prefix + ".dat";
   output_file.open(filename, std::fstream::trunc);
-  stream_output_1d(output_file);
+  stream_output_ascii(output_file);
   output_file.close(); 
 }
 
@@ -335,7 +334,7 @@ auto GenericSimulator<Traits>::dimension_info() const
 }
 
 template <typename Traits> template <typename Stream>
-void GenericSimulator<Traits>::stream_output_1d(Stream&& stream) const
+void GenericSimulator<Traits>::stream_output_ascii(Stream&& stream) const
 {
   using index_t = typename traits_t::primitive_t::index;
 
@@ -359,35 +358,54 @@ void GenericSimulator<Traits>::stream_output_1d(Stream&& stream) const
   // Internal energy:
   stream << comment << "Column " << column << " : " << "internal energy (e)\n";
 
-  // Print the state data:
+  auto append_element = [&stream] (auto element)
+  {
+    stream << std::setw(12)  << std::left           << std::fixed
+           << std::showpoint << std::setprecision(8) << element << " ";
+  };
+
   auto state_iterator = _data.states().multi_iterator();
-  auto x_coord        = _params.resolution / 2;
   auto material       = material_t();
   auto state          = state_iterator->primitive(material);
-  for (const auto offset_x : range(dimension_info().size(dim_x)))
+  auto dim_info       = dimension_info();
+  auto offsets        = std::array<std::size_t, dimensions>{0};
+  do
   {
-    state = state_iterator.offset(offset_x, dim_x)->primitive(material);
-
-    auto append_element = [&stream] (auto element)
+    unrolled_for<dimensions-1>([&] (auto i)
     {
-      stream << std::setw(12)   << std::left           << std::fixed
-             << std::showpoint << std::setprecision(8) << element << " ";
-    };
+      if (offsets[i] == dim_info.size(i))
+      {
+        offsets[i] = 0;
+      }
+    });
 
-//    stream << std::setw(12)   << std::left           << std::fixed
-//           << std::showpoint << std::setprecision(8) << x_coord << " ";
-
-    append_element(x_coord);
-    for (const auto& element : state)
+    for (const auto offset_x : range(dim_info.size(dim_x)))
     {
-      append_element(element);
-//      stream << std::setw(12)   << std::left           << std::fixed
-//             << std::showpoint << std::setprecision(8) << element << " ";
+      state = state_iterator.offset(offset_x, dim_x)->primitive(material);
+      for (const auto dim : range(dimensions))
+      {
+        auto coord = (offsets[dim] + 0.5) * _params.domain.resolution();
+        append_element(coord);
+      }
+      for (const auto& element : state)
+      {
+        append_element(element);
+      }
+      append_element(material.eos(state));
+      stream << "\n";
+      offsets[dim_x]++;
     }
-    append_element(material.eos(state));
-    stream << "\n";
-    x_coord += _params.resolution;
-  }
+    unrolled_for<dimensions-1>([&] (auto i)
+    {
+      constexpr auto dim      = Dimension<i>{};
+      constexpr auto next_dim = Dimension<i+1>{};
+      if (offsets[dim] == dim_info.size(dim))
+      {
+        offsets[next_dim]++;
+        state_iterator.shift(1, next_dim);
+      }
+    });
+  } while (offsets[dimensions - 1] != dim_info.size(dimensions - 1));
 }
 
 }} // namespace fluid::sim

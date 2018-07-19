@@ -36,9 +36,6 @@ struct Parameters {
   /// Defines the default number of maximum iterations for the simulation.
   static constexpr iter_t default_iters = std::numeric_limits<iter_t>::max();
 
-  /// Resolution of the computational domain. These parameters use the same
-  /// resolution for each of the dimensions.
-  value_t resolution  = 0.1;
   /// CFL number for the simulation.
   value_t cfl         = 0.9;
   /// The time for which a simulation has been running.
@@ -50,7 +47,7 @@ struct Parameters {
   /// Maximum number of iterations for the simulation.
   iter_t max_iters    = default_iters;
   /// Defines the domain information.
-  ::fluid::sim::Domain domain;
+  Domain domain;
 
   /// Constructor to set the number of dimensions for the paramters.
   /// \param[in] num_dimensions The number of dimensions for the domain.
