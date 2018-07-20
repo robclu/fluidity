@@ -17,6 +17,7 @@
 #define FLUIDITY_DIMENSION_DIMENSION_HPP
 
 #include <fluidity/utility/portability.hpp>
+#include <cstddef>
 
 namespace fluid {
 

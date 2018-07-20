@@ -126,9 +126,9 @@ class GenericSimulator final : public Simulator<Traits> {
   static constexpr auto batch_size_tag = 
     std::integral_constant<bool, traits_t::spacial_dims == 1>{};
 
-  storage_t   _data;    //!< Data for the simulation.
-  params_t    _params;  //!< The parameters for the simulation.
-  setter_t    _setter;  //!< The boundary setter.
+  storage_t _data;    //!< Data for the simulation.
+  params_t  _params;  //!< The parameters for the simulation.
+  setter_t  _setter;  //!< The boundary setter.
 
   /// Returns the dimension information for the simulator.
   auto dimension_info() const;

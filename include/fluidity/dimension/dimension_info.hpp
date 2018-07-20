@@ -51,6 +51,17 @@ using dispatch_tag_3d_t = detail::DimDispatchTag<3>;
 template <std::size_t Dims>
 static constexpr auto dim_dispatch_tag = detail::DimDispatchTag<Dims>{};
 
+/// Defines a struct for padding information for a specific dimension.
+/// \tparam Dim     The dimension the padding applied to.
+/// \tparam Amount  The amount of padding for the dimension.
+template <std::size_t Dim, std::size_t Amount>
+struct PaddingInfo {
+  /// Defines the dimension the padding applies to.
+  static constexpr auto dim    = Dim;
+  /// Defines the amount of the padding for the dimension.
+  static constexpr auto amount = Amount;
+};
+
 /// The DimInfoCt struct defines dimension information which is known at compile
 /// time, where the dimension sizes are built into the type via the template
 /// parameters. All functions are also compile-time computed.
@@ -102,6 +113,15 @@ struct DimInfoCt {
     return fold<FoldOp::mult, (Sizes + (Padding << 1))...>();
   }
 
+  /// Returns the total size of the dimensional space when the padding info for
+  /// a specific dimension is defined by the PaddingInfo.
+  /// \param[in] PaddingInfo The information which defines the padding.
+  template <typename PaddingInfo>
+  constexpr std::size_t total_size() const
+  {
+    return total_size_impl<PaddingInfo, 0, Sizes...>();
+  }
+
  private:
   /// Defines the type of the dimension information.
   using dim_info_t = DimInfoCt<Sizes...>;
@@ -110,16 +130,39 @@ struct DimInfoCt {
   struct detail {
     /// Computes the offset for a dimension \p dim, using a starting value of
     /// \p start_value.
-    /// \param[in] dim          The dimension to compute the offset for.
     /// \param[in] start_value  The starting value for the computation.
     /// \tparam    Value        The value which defines the dimension.
     template <std::size_t Value>
     static constexpr std::size_t
-    offset(Dimension<Value> /*dim*/, std::size_t start_value)
+    offset(Dimension<Value>, std::size_t start_value)
     {
       return start_value * dim_info_t().size(Dimension<Value - 1>{});
     }
   };
+
+  /// Computes the total size of the dimensional space when additional sizes are
+  /// defined for a dimension.
+  /// \tparam Info The additional size information.
+  /// \tparam I    The index of the iteration.
+  /// \tparam S    The size of the dimension at iteration I.
+  /// \tparam Szs  The sizes of the remaining dimensions.
+  template <typename Info, std::size_t I, std::size_t S, std::size_t... Szs>
+  constexpr std::size_t total_size_impl() const
+  {
+    constexpr auto zero = std::size_t{0};
+    constexpr auto size = S + (Info::dim == I ? (Info::amount << 1) : zero);
+    return size * total_size_impl<Info, I + 1, Szs...>();
+  }
+
+  /// Computes the total size of the dimensional space when additional sizes are
+  /// defined for a dimension. This is the terminating case.
+  /// \tparam Info The additional size information.
+  /// \tparam I    The index of the iteration.
+  template <typename Info, std::size_t I>
+  constexpr std::size_t total_size_impl() const
+  {
+    return std::size_t{1};
+  }
 
  public:
   /// Returns amount of offset required to iterate in dimension \p dim. The
@@ -208,11 +251,41 @@ struct DimInfo {
   fluidity_host_device std::size_t total_size() const
   {
     std::size_t prod_sum = 1;
-
     for (const auto i : range(num_dimensions()))
     {
       prod_sum *= _sizes[i];
     }
+    return prod_sum;
+  }
+
+  /// Returns the total size of the N dimensional space i.e the total number of
+  /// elements in the space with twice the amount of Padding in each dimension
+  /// ... i.e when the space is uniformly padded. This is the product sum of the
+  /// dimensions with the padding added.
+  /// \tparam Padding The amount of padding for one side of each dimension.
+  template <std::size_t Padding>
+  fluidity_host_device std::size_t total_size() const
+  {
+    std::size_t prod_sum = 1;
+    for (const auto i : range(num_dimensions()))
+    {
+      prod_sum *= _sizes[i] + (Padding << 1);
+    } 
+    return prod_sum;
+  }
+
+  /// Returns the total size of the dimensional space when the padding info for
+  /// a specific dimension is defined by the PaddingInfo.
+  /// \param[in] PaddingInfo The information which defines the padding.
+  template <typename PaddingInfo>
+  constexpr std::size_t total_size() const
+  {
+    std::size_t prod_sum = 1;
+    for (const auto i : range(num_dimensions()))
+    {
+      prod_sum *= _sizes[i] 
+                + (PaddingInfo::dim == i ? (PaddingInfo::amount << 1) : 0);
+    } 
     return prod_sum;
   }
 
@@ -239,6 +312,30 @@ struct DimInfo {
       return start_value * i.size(Dimension<Value - 1>{});
     }
   };
+
+  /// Computes the total size of the dimensional space when additional sizes are
+  /// defined for a dimension.
+  /// \tparam Info The additional size information.
+  /// \tparam I    The index of the iteration.
+  /// \tparam S    The size of the dimension at iteration I.
+  /// \tparam Szs  The sizes of the remaining dimensions.
+  template <typename Info, std::size_t I, std::size_t S, std::size_t... Szs>
+  constexpr std::size_t total_size_impl() const
+  {
+    constexpr auto zero = std::size_t{0};
+    constexpr auto size = S + (Info::dim == I ? (Info::amount << 1) : zero);
+    return size * total_size_impl<Info, I + 1, Szs...>();
+  }
+
+  /// Computes the total size of the dimensional space when additional sizes are
+  /// defined for a dimension. This is the terminating case.
+  /// \tparam Info The additional size information.
+  /// \tparam I    The index of the iteration.
+  template <typename Info, std::size_t I>
+  constexpr std::size_t total_size_impl() const
+  {
+    return std::size_t{1};
+  }
 
  public:
   /// Returns amount of offset required to iterate in dimension \p dim. The
