@@ -43,9 +43,9 @@ struct Parameters {
   /// The time for which a simulation must run until.
   value_t sim_time    = 0.0;
   /// The number of iterations performed during a simulation.
-  iter_t iters        = 0;
+  iter_t  iters       = 0;
   /// Maximum number of iterations for the simulation.
-  iter_t max_iters    = default_iters;
+  iter_t  max_iters   = default_iters;
   /// Defines the domain information.
   Domain domain;
 

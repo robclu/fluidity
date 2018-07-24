@@ -87,11 +87,17 @@ class Simulator {
   /// Prints the results of the simulation to the standard output stream so that
   /// they can be viewed.
   virtual void print_results() const = 0;
-
   /// Writes the results of the simulation to the \p path using the \p prefix
   /// appended to the property which is output.
   /// \param[in] path   The file path (including the prefix) to write to.
   virtual void write_results(std::string path) const = 0;
+
+  /// Writes the results of the simulation to the \p path using the \p prefix
+  /// appended to the property which is output. This outputs a separate file for
+  /// each of the components of the state (i.e, density, pressure, etc), and
+  /// outputs the data in the same format as the domain.
+  /// \param[in] path   The file path (including the prefix) to write to.
+  virtual void write_results_separate_raw(std::string path) const = 0;
 };
 
 }} // namespace fluid::sim

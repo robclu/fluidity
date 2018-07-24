@@ -56,6 +56,27 @@ struct Dimension {
   }
 };
 
+// If the compilation system has cuda functionality then set the default
+// execution policy to use the GPU.
+#if defined(FLUIDITY_CUDA_AVAILABLE)
+
+/// Defines the type for runtime dimension info.
+using dim3_t = dim3;
+
+#else
+
+/// Defines a class which mimics cuda's dim3 type.
+struct Dim3 {
+  int x = 0;  //!< Value in the x dimension.  
+  int y = 0;  //!< Value in the y dimension.
+  int z = 0;  //!< Value in the z dimension.
+};
+
+/// Defines the type for runtime dimension information.
+using dim3_t = Dim3;
+
+#endif // FLUIDITY_CUDA_AVAILABLE
+
 /// Aliases for the x spacial dimension type.
 using dimx_t = Dimension<0>;
 /// Alias for the y spacial dimension type.

@@ -32,11 +32,11 @@ template <std::size_t> struct DimDispatchTag {};
 } // namespace detail
 
 /// Defines the type of a 1D dispatch tag.
-using dispatch_tag_1d_t = detail::DimDispatchTag<1>;
+using tag_1d_t = detail::DimDispatchTag<1>;
 /// Defines the type of a 2D dispatch tag.
-using dispatch_tag_2d_t = detail::DimDispatchTag<2>;
+using tag_2d_t = detail::DimDispatchTag<2>;
 /// Defines the type of a 3D dispatch tag.
-using dispatch_tag_3d_t = detail::DimDispatchTag<3>;
+using tag_3d_t = detail::DimDispatchTag<3>;
 
 /// Creates a constexpr instance of a dimension dispatch tag from a type which
 /// contains a constexpr dimensions trait.

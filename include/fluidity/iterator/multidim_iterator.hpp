@@ -362,7 +362,7 @@ struct MultidimIterator : public DimensionInfo {
   /// Returns the number of dimensions which can be iterated over.
   fluidity_host_device constexpr std::size_t num_dimensions() const
   {
-    return dim_info_t::num_dimensions();
+    return dimensions;
   }
 
   /// Offsets the iterator by \p amount in the dimension defined by \p dim, and
@@ -450,6 +450,21 @@ fluidity_device_only auto make_multidim_iterator()
 {
   using iter_t = MultidimIterator<T, DimInfo, exec::gpu_type>;
   __shared__ T buffer[DimInfo().template total_size<Padding>()];
+  return iter_t{buffer};
+}
+
+/// Makes a multidimensional iterator over a multidimensional space, where the
+/// properties of the space are defined by the DimInfo parameter. The DimInfo
+/// template parameter must be of DimInfoCt type, otherwise a compiler error is
+/// generated.
+/// \tparam T       The type of the data to iterate over.
+/// \tparam DimInfo The information which defines the multi dimensional space.
+/// \tparam PadInfo The information for the padding.
+template <typename T, typename DimInfo, typename PadInfo>
+fluidity_device_only auto make_multidim_iterator()
+{
+  using iter_t = MultidimIterator<T, DimInfo, exec::gpu_type>;
+  __shared__ T buffer[DimInfo().template total_size<PadInfo>()];
   return iter_t{buffer};
 }
 

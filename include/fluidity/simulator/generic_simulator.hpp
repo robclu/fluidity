@@ -19,8 +19,9 @@
 #include "parameters.hpp"
 #include "simulation_data.hpp"
 #include "simulation_traits.hpp"
-#include "simulation_updater.hpp"
+//#include "simulation_updater.hpp"
 #include "simulator.hpp"
+#include "wavespeed_initialization.hpp"
 #include <fluidity/algorithm/fill.hpp>
 #include <fluidity/algorithm/max_element.hpp>
 #include <fluidity/dimension/dimension_info.hpp>
@@ -120,6 +121,13 @@ class GenericSimulator final : public Simulator<Traits> {
   /// \param[in] file_path   The path (inluding the file prefix) to write to.
   void write_results(std::string file_path) const override;
 
+  /// Writes the results of the simulation to the \p path using the \p prefix
+  /// appended to the property which is output. This outputs a separate file for
+  /// each of the components of the state (i.e, density, pressure, etc), and
+  /// outputs the data in the same format as the domain.
+  /// \param[in] path   The file path (including the prefix) to write to.
+  void write_results_separate_raw(std::string path) const override;
+
  private:
   /// Defines a constexpr instance of a tag which is std::true_type of the batch
   /// size must be fetched for 1 spacial dimension.
@@ -145,6 +153,18 @@ class GenericSimulator final : public Simulator<Traits> {
   /// \tparam    Stream   The type of the output stream.
   template <typename Stream>
   void stream_output_ascii(Stream&& stream) const;
+
+  template <typename Iter, typename Streams>
+  void write_blob(Iter iter, Streams& streams, dimx_t) const;
+
+  template <typename Iter>
+  void write_blob(Iter iter, std::string prefix, dimx_t) const;
+
+  template <typename Iter>
+  void write_blob(Iter iter, std::string prefix, dimy_t) const;
+
+  template <typename Iter>
+  void write_blob(Iter iter, std::string prefix, dimz_t) const;
 };
 
 //==--- Implementation -----------------------------------------------------==//
@@ -160,10 +180,8 @@ void GenericSimulator<Traits>::simulate()
   auto end   = high_resolution_clock::now();
 
   // Variables for simulation specification:
-  auto threads = get_thread_sizes(_data.input_iterator());
-  auto blocks  = get_block_sizes(_data.input_iterator(), threads);
-  auto solver  = solver_t{};
-  auto mat     = material_t{};
+  auto solver = solver_t{_data.input_iterator()};
+  auto mat    = material_t{};
 
   _params.print_static_summary();
 
@@ -175,26 +193,17 @@ void GenericSimulator<Traits>::simulate()
   {
     _params.cfl = _params.iters < 5 ? 0.18 : cfl;
 
-    auto input_it     = _data.input_iterator();
-    auto output_it    = _data.output_iterator();
-    auto wavespeed_it = _data.wavespeed_iterator();
+    auto in         = _data.input_iterator();
+    auto out        = _data.output_iterator();
+    auto wavespeeds = _data.wavespeed_iterator();
 
     _params.print_current_status();
 
     // Set the wavespeed data based on the updated state data from the previous
     // iteration, and then update sim time delta based on max wavespeed:
-    set_wavespeeds(input_it, wavespeed_it, mat);
-    _params.update_time_delta(
-      max_element(_data.wavespeeds().begin(),_data.wavespeeds().end()));
-
-    update(input_it       ,
-           output_it      ,
-           solver         ,
-           mat            ,
-           _params.dt_dh(),
-           threads        ,
-           blocks         ,
-           _setter        );
+    set_wavespeeds(in, wavespeeds, mat);
+    _params.update_time_delta(max_element(_data.wavespeeds().begin(),                                                 _data.wavespeeds().end()));
+    solver.solve(in, out, mat, _params.dt_dh(), _setter);
     _params.update_simulation_info();
     _data.swap_states();
 
@@ -318,6 +327,69 @@ void GenericSimulator<Traits>::write_results(std::string prefix) const
   output_file.open(filename, std::fstream::trunc);
   stream_output_ascii(output_file);
   output_file.close(); 
+}
+
+template <typename Traits> template <typename Iter, typename Streams>
+void GenericSimulator<Traits>::write_blob(Iter iter, Streams& streams, dimx_t) const
+{
+  for (const auto x : range(iter.size(dim_x)))
+  {
+    unsigned i = 0;
+    auto state = iter.offset(x, dim_x)->primitive(material_t{});
+    for (auto& stream : streams)
+    {
+      stream << state[i++] << " ";
+    }
+  }
+  for (auto& stream : streams) stream << "\n";
+}
+
+template <typename Traits> template <typename Iter>
+void GenericSimulator<Traits>::write_blob(Iter iter, std::string prefix, dimx_t) const
+{
+  using index_t = typename traits_t::primitive_t::index;
+  std::vector<std::ofstream> streams;
+  for (auto name : index_t::element_names())
+  { 
+    streams.emplace_back(prefix + "_" + name + ".ext");
+  }
+  write_blob(iter, streams, dim_x);
+  for (auto& stream : streams) stream << "\n";
+}
+
+template <typename Traits> template <typename Iter>
+void GenericSimulator<Traits>::write_blob(Iter iter, std::string prefix, dimy_t) const
+{
+  using index_t = typename traits_t::primitive_t::index;
+  std::vector<std::ofstream> streams;
+  for (auto name : index_t::element_names())
+  { 
+    streams.emplace_back(prefix + "_" + name + ".ext");
+  }
+  for (const auto y : range(iter.size(dim_y)))
+  {
+    write_blob(iter.offset(y, dim_y), streams, dim_x);
+  }
+  for (auto& stream : streams) { stream.close(); }
+}
+
+template <typename Traits> template <typename Iter>
+void GenericSimulator<Traits>::write_blob(Iter iter, std::string prefix, dimz_t) const
+{
+  for (const auto z : range(iter.size(dim_z)))
+  {
+    auto new_prefix = prefix + "_" + std::to_string(z);
+    write_blob(iter.offset(z, dim_z), new_prefix, dim_y);
+  }
+}
+
+template <typename Traits>
+void
+GenericSimulator<Traits>::write_results_separate_raw(std::string prefix) const
+{
+  write_blob(_data.states().multi_iterator(),
+             prefix                   ,
+             Dimension<dimensions-1>());
 }
 
 //===== Private ---------------------------------------------------------=====//

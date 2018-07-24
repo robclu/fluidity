@@ -20,6 +20,7 @@
 #include <fluidity/reconstruction/reconstructors.hpp>
 #include <fluidity/simulator/generic_simulator.hpp>
 #include <fluidity/state/state.hpp>
+#include <iostream>
 #include <memory>
 
 using namespace fluid;
@@ -53,7 +54,7 @@ int main(int argc, char** argv)
   using simulator_t = fluid::sim::GenericSimulator<sim_traits_t>;
   auto simulator    = std::make_unique<simulator_t>();
 
-  constexpr auto res             = real_t{0.001};
+  constexpr auto res             = real_t{0.01};
   constexpr auto size_x          = real_t{1.6};
   constexpr auto size_y          = real_t{1.0};
   constexpr auto shock_start     = real_t{0.1};
@@ -66,7 +67,7 @@ int main(int argc, char** argv)
            ->configure_dimension(fluid::dim_y, 0.0, size_y)
            ->configure_sim_time(0.4)
            ->configure_cfl(0.9)
-           ->configure_max_iterations(0);
+           ->configure_max_iterations(20);
 
   // Returns the value based on whether the pos is inside the bubble,
   // or before or after the shock wave.
@@ -108,5 +109,6 @@ int main(int argc, char** argv)
   });
 
   simulator->simulate();
+  simulator->write_results_separate_raw("2d_shock_bubble");
   simulator->write_results("2d_shock_bubble_results");
 }

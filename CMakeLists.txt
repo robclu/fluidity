@@ -132,7 +132,11 @@ else()
 endif()
 
 message("-- CUDA INCLUDE DIR: ${CUDA_INCLUDE_DIR}")
-message("-- CUDA LIBRARY DIR: ${CUDA_LIB_DIRS}"    )
+message("-- CUDA LIBRARY DIR: ${CUDA_LIB_DIRS}"   )
+
+if (CUDA_FOUND)
+  set(CUDA_DEFS "-DFLUIDITY_CUDA_AVAILABLE=1")
+endif()
 
 if(WIN32)
 
@@ -155,6 +159,7 @@ else(APPLE)
     set(CUDA_FLAGS "${CUDA_FLAGS} -O3 -std=c++14")
   endif()
 endif()
+set(CUDA_FLAGS "${CUDA_FLAGS} ${CUDA_DEFS}")
 
 if(CMAKE_BUILD_TYPE MATCHES Release)
   set(
