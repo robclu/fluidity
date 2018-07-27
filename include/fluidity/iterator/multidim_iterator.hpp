@@ -113,7 +113,8 @@ struct MultidimIterator : public DimensionInfo {
   MultidimIterator(pointer_t ptr, const dim_info_t& dim_info)
   : dim_info_t{dim_info}, _ptr{ptr}
   {
-    assert(_ptr != nullptr && "Cannot iterate from a nullptr!");
+    // NOTE: This assertation causes a problem ...
+    //assert(_ptr != nullptr && "Cannot iterate from a nullptr!");
   }
 
   /// Overload of operator() to offset the iterator in a specific dimension.

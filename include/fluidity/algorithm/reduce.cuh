@@ -128,5 +128,4 @@ auto reduce(Iterator&& begin, Iterator&& end, Pred&& pred, Args&&... args)
 
 }}} // namespace fluid::detail::cuda
 
-
 #endif // FLUIDITY_ALGORITHM_REDUCE_CUH

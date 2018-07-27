@@ -24,7 +24,6 @@ namespace detail {
 
 #if defined(__CUDACC__)
 
-
 /// The BlockSizeImpl struct defines a struct which can be specialized for
 /// the different dimension types.
 /// \tparam Dimension The dimension to implement to the block size computation

@@ -65,11 +65,9 @@ namespace fluid {
 template < typename It, typename P, typename... As, exec::cpu_enable_t<It> = 0>
 fluidity_host_device auto reduce(It&& begin, It&& end, P&& pred, As&&... args)
 {
-  printf("Begin: %x\n", &(*begin));
   auto best = *begin; begin++;
   while (end - begin > 0)
   {
-    printf("It diff: %4lu\n", end - begin);
     pred(best, *begin, std::forward<As>(args)...);
     begin++;
   }

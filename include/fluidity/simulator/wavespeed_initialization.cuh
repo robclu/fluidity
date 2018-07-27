@@ -19,6 +19,7 @@
 #include <fluidity/utility/debug.hpp>
 #include <fluidity/utility/portability.hpp>
 #include <fluidity/utility/type_traits.hpp>
+#include <fluidity/dimension/dimension.hpp>
 
 namespace fluid  {
 namespace sim    {
@@ -36,11 +37,13 @@ namespace cuda   {
 template <typename I1, typename I2, typename Mat>
 fluidity_global void set_wavespeeds_impl(I1 states, I2 wspeeds, Mat mat)
 {
+#if defined(__CUDACC__)
   const auto idx = flattened_id(dim_x);
   if (idx < wspeeds.size(dim_x))
   {
     wspeeds[idx] = states[idx].max_wavespeed(mat);
   }
+#endif
 }
 
 /// Sets the wavespeed values in the \p wavespeed iterator using the state
@@ -54,13 +57,15 @@ fluidity_global void set_wavespeeds_impl(I1 states, I2 wspeeds, Mat mat)
 template <typename I1, typename I2, typename Mat>
 void set_wavespeeds(I1&& states, I2&& wavespeeds, Mat&& mat)
 {
+#if defined(__CUDACC__)
   // The WS iterator is used to determine the thread and block sizes because the
   // data should be treated as linear (flattened into a single dimension) since
   // the wavespeed computation on a cell is independant of the dimension.
-  auto threads = get_thread_sizes(wavespeeds);
-  auto blocks  = get_block_sizes(wavespeeds, threads);
+  auto threads = exec::get_thread_sizes(wavespeeds);
+  auto blocks  = exec::get_block_sizes(wavespeeds, threads);
   set_wavespeeds_impl<<<blocks, threads>>>(states, wavespeeds, mat);
   fluidity_check_cuda_result(cudaDeviceSynchronize());
+#endif
 }
 
 }}}} // namespace fluid::sim::detail::cuda

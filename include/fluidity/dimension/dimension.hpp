@@ -18,6 +18,7 @@
 
 #include <fluidity/utility/portability.hpp>
 #include <cstddef>
+#include <string>
 
 namespace fluid {
 
@@ -61,7 +62,7 @@ struct Dimension {
 #if defined(FLUIDITY_CUDA_AVAILABLE)
 
 /// Defines the type for runtime dimension info.
-using dim3_t = dim3;
+//using dim3_t = dim3;
 
 #else
 
@@ -73,7 +74,7 @@ struct Dim3 {
 };
 
 /// Defines the type for runtime dimension information.
-using dim3_t = Dim3;
+//using dim3_t = Dim3;
 
 #endif // FLUIDITY_CUDA_AVAILABLE
 
@@ -90,6 +91,54 @@ static constexpr dimx_t dim_x = dimx_t{};
 static constexpr dimy_t dim_y = dimy_t{};
 /// Defines a compile time type for the x spacial dimension.
 static constexpr dimz_t dim_z = dimz_t{};
+
+#if defined(FLUIDITY_CUDA_AVAILBLE)
+
+/// Defines a utility struct for dimension info.
+struct DimPrintInfo {
+  dim3        dim_info;   //!< The dimension information.
+  std::string name = "";  //!< The name for the dimension information.
+
+  /// Returns the name followed by the values of the dimensions, as:
+  ///   "<name> : { value.x, value.y, value.z }"
+  std::string as_string() const
+  {
+    return name + "{ x: " + std::to_string(dim_info.x) + ", y: "
+                          + std::to_string(dim_info.y) + ", z: "
+                          + std::to_string(dim_info.z) + " } ";
+  }
+};
+
+/// Base case for printing the dimension information.
+std::string printable_dim_info()
+{
+  return "\n";
+}
+
+/// Utility function to return a printable dimension information string. This
+/// is the recusive case.
+/// \param[in] info   The first information to print.
+/// \param[in] infos  Additional dimension information to print.
+/// \tparam    Info   The type of the first information.
+/// \tparam    Infos  The types of the other information.
+template <typename Info, typename... Infos>
+std::string printable_dim_info(Info&& info, Infos&&... infos)
+{
+  return info.as_string() + printable_dim_info(infos...);
+}
+
+/// Prints dimension information.
+/// \param[in] info   The first information to print.
+/// \param[in] infos  Additional dimension information to print.
+/// \tparam    Info   The type of the first information.
+/// \tparam    Infos  The types of the other information.
+template <typename Info, typename... Infos>
+void print_dim_info(Info&& info, Infos&&... infos)
+{
+  printf("%s", printable_dim_info(info, infos...).c_str());
+}
+
+#endif // FLUIDITY_CUDA_AVAILABLE
 
 #if !defined(FLUIDITY_DEFAULT_THREADS_1D_X)
   /// Defines the default number of threads per block.

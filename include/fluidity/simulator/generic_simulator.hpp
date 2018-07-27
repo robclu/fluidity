@@ -197,12 +197,16 @@ void GenericSimulator<Traits>::simulate()
     auto out        = _data.output_iterator();
     auto wavespeeds = _data.wavespeed_iterator();
 
-    _params.print_current_status();
-
     // Set the wavespeed data based on the updated state data from the previous
     // iteration, and then update sim time delta based on max wavespeed:
     set_wavespeeds(in, wavespeeds, mat);
-    _params.update_time_delta(max_element(_data.wavespeeds().begin(),                                                 _data.wavespeeds().end()));
+    //printf("ME: %4.4f\n", max_element(_data.wavespeeds().begin(),
+//                                _data.wavespeeds().end()));
+    _params.update_time_delta(max_element(_data.wavespeeds().begin(),      
+                                          _data.wavespeeds().end()));
+    
+    _params.print_current_status();
+
     solver.solve(in, out, mat, _params.dt_dh(), _setter);
     _params.update_simulation_info();
     _data.swap_states();

@@ -26,7 +26,6 @@
   #define MAX_UNROLL_DEPTH 4
 #endif  // MAX_UNROLL_DEPTH
 
-
 namespace fluid {
 
 /// Defines the maximum loop size where compile time unrolling may be performed

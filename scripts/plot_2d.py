@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import matplotlib.ticker as plticker
 import numpy as np
 import threading
 import sys
@@ -17,16 +18,26 @@ plt.rc('font', family='serif')
 
 data = np.genfromtxt(sys.argv[1])
 
-if (len(sys.argv) > 2 and sys.argv[2] == "--flip"):
-  data = np.flipud(data)
-
-xticks = np.arange(len(data[0, :]), 1)
-yticks = np.arange(len(data[:, 0]), 1)
+argc = len(sys.argv)
+grid = False
+if (argc > 2):
+  for i in range(2, argc):
+    arg = sys.argv[i]
+    if (arg == "--flip"):
+      data = np.flipud(data)
+    elif (arg == "--grid"):
+      grid = True
 
 ax = plt.gca()
+if grid:
+  lenx = len(data[0,:])
+  leny = len(data[:,0])
+  locx = plticker.MultipleLocator(base=1.0)
+  locy = plticker.MultipleLocator(base=lenx/leny)
+  ax.xaxis.set_major_locator(locx)
+  ax.yaxis.set_major_locator(locy)
+  ax.grid(color='k', linestyle='-', linewidth=2, which='both')
+
 im = ax.imshow(data, cmap=plt.cm.rainbow)
-#im = ax.imshow(data, cmap=plt.cm.rainbow, extent=(0, 1, 0, 1))
-
 colorbar = plt.colorbar(im)
-
 plt.show()

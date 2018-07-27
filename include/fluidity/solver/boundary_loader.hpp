@@ -190,13 +190,11 @@ struct BoundaryLoader {
     int global_idx = flattened_id(dim), local_idx = thread_id(dim);
     if (global_idx < padding)
     {
-      //util::cuda::debug::thread_msg("L FRONT BOUNDARY");
       constexpr auto bi = BoundaryIndex::first;
       setter(*patch_it, *patch_it.offset(-2 * global_idx - 1, dim), dim, bi);
     }
     else if (local_idx < padding)
     {
-      //util::cuda::debug::thread_msg("L FRONT DATA");
       const auto shift = -2 * local_idx - 1;
       *patch_it.offset(shift, dim) = *data_it.offset(shift, dim);
     }
@@ -206,13 +204,11 @@ struct BoundaryLoader {
 
     if (global_idx < padding)
     {
-      //util::cuda::debug::thread_msg("L BACK BOUNDARY");
       constexpr auto bi = BoundaryIndex::second;
       setter(*patch_it, *patch_it.offset(2 * global_idx + 1), dim, bi);
     }
     else if (local_idx < padding)
     {
-      //util::cuda::debug::thread_msg("L BACK DATA");
       const auto shift = 2 * local_idx + 1;
       *patch_it.offset(shift, dim) = *data_it.offset(shift, dim);
     }

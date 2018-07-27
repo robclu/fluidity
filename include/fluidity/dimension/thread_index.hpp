@@ -138,7 +138,28 @@ fluidity_host_only constexpr inline std::size_t flattened_id(Dimension<Value>)
   if constexpr (Value == 2) { return 2; }
 }
 
+/// Returns true if the global thread index in each dimension is less than the
+/// size of the iterator in the dimension.
+template <typename It>
+
 #endif // __CUDACC__
+
+/// Returns true if the global thread index in each dimension is less than the
+/// size of the iterator in the dimension.
+/// \param[in]  it The iterator over the space to determine if in range.
+/// \tparam     It The type of the iterator.
+template <typename It>
+fluidity_host_device bool in_range(It&& it)
+{
+  using iter_t = std::decay_t<It>;
+  bool result = true;
+  unrolled_for<iter_t::dimensions>([&] (auto i)
+  {
+    constexpr auto dim = Dimension<i>();
+    result *= flattened_id(dim) < it.size(dim);
+  });
+  return result;
+}
 
 } // namespace fluid
 

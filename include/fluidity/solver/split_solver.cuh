@@ -65,7 +65,7 @@ void solve_impl(Solver&&               solver,
                 It&&                   out   ,
                 Mat&&                  mat   ,
                 T                      dtdh  ,
-                solver::BoundarySetter setter)
+                const solver::BoundarySetter& setter)
 {
   using iter_t   = std::decay_t<It>;
   using solver_t = std::decay_t<Solver>;
