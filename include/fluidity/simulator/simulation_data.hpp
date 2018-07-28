@@ -96,6 +96,14 @@ class SimulationData<Traits, exec::DeviceKind::gpu> {
     std::swap(_states_in, _states_out);
   }
 
+  /// Resets the data using the \p in and \p out iterators.
+  template <typename In, typename Out>
+  void reset(In&& in, Out&& out)
+  {
+    _states_in.reset_data(&(*in));
+    _states_out.reset_data(&(*out));
+  }
+
   /// Returns an iterator to the simulation input states.
   auto input_iterator()
   {

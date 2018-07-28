@@ -109,6 +109,12 @@ fluid_target_link_libraries(
   ${CUDA_LIBRARIES}
 )
 
+fluid_add_executable(
+  state_tests_host
+  ${fluidity_SOURCE_DIR}/tests/state_tests_host.cpp
+)
+fluid_target_link_libraries(state_tests_host ${GTEST_BOTH_LIBRARIES})
+
 #add_executable(solver_host_tests solver_tests_host.cpp)
 #target_link_libraries(solver_host_tests ${GTEST_BOTH_LIBRARIES})
 

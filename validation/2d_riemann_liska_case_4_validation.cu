@@ -1,4 +1,4 @@
-//==--- fluidity/tests/2d_shock_bubble_validation.cu ------- -*- C++ -*- ---==//
+//==--- fluidity/tests/2d_riemann_liska_case_4_validation.cu -*- C++ -*- ---==//
 //            
 //                                Fluidity
 // 
@@ -8,9 +8,9 @@
 //
 //==------------------------------------------------------------------------==//
 //
-/// \file  2d_shock_bubble_validation.cu
-/// \brief This file defines a validation test for two dimensions where a shock
-///        wave interacts with a bubble.
+/// \file  2d_riemann_liska_case_4_validation.cu
+/// \brief This file defines a validation test for 2D solvers where the input
+///        data is a 2D riemann problem.
 //
 //==------------------------------------------------------------------------==//
 
@@ -54,59 +54,59 @@ int main(int argc, char** argv)
   using simulator_t = fluid::sim::GenericSimulator<sim_traits_t>;
   auto simulator    = std::make_unique<simulator_t>();
 
-  constexpr auto res             = real_t{0.01};
-  constexpr auto size_x          = real_t{1.6};
-  constexpr auto size_y          = real_t{1.0};
-  constexpr auto shock_start     = real_t{0.1};
-  constexpr auto bubble_centre_x = real_t{0.4};
-  constexpr auto bubble_centre_y = real_t{0.5}; 
-  constexpr auto bubble_radius   = real_t{0.2};
+  constexpr auto size  = real_t{1.0};
+  constexpr auto cells = real_t{400};
+  constexpr auto res   = size / cells;
 
   simulator->configure_resolution(res)
-           ->configure_dimension(fluid::dim_x, 0.0, size_x)
-           ->configure_dimension(fluid::dim_y, 0.0, size_y)
-           ->configure_sim_time(0.4)
-           ->configure_cfl(0.9);
-
-  // Returns the value based on whether the pos is inside the bubble,
-  // or before or after the shock wave.
-  auto shock_bubble_val = [&] (const auto& pos, auto in, auto pre, auto post)
-  {
-    const auto x = pos[0] * size_x - bubble_centre_x;
-    const auto y = pos[1] * size_y - bubble_centre_y;
-
-    const auto inside = std::sqrt(x*x + y*y) < bubble_radius;
-
-    return inside ? in : pos[0] * size_x < shock_start ? pre : post;
-  };
+           ->configure_dimension(fluid::dim_x, 0.0, size)
+           ->configure_dimension(fluid::dim_y, 0.0, size)
+           ->configure_sim_time(0.25)
+           ->configure_cfl(0.85);
 
   simulator->fill_data({
     {
       "rho", [&] (const auto& pos)
       {
-        return shock_bubble_val(pos, 1.0, 3.81062, 1.0);
-      } 
+        return pos[1] < 0.5
+        ? pos[0] < 0.5
+          ? 1.1000 : 0.5065     // (top left) | (top right)
+        : pos[0] < 0.5          // -----------|-------------
+          ? 0.5065 : 1.1000;    // (bot left) | (bot right)
+      }
     },
     {
       "p", [&] (const auto& pos)
       {
-        return shock_bubble_val(pos, 0.1, 9.98625, 1.0);
+        return pos[1] < 0.5
+          ? pos[0] < 0.5
+            ? 1.1000 : 0.3500     // (top left) | (top right)
+          : pos[0] < 0.5          // -----------|-------------
+            ? 0.3500 : 1.1000;    // (bot left) | (bot right)
       }
     },
     {
       "v_x", [&] (const auto& pos)
       {
-        return shock_bubble_val(pos, 0.0, 2.5745, 0.0);
+        return pos[1] < 0.5
+          ? pos[0] < 0.5
+            ? 0.8939 : 0.000      // (top left) | (top right)
+          : pos[0] < 0.5          // -----------|-------------
+            ? 0.8939 : 0.000;     // (bot left) | (bot right)
       }
     },
     {
       "v_y", [&] (const auto& pos)
       {
-        return 0.0;
+        return pos[1] < 0.5
+          ? pos[0] < 0.5
+            ? 0.8939 : 0.8939     // (top left) | (top right)
+          : pos[0] < 0.5          // -----------|-------------
+            ? 0.000 : 0.000;      // (bot left) | (bot right)
       }
     }
   });
 
   simulator->simulate();
-  simulator->write_results_separate_raw("2d_shock_bubble");
+  simulator->write_results_separate_raw("2d_riemann_liska_case_4");
 }

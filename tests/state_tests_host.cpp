@@ -193,6 +193,32 @@ TEST(state_tests_host, primitive_and_conservative_fluxes_are_the_same)
   EXPECT_EQ(cons_fluxes[ai] , prim_fluxes[ai] );
 }
 
+TEST(state_tests_host, can_copy_states)
+{
+  conservative2d_t cons_state;
+  material_t       material(adi_index);
+
+  cons_state.set_density(1.0);
+  cons_state.set_velocity(2.0, fluid::dim_x);
+  cons_state.set_velocity(2.5, fluid::dim_y);
+  cons_state.set_energy(3.0);
+  cons_state.set_additional(3.0, 0);
+
+  EXPECT_EQ(cons_state.density()             , real_t(1.0));
+  EXPECT_EQ(cons_state.velocity(fluid::dim_x), real_t(2.0));
+  EXPECT_EQ(cons_state.velocity(fluid::dim_y), real_t(2.5));
+  EXPECT_EQ(cons_state.energy(material)      , real_t(3.0));
+  EXPECT_EQ(cons_state.additional(0)         , real_t(3.0));
+
+  auto cons_state_other = cons_state;
+
+  EXPECT_EQ(cons_state_other.density()             , real_t(1.0));
+  EXPECT_EQ(cons_state_other.velocity(fluid::dim_x), real_t(2.0));
+  EXPECT_EQ(cons_state_other.velocity(fluid::dim_y), real_t(2.5));
+  EXPECT_EQ(cons_state_other.energy(material)      , real_t(3.0));
+  EXPECT_EQ(cons_state_other.additional(0)         , real_t(3.0));
+}
+
 /*
 TEST(StateTests, CanCreateStatesFromVectorExpressions) {
   Flow::Vec<T, 5> u(T(1), T(2), T(3), T(4), T(5));

@@ -204,12 +204,13 @@ void GenericSimulator<Traits>::simulate()
 //                                _data.wavespeeds().end()));
     _params.update_time_delta(max_element(_data.wavespeeds().begin(),      
                                           _data.wavespeeds().end()));
-    
     _params.print_current_status();
 
     solver.solve(in, out, mat, _params.dt_dh(), _setter);
     _params.update_simulation_info();
-    _data.swap_states();
+
+    _data.reset(out, in);
+    //_data.swap_states();
 
     // Debugging ...
     //_data.finalise_states();

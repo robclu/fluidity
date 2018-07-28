@@ -66,8 +66,8 @@ struct BoundarySetter {
   /// \tparam    State    The type of the state.
   /// \tparam    Value    The value which defines the dimension.
   template <typename State, std::size_t Value>
-  fluidity_host_device void operator()(State&&          internal,
-                                       State&&          boundary,
+  fluidity_host_device void operator()(const State&     internal,
+                                       State&           boundary,
                                        Dimension<Value> /*dim*/ ,
                                        BoundaryIndex    index   ) const
   {
@@ -205,7 +205,7 @@ struct BoundaryLoader {
     if (global_idx < padding)
     {
       constexpr auto bi = BoundaryIndex::second;
-      setter(*patch_it, *patch_it.offset(2 * global_idx + 1), dim, bi);
+      setter(*patch_it, *patch_it.offset(2 * global_idx + 1, dim), dim, bi);
     }
     else if (local_idx < padding)
     {

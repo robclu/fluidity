@@ -52,6 +52,13 @@ fluid_add_executable(
 )
 fluid_target_link_libraries(2d_shock_bubble ${CUDA_LIBRARIES})
 
+# 2D Riemann test case 4:
+fluid_add_executable(
+  2d_riemann_liska_case_4
+  ${SOURCE_DIR}/2d_riemann_liska_case_4_validation.cu
+)
+fluid_target_link_libraries(2d_riemann_liska_case_4 ${CUDA_LIBRARIES})
+
 #==--- Finish Up ------------------------------------------------------------==#
 
 # This creates all the targets, and is required to be called to enable the

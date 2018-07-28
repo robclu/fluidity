@@ -123,6 +123,12 @@ class BaseTensor {
     return info;
   }
 
+  /// Returns the data for the tensor.
+  fluidity_host_device void reset_data(pointer_t new_data)
+  {
+    _data = new_data;
+  }
+
   /// Returns the amount of memory required by the tensor, in bytes.
   fluidity_host_device std::size_t mem_requirement() const;
 

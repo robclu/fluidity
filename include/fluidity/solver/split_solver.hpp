@@ -138,8 +138,9 @@ struct SplitSolver {
       });
       *patch = *in;
 
-      loader_t::load_boundary(in, patch, dim, setter);
       __syncthreads();
+      loader_t::load_boundary(in, patch, dim, setter);
+      //__syncthreads();
 
       // Update states as (for dimension i):
       //  U_i + dt/dh * [F_{i-1/2} - F_{i+1/2}]

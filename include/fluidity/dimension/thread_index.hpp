@@ -36,7 +36,7 @@ fluidity_device_only inline std::size_t block_size()
 template <std::size_t Value>
 fluidity_device_only inline std::size_t block_size(Dimension<Value>)
 {
-  static_assert(Value <= 2, "Can only get thread id for 3 dimensions {0,1,2}.");
+  static_assert(Value <= 2, "Can only get size for 3 dimensions {0,1,2}.");
   return detail::BlockSizeImpl<Dimension<Value>>()();
 }
 
@@ -48,7 +48,7 @@ fluidity_device_only inline std::size_t block_size(Dimension<Value>)
 template <std::size_t Value>
 fluidity_device_only inline std::size_t grid_size(Dimension<Value>)
 {
-  static_assert(Value <= 2, "Can only get thread id for 3 dimensions {0,1,2}.");
+  static_assert(Value <= 2, "Can only get size for 3 dimensions {0,1,2}.");
   return detail::GridSizeImpl<Dimension<Value>>()();
 }
 
@@ -137,10 +137,6 @@ fluidity_host_only constexpr inline std::size_t flattened_id(Dimension<Value>)
   if constexpr (Value == 1) { return 1; }
   if constexpr (Value == 2) { return 2; }
 }
-
-/// Returns true if the global thread index in each dimension is less than the
-/// size of the iterator in the dimension.
-template <typename It>
 
 #endif // __CUDACC__
 
