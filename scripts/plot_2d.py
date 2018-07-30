@@ -22,14 +22,14 @@ plt.rc('font', family='serif')
 argc    = len(sys.argv)
 grid    = False
 contour = False
+copts   = False
 cmap    = True
-origin  = 'upper'
+origin  = 'lower'
+levels  = np.arange(0, 1)
 
 for i in range(1, argc):
   arg = sys.argv[i]
-  if (arg == "--flip"):
-    origin = 'lower'
-  elif (arg == "--grid"):
+  if (arg == "--grid"):
     grid = True
   elif (arg == "--contour"):
     contour   = True
@@ -37,11 +37,17 @@ for i in range(1, argc):
   elif (arg == "--cmap"):
     cmap = True
     data = np.genfromtxt(sys.argv[i+1])
+  elif (arg == "--contour-levels"):
+    copts = True
+    cont_min  = float(sys.argv[i+1])
+    cont_max  = float(sys.argv[i+2])
+    cont_step = float(sys.argv[i+3])
+    levels    = np.arange(cont_min, cont_max, cont_step)
+  elif (os.path.isfile(arg)):
+    cmap = True
+    data = np.genfromtxt(arg)
   else:
-    if (os.path.isfile(arg)):
-      cmap = True
-      data = np.genfromtxt(arg)
-
+    continue
 
 ax = plt.gca()
 if grid:
@@ -58,7 +64,12 @@ if cmap:
   col_bar = plt.colorbar(im)
 
 if contour:
-  cont     = ax.contour(cont_data, cmap=plt.cm.plasma, origin=origin)
+  if not copts:
+    cont_max  = cont_data.max()
+    cont_min  = cont_data.min()
+    cont_step = (cont_max - cont_min) / 20.0
+    levels = np.arange(cont_min, cont_max, cont_step)
+  cont     = ax.contour(cont_data, levels, cmap=plt.cm.plasma, origin=origin)
   cont_bar = plt.colorbar(cont)
 
 plt.show()

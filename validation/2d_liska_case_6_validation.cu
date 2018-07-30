@@ -1,4 +1,4 @@
-//==--- fluidity/tests/2d_riemann_liska_case_4_validation.cu -*- C++ -*- ---==//
+//==--- fluidity/tests/2d_liska_case_6_validation.cu ---------*- C++ -*- ---==//
 //            
 //                                Fluidity
 // 
@@ -8,7 +8,7 @@
 //
 //==------------------------------------------------------------------------==//
 //
-/// \file  2d_riemann_liska_case_4_validation.cu
+/// \file  2d_liska_case_6_validation.cu
 /// \brief This file defines a validation test for 2D solvers where the input
 ///        data is a 2D riemann problem.
 //
@@ -61,52 +61,48 @@ int main(int argc, char** argv)
   simulator->configure_resolution(res)
            ->configure_dimension(fluid::dim_x, 0.0, size)
            ->configure_dimension(fluid::dim_y, 0.0, size)
-           ->configure_sim_time(0.25)
-           ->configure_cfl(0.85);
+           ->configure_sim_time(0.3)
+           ->configure_cfl(0.9);
 
   simulator->fill_data({
     {
       "rho", [&] (const auto& pos)
       {
-        return pos[1] < 0.5
+        return pos[1] > 0.5
         ? pos[0] < 0.5
-          ? 1.1000 : 0.5065     // (top left) | (top right)
+          ? 2.0 : 1.0           // (top left) | (top right)
         : pos[0] < 0.5          // -----------|-------------
-          ? 0.5065 : 1.1000;    // (bot left) | (bot right)
+          ? 1.0 : 3.0;          // (bot left) | (bot right)
       }
     },
     {
       "p", [&] (const auto& pos)
       {
-        return pos[1] < 0.5
-          ? pos[0] < 0.5
-            ? 1.1000 : 0.3500     // (top left) | (top right)
-          : pos[0] < 0.5          // -----------|-------------
-            ? 0.3500 : 1.1000;    // (bot left) | (bot right)
+        return 1.0;
       }
     },
     {
       "v_x", [&] (const auto& pos)
       {
-        return pos[1] < 0.5
-          ? pos[0] < 0.5
-            ? 0.8939 : 0.000      // (top left) | (top right)
-          : pos[0] < 0.5          // -----------|-------------
-            ? 0.8939 : 0.000;     // (bot left) | (bot right)
+        return pos[1] > 0.5
+        ? pos[0] < 0.5
+          ? 0.75 : 0.75           // (top left) | (top right)
+        : pos[0] < 0.5              // -----------|-------------
+          ? -0.75 : -0.75;            // (bot left) | (bot right)
       }
     },
     {
       "v_y", [&] (const auto& pos)
       {
-        return pos[1] < 0.5
+        return pos[1] > 0.5
           ? pos[0] < 0.5
-            ? 0.8939 : 0.8939     // (top left) | (top right)
-          : pos[0] < 0.5          // -----------|-------------
-            ? 0.000 : 0.000;      // (bot left) | (bot right)
+            ? 0.5 : -0.5           // (top left) | (top right)
+          : pos[0] < 0.5           // -----------|-------------
+            ? 0.5 : -0.5;          // (bot left) | (bot right)
       }
     }
   });
 
   simulator->simulate();
-  simulator->write_results_separate_raw("2d_riemann_liska_case_4");
+  simulator->write_results_separate_raw("2d_liska_case_6");
 }

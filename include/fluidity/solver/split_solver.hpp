@@ -138,9 +138,8 @@ struct SplitSolver {
       });
       *patch = *in;
 
-      __syncthreads();
       loader_t::load_boundary(in, patch, dim, setter);
-      //__syncthreads();
+      __syncthreads();
 
       // Update states as (for dimension i):
       //  U_i + dt/dh * [F_{i-1/2} - F_{i+1/2}]
@@ -152,25 +151,28 @@ struct SplitSolver {
   /// Offsets the global iterator in the given dimension.
   /// \param[in] it       The iterator to offset.
   /// \tparam    Iterator The type of te iterator.
-  /// \tparam    Value    The value which defines the dimension.
-  template <typename I1, typename I2, std::size_t VS, std::size_t VO>
+  /// \tparam    Value    The type which defines the dimension to solve in.
+  /// \tparam    VO       The type which defines the dimension to offset in.
+  template <typename I1, typename I2, typename DS, typename DO>
   fluidity_host_device static auto
-  shift_iterators(I1&& in, I1&& out, I2&& patch, Dimension<VS>, Dimension<VO>)
+  shift_iterators(I1&& in, I1&& out, I2&& patch, DS, DO)
   {
-    constexpr auto dim_off = Dimension<VO>{};
+    constexpr auto dim_off = DO();
+    constexpr auto pad_off = DS::value == DO::value ? padding : 0;
     in.shift(flattened_id(dim_off), dim_off);
     out.shift(flattened_id(dim_off), dim_off);
-    patch.shift(thread_id(dim_off) + (VS == VO ? padding : 0), dim_off);
+    patch.shift(thread_id(dim_off) + pad_off, dim_off);
   }
 
   /// Returns a shared memory multi dimensional iterator over a patch. 
   /// \param[in] it       The iterator to the start of the global data.
   /// \tparam    Iterator The type of the iterator.
-  template <typename It>
-  fluidity_device_only static auto make_patch_iterator(It&& it, tag_1d_t)
+  /// \tparam    DS       The type which defines the solving dimension.
+  template <typename It, typename DS>
+  fluidity_device_only static auto make_patch_iterator(It&& it, tag_1d_t, DS)
   {
-    using state_t        = std::decay_t<decltype(*(it))>;
-    using dim_info_t     = DimInfoCt<threads_per_block_1d_x + (padding << 1)>;
+    using state_t    = std::decay_t<decltype(*(it))>;
+    using dim_info_t = DimInfoCt<threads_per_block_1d_x + (padding << 1)>;
     return make_multidim_iterator<state_t, dim_info_t>();
   }
 
@@ -178,13 +180,15 @@ struct SplitSolver {
   /// overload is called for a 2D system when solving in the x direction.
   /// \param[in] it       The iterator to the start of the global data.
   /// \tparam    Iterator The type of the iterator.
-  template <typename It>
-  fluidity_device_only static auto
-  make_patch_iterator(It&& it, tag_2d_t, dimx_t)
+  /// \tparam    DS       The type which defines the solving dimension.
+  template <typename It, typename DS>
+  fluidity_device_only static auto make_patch_iterator(It&& it, tag_2d_t, DS)
   {
-    using state_t        = std::decay_t<decltype(*(it))>;
-    using dim_info_t     = DimInfoCt<threads_per_block_2d_x + (padding << 1),
-                                     threads_per_block_2d_y>;
+    constexpr auto pad_amount = padding << 1;
+    using state_t    = std::decay_t<decltype(*(it))>;
+    using dim_info_t = DimInfoCt<
+      threads_per_block_2d_x + (DS::value == dimx_t::value ? pad_amount : 0),
+      threads_per_block_2d_y + (DS::value == dimy_t::value ? pad_amount : 0)>;
     return make_multidim_iterator<state_t, dim_info_t>();
   }
 
@@ -192,28 +196,33 @@ struct SplitSolver {
   /// overload is called for a 2D system when solving in the y direction.
   /// \param[in] it       The iterator to the start of the global data.
   /// \tparam    Iterator The type of the iterator.
+  /*
   template <typename It>
   fluidity_device_only static auto
   make_patch_iterator(It&& it, tag_2d_t, dimy_t)
   {
-    using state_t        = std::decay_t<decltype(*(it))>;
-    using dim_info_t     = DimInfoCt<threads_per_block_2d_x,    
-                                     threads_per_block_2d_y + (padding << 1)>;
+    using state_t    = std::decay_t<decltype(*(it))>;
+    using dim_info_t = DimInfoCt<threads_per_block_2d_x,    
+                                 threads_per_block_2d_y + (padding << 1)>;
     return make_multidim_iterator<state_t, dim_info_t>();
   }
+  */
 
-  /// Returns a shared memory multi dimensional iterator over a patch. 
+  /// Returns a shared memory multi dimensional iterator over a patch. This
+  /// overload is called for a 3D system when solving in the x direction.
   /// \param[in] it       The iterator to the start of the global data.
   /// \tparam    Iterator The type of the iterator.
-  template <typename It>
-  fluidity_device_only static auto make_patch_iterator(It&& it, tag_3d_t)
+  /// \tparam    DS       The type which defines the solving dimension.
+  template <typename It, typename DS>
+  fluidity_device_only static auto make_patch_iterator(It&& it, tag_3d_t, DS)
   {
-    using state_t        = std::decay_t<decltype(*(it))>;
-    using padding_info_t = PaddingInfo<dimz_t::value, padding>;
-    using dim_info_t     = DimInfoCt<threads_per_block_3d_x,    
-                                     threads_per_block_3d_y,
-                                     threads_per_block_3d_z>;
-    return make_multidim_iterator<state_t, dim_info_t, padding_info_t>();
+    constexpr auto pad_amount = padding << 1;
+    using state_t    = std::decay_t<decltype(*(it))>;
+    using dim_info_t = DimInfoCt<
+      threads_per_block_3d_x + (DS::value == dimx_t::value ? pad_amount : 0), 
+      threads_per_block_3d_y + (DS::value == dimy_t::value ? pad_amount : 0),
+      threads_per_block_3d_z + (DS::value == dimz_t::value ? pad_amount : 0)>;
+    return make_multidim_iterator<state_t, dim_info_t>();
   }
 };
 
