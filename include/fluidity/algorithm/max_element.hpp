@@ -21,8 +21,6 @@
 
 namespace fluid {
 
-
-
 /// Returns the maximum element between the \p begin and \p end elements.
 /// \param[in] begin The first element to find the max element from.
 /// \param[in] end   The last element to find the max element from.

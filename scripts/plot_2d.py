@@ -77,7 +77,7 @@ if contour:
     cont_min  = cont_data.min()
     cont_step = (cont_max - cont_min) / 20.0
     levels = np.arange(cont_min, cont_max, cont_step)
-  cont     = ax.contour(cont_data, levels, cmap=plt.cm.hsv, origin=origin)
+  cont     = ax.contour(cont_data, levels, cmap=plt.cm.magma, origin=origin)
   cont_bar = plt.colorbar(cont, cax=cont_ax)
 
 plt.show()

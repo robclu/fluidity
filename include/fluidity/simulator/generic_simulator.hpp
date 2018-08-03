@@ -19,12 +19,12 @@
 #include "parameters.hpp"
 #include "simulation_data.hpp"
 #include "simulation_traits.hpp"
-//#include "simulation_updater.hpp"
 #include "simulator.hpp"
 #include "wavespeed_initialization.hpp"
 #include <fluidity/algorithm/fill.hpp>
 #include <fluidity/algorithm/max_element.hpp>
 #include <fluidity/dimension/dimension_info.hpp>
+#include <fluidity/utility/timer.hpp>
 #include <fluidity/utility/type_traits.hpp>
 #include <fstream>
 #include <iomanip>
@@ -180,14 +180,12 @@ void GenericSimulator<Traits>::simulate()
   auto mat    = material_t{};
 
   _params.print_static_summary();
-
-  // Initialize the data:
   _data.initialize();
 
   auto cfl        = _params.cfl;
   auto wavespeeds = _data.wavespeed_iterator();
-  auto end        = high_resolution_clock::now();
-  auto start      = high_resolution_clock::now();
+  auto timer      = util::default_timer_t();
+
   while (_params.continue_simulation())
   {
     //_params.cfl = _params.iters < 5 ? 0.18 : cfl;
@@ -198,32 +196,19 @@ void GenericSimulator<Traits>::simulate()
     // Set the wavespeed data based on the updated state data from the previous
     // iteration, and then update sim time delta based on max wavespeed:
     set_wavespeeds(in, wavespeeds, mat);
-    printf("ME : %5.5f\n", max_element(_data.wavespeeds().begin(),      
-                                          _data.wavespeeds().end()));
     _params.update_time_delta(max_element(_data.wavespeeds().begin(),      
                                           _data.wavespeeds().end()));
     _params.print_current_status();
 
     solver.solve(in, out, mat, _params.dt_dh(), _setter);
     _params.update_simulation_info();
-
-    _data.reset(out, in);
-    //_data.swap_states();
-
-    // Debugging ...
-    //_data.finalise_states();
-    // If debugging, set option to print based on iterations check:
-    //std::string filename = "Debug_" + std::to_string(_params.iters);
-    //this->write_results(filename);
+    _data.swap(out, in);
   }
-
-  end = high_resolution_clock::now();
-  printf("Simulation time : %8lu ms\n", 
-    std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count());
+  printf("Simulation time : %8lu ms\n", timer.elapsed_time());
   _params.print_final_summary();
 
   // Finalise the data, making sure it is all available on the host.
-//  _data.finalise();
+  _data.sync_device_to_host();
 }
 
 template <typename Traits>
