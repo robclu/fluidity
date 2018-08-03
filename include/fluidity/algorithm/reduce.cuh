@@ -63,19 +63,21 @@ fluidity_global void reduce_impl(Iterator    begin  ,
     __syncthreads();
 
     const auto block_start = flattened_block_id(dim_x) * block_size(dim_x);
-    const auto leftover    = (size << 1) - block_start;
+    const auto leftover    = size - block_start;
 
     // Number of elements to reduce in this block is the smaller of the block
     // size and the extra elements for non-power-of-2 block sizes ...
-    auto size = std::min(block_size(), leftover);
-    while (index < (size >> 1))
+    size = std::min(block_size(dim_x), leftover);
+
+    //while (index < (size >> 1))
+    while (thread_id(dim_x) < (size >> 1))
     {
       size = (size >> 1) + (size & 1);
       pred(*iter, *(iter.offset(size)), args...);
       __syncthreads();
     }
 
-    if (index == 0)
+    if (thread_id(dim_x) == 0)
     {
       results[flattened_block_id(dim_x)] = *iter;
     }
@@ -98,12 +100,15 @@ auto reduce(Iterator&& begin, Iterator&& end, Pred&& pred, Args&&... args)
   const int      elements    = end - begin;
   constexpr auto max_threads = reduction_threads;
 
+
   dim3 threads_per_block(elements < max_threads ? elements : max_threads);
-  dim3 num_blocks(std::max(elements / threads_per_block.x,
-                           static_cast<unsigned int>(1)));
+  dim3 num_blocks(
+      std::max(
+        static_cast<int>(std::ceil(static_cast<double>(elements) /
+                                   threads_per_block.x)), int{1})); 
 
   using value_t        = typename decay_t<Iterator>::value_t;
-  using host_results_t = HostTensor<value_t, 1>;
+ // using host_results_t = HostTensor<value_t, 1>;
   using dev_results_t  = DeviceTensor<value_t, 1>;
 
   dev_results_t dev_results(num_blocks.x);
@@ -117,12 +122,11 @@ auto reduce(Iterator&& begin, Iterator&& end, Pred&& pred, Args&&... args)
   fluidity_check_cuda_result(cudaDeviceSynchronize());
 
   auto host_results = dev_results.as_host();
-  value_t result    = host_results[0];
-  for (const auto& i : range(num_blocks.x))
+  for (const auto& i : range(std::size_t{1}, host_results.total_size()))
   {
-    pred(result, host_results[i]);
+    pred(host_results[0], host_results[i]);
   }
-  return result;
+  return host_results[0];
 #endif // __CUDACC__ 
 }
 

@@ -62,7 +62,7 @@ int main(int argc, char** argv)
            ->configure_dimension(fluid::dim_x, 0.0, size)
            ->configure_dimension(fluid::dim_y, 0.0, size)
            ->configure_sim_time(0.25)
-           ->configure_cfl(0.92);
+           ->configure_cfl(0.9);
 
   simulator->fill_data({
     {

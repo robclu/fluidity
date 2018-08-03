@@ -85,8 +85,10 @@ void fill(Iterator begin, Iterator end, T&& value_pred, Args&&... args)
   constexpr auto max_threads = 256;
 
   dim3 threads_per_block(elements < max_threads ? elements : max_threads);
-  dim3 num_blocks(std::max(elements / threads_per_block.x,
-                           static_cast<unsigned int>(1)));
+  dim3 num_blocks(
+      std::max(
+        static_cast<int>(std::ceil(static_cast<double>(elements) /
+                                   threads_per_block.x)), int{1})); 
 
   fill_impl<<<num_blocks, threads_per_block>>>(begin, value_pred, args...);
   fluidity_check_cuda_result(cudaDeviceSynchronize());

@@ -218,6 +218,7 @@ max_wavespeed(State&& state, Material&& mat) noexcept
 {
   using state_t     = std::decay_t<State>;
   auto max_velocity = std::abs(state.velocity(dim_x));
+  //unrolled_for<state_t::dimensions - 1>([&] (auto i)
   unrolled_for<state_t::dimensions - 1>([&] (auto i)
   {
     constexpr auto dim = Dimension<i + 1>{};

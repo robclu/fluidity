@@ -94,9 +94,9 @@ struct Parameters {
     printf(
       "------------------------------------------------------------\n"
       "| ITERATION      | %39lu |\n"
-      "| TIME DELTA     | %39.4f |\n"
-      "| DT/DH          | %39.4f |\n"
-      "| RUN TIME       | %39.4f |\n"
+      "| TIME DELTA     | %39.9f |\n"
+      "| DT/DH          | %39.9f |\n"
+      "| RUN TIME       | %39.9f |\n"
       "------------------------------------------------------------\n",
       iters, _dt, dt_dh(), run_time
     );
@@ -113,6 +113,19 @@ struct Parameters {
       "| MAX ITERATIONS | %39lu |\n"
       "------------------------------------------------------------\n",
       domain.resolution(), cfl, sim_time, max_iters
+    );
+  }
+
+  /// Prints the final summary.
+  void print_final_summary() const
+  {
+    printf(
+      "------------------------------------------------------------\n"
+      "| ITERATIONS     | %39lu |\n"
+      "| LAST TIME DELTA| %39.4f |\n"
+      "| RUN TIME       | %39.4f |\n"
+      "------------------------------------------------------------\n",
+      iters, _dt, run_time
     );
   }
 

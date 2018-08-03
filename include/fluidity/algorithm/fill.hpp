@@ -74,8 +74,7 @@ template < typename    Iterator
          , typename    T
          , typename... Args
          , exec::cpu_enable_t<Iterator> = 0>
-fluidity_host_device void
-fill(Iterator begin, Iterator end, T value, Args&&... args)
+void fill(Iterator begin, Iterator end, T value, Args&&... args)
 {
   constexpr bool is_predicate = 
     !std::is_convertible<typename Iterator::value_t, T>::value;
@@ -100,7 +99,7 @@ fill(Iterator begin, Iterator end, T value, Args&&... args)
 /// \tparam    P        The type of the predicate.
 /// \tparam    Args     The type of arguments for a callable predicate.
 template <typename Iterator, typename T, exec::gpu_enable_t<Iterator> = 0>
-fluidity_host_device void fill(Iterator begin, Iterator end, T value)
+void fill(Iterator begin, Iterator end, T value)
 {
   detail::cuda::fill(begin, end, value);
 }

@@ -54,7 +54,7 @@ int main(int argc, char** argv)
   using simulator_t = fluid::sim::GenericSimulator<sim_traits_t>;
   auto simulator    = std::make_unique<simulator_t>();
 
-  constexpr auto res             = real_t{0.001};
+  constexpr auto res             = real_t{0.01};
   constexpr auto size_x          = real_t{1.6};
   constexpr auto size_y          = real_t{1.0};
   constexpr auto shock_start     = real_t{0.1};
@@ -72,9 +72,8 @@ int main(int argc, char** argv)
   // or before or after the shock wave.
   auto shock_bubble_val = [&] (const auto& pos, auto in, auto pre, auto post)
   {
-    const auto x = pos[0] * size_x - bubble_centre_x;
-    const auto y = pos[1] * size_y - bubble_centre_y;
-
+    const auto x      = pos[0] * size_x - bubble_centre_x;
+    const auto y      = pos[1] * size_y - bubble_centre_y;
     const auto inside = std::sqrt(x*x + y*y) < bubble_radius;
 
     return inside ? in : pos[0] * size_x < shock_start ? pre : post;
@@ -84,12 +83,14 @@ int main(int argc, char** argv)
     {
       "rho", [&] (const auto& pos)
       {
+        //return shock_bubble_val(pos, 0.1, 3.81062, 1.0);
         return shock_bubble_val(pos, 1.0, 3.81062, 1.0);
       } 
     },
     {
       "p", [&] (const auto& pos)
       {
+        //return shock_bubble_val(pos, 1.0, 9.98625, 1.0);
         return shock_bubble_val(pos, 0.1, 9.98625, 1.0);
       }
     },

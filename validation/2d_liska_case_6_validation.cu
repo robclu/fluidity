@@ -44,7 +44,7 @@ using sim_traits_t =
   < primitive2d_t
   , material_t
   , reconstructor_t
-  , flux::Hllc
+  , flux::Force
   , solver::Type::split
   , execution_t
   >;
@@ -55,7 +55,7 @@ int main(int argc, char** argv)
   auto simulator    = std::make_unique<simulator_t>();
 
   constexpr auto size  = real_t{1.0};
-  constexpr auto cells = real_t{400};
+  constexpr auto cells = real_t{1600};
   constexpr auto res   = size / cells;
 
   simulator->configure_resolution(res)

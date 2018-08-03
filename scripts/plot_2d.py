@@ -19,13 +19,14 @@ plt.rc('font', family='serif')
 
 #data = np.genfromtxt(sys.argv[1])
 
-argc    = len(sys.argv)
-grid    = False
-contour = False
-copts   = False
-cmap    = True
-origin  = 'lower'
-levels  = np.arange(0, 1)
+argc       = len(sys.argv)
+grid       = False
+contour    = False
+copts      = False
+cmap       = True
+cmaplevels = False
+origin     = 'lower'
+levels     = np.arange(0, 1)
 
 for i in range(1, argc):
   arg = sys.argv[i]
@@ -43,13 +44,17 @@ for i in range(1, argc):
     cont_max  = float(sys.argv[i+2])
     cont_step = float(sys.argv[i+3])
     levels    = np.arange(cont_min, cont_max, cont_step)
-  elif (os.path.isfile(arg)):
-    cmap = True
-    data = np.genfromtxt(arg)
+  elif (arg == "--cmap-levels"):
+    cmap_min   = float(sys.argv[i+1])
+    cmap_max   = float(sys.argv[i+2])
+    cmaplevels = True
   else:
     continue
 
-ax = plt.gca()
+ax         = plt.gca()
+ax_divider = make_axes_locatable(ax)
+cmap_ax    = ax_divider.append_axes("bottom", size="7%", pad=0.6)
+cont_ax    = ax_divider.append_axes("right" , size="7%", pad=0.6)
 if grid:
   lenx = len(data[0,:])
   leny = len(data[:,0])
@@ -60,8 +65,11 @@ if grid:
   ax.grid(color='k', linestyle='-', linewidth=2, which='both')
 
 if cmap:
-  im      = ax.imshow(data, cmap=plt.cm.rainbow, origin=origin)
-  col_bar = plt.colorbar(im)
+  if not cmaplevels:
+    cmap_min = data.min()
+    cmap_max = data.max()  
+  im      = ax.imshow(data, cmap=plt.cm.viridis, origin=origin, vmin=cmap_min, vmax=cmap_max)
+  col_bar = plt.colorbar(im, cax=cmap_ax, orientation="horizontal")
 
 if contour:
   if not copts:
@@ -69,7 +77,7 @@ if contour:
     cont_min  = cont_data.min()
     cont_step = (cont_max - cont_min) / 20.0
     levels = np.arange(cont_min, cont_max, cont_step)
-  cont     = ax.contour(cont_data, levels, cmap=plt.cm.plasma, origin=origin)
-  cont_bar = plt.colorbar(cont)
+  cont     = ax.contour(cont_data, levels, cmap=plt.cm.hsv, origin=origin)
+  cont_bar = plt.colorbar(cont, cax=cont_ax)
 
 plt.show()

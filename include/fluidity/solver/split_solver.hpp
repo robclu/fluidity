@@ -138,8 +138,9 @@ struct SplitSolver {
       });
       *patch = *in;
 
-      loader_t::load_boundary(in, patch, dim, setter);
       __syncthreads();
+      loader_t::load_boundary(in, patch, dim, setter);
+//      __syncthreads();
 
       // Update states as (for dimension i):
       //  U_i + dt/dh * [F_{i-1/2} - F_{i+1/2}]
@@ -191,22 +192,6 @@ struct SplitSolver {
       threads_per_block_2d_y + (DS::value == dimy_t::value ? pad_amount : 0)>;
     return make_multidim_iterator<state_t, dim_info_t>();
   }
-
-  /// Returns a shared memory multi dimensional iterator over a patch. This
-  /// overload is called for a 2D system when solving in the y direction.
-  /// \param[in] it       The iterator to the start of the global data.
-  /// \tparam    Iterator The type of the iterator.
-  /*
-  template <typename It>
-  fluidity_device_only static auto
-  make_patch_iterator(It&& it, tag_2d_t, dimy_t)
-  {
-    using state_t    = std::decay_t<decltype(*(it))>;
-    using dim_info_t = DimInfoCt<threads_per_block_2d_x,    
-                                 threads_per_block_2d_y + (padding << 1)>;
-    return make_multidim_iterator<state_t, dim_info_t>();
-  }
-  */
 
   /// Returns a shared memory multi dimensional iterator over a patch. This
   /// overload is called for a 3D system when solving in the x direction.

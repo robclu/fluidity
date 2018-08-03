@@ -175,10 +175,6 @@ void GenericSimulator<Traits>::simulate()
 {
   using namespace std::chrono;
 
-  // Variables for debug info:
-  auto start = high_resolution_clock::now();
-  auto end   = high_resolution_clock::now();
-
   // Variables for simulation specification:
   auto solver = solver_t{_data.input_iterator()};
   auto mat    = material_t{};
@@ -188,20 +184,22 @@ void GenericSimulator<Traits>::simulate()
   // Initialize the data:
   _data.initialize();
 
-  auto cfl = _params.cfl;
+  auto cfl        = _params.cfl;
+  auto wavespeeds = _data.wavespeed_iterator();
+  auto end        = high_resolution_clock::now();
+  auto start      = high_resolution_clock::now();
   while (_params.continue_simulation())
   {
-    _params.cfl = _params.iters < 5 ? 0.18 : cfl;
+    //_params.cfl = _params.iters < 5 ? 0.18 : cfl;
 
-    auto in         = _data.input_iterator();
-    auto out        = _data.output_iterator();
-    auto wavespeeds = _data.wavespeed_iterator();
+    auto in  = _data.input_iterator();
+    auto out = _data.output_iterator();
 
     // Set the wavespeed data based on the updated state data from the previous
     // iteration, and then update sim time delta based on max wavespeed:
     set_wavespeeds(in, wavespeeds, mat);
-    //printf("ME: %4.4f\n", max_element(_data.wavespeeds().begin(),
-//                                _data.wavespeeds().end()));
+    printf("ME : %5.5f\n", max_element(_data.wavespeeds().begin(),      
+                                          _data.wavespeeds().end()));
     _params.update_time_delta(max_element(_data.wavespeeds().begin(),      
                                           _data.wavespeeds().end()));
     _params.print_current_status();
@@ -222,9 +220,10 @@ void GenericSimulator<Traits>::simulate()
   end = high_resolution_clock::now();
   printf("Simulation time : %8lu ms\n", 
     std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count());
+  _params.print_final_summary();
 
   // Finalise the data, making sure it is all available on the host.
-  _data.finalise();
+//  _data.finalise();
 }
 
 template <typename Traits>
@@ -356,7 +355,7 @@ void GenericSimulator<Traits>::write_blob(Iter iter, std::string prefix, dimx_t)
   std::vector<std::ofstream> streams;
   for (auto name : index_t::element_names())
   { 
-    streams.emplace_back(prefix + "_" + name + ".ext");
+    streams.emplace_back(prefix + "_" + name + "_" + std::to_string(_params.sim_time) + ".dat");
   }
   write_blob(iter, streams, dim_x);
   for (auto& stream : streams) stream << "\n";
@@ -369,7 +368,7 @@ void GenericSimulator<Traits>::write_blob(Iter iter, std::string prefix, dimy_t)
   std::vector<std::ofstream> streams;
   for (auto name : index_t::element_names())
   { 
-    streams.emplace_back(prefix + "_" + name + ".ext");
+    streams.emplace_back(prefix + "_" + name + "_" + std::to_string(_params.sim_time) + ".dat");
   }
   for (const auto y : range(iter.size(dim_y)))
   {

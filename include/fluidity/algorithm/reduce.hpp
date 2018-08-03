@@ -63,7 +63,7 @@ namespace fluid {
 /// \tparam     P     The type of the predicate.
 /// \tparam     As    The type of any additional args for the predicate.
 template < typename It, typename P, typename... As, exec::cpu_enable_t<It> = 0>
-fluidity_host_device auto reduce(It&& begin, It&& end, P&& pred, As&&... args)
+auto reduce(It&& begin, It&& end, P&& pred, As&&... args)
 {
   auto best = *begin; begin++;
   while (end - begin > 0)
@@ -115,7 +115,7 @@ fluidity_host_device auto reduce(It&& begin, It&& end, P&& pred, As&&... args)
 /// \tparam     P     The type of the predicate.
 /// \tparam     As    The type of any additional args for the predicate.
 template <typename It, typename P, typename... As, exec::gpu_enable_t<It> = 0>
-fluidity_host_device auto reduce(It&& begin, It&& end, P&& pred, As&&... args)
+auto reduce(It&& begin, It&& end, P&& pred, As&&... args)
 {
   return detail::cuda::reduce(std::forward<It>(begin)  ,
                               std::forward<It>(end)    ,

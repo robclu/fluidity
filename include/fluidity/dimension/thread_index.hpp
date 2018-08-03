@@ -17,6 +17,7 @@
 #define FLUIDITY_DIMENSION_THREAD_INDEX_HPP
 
 #include "thread_index_detail.hpp"
+#include <fluidity/algorithm/unrolled_for.hpp>
 
 namespace fluid {
 
@@ -145,7 +146,7 @@ fluidity_host_only constexpr inline std::size_t flattened_id(Dimension<Value>)
 /// \param[in]  it The iterator over the space to determine if in range.
 /// \tparam     It The type of the iterator.
 template <typename It>
-fluidity_host_device bool in_range(It&& it)
+fluidity_device_only bool in_range(It&& it)
 {
   using iter_t = std::decay_t<It>;
   bool result = true;
