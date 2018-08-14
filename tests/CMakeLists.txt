@@ -108,6 +108,12 @@ fluid_target_link_libraries(
 )
 
 fluid_add_executable(
+  setting_tests
+  ${fluidity_SOURCE_DIR}/tests/setting_tests.cpp
+)
+fluid_target_link_libraries(setting_tests ${GTEST_BOTH_LIBRARIES})
+
+fluid_add_executable(
   simulator_tests
   ${fluidity_SOURCE_DIR}/tests/simulator_tests.cu
 )

@@ -83,15 +83,15 @@ int main(int argc, char** argv)
     {
       "rho", [&] (const auto& pos)
       {
-        //return shock_bubble_val(pos, 0.1, 3.81062, 1.0);
-        return shock_bubble_val(pos, 1.0, 3.81062, 1.0);
+        return shock_bubble_val(pos, 0.1, 3.81062, 1.0);
+        //return shock_bubble_val(pos, 1.0, 3.81062, 1.0);
       } 
     },
     {
       "p", [&] (const auto& pos)
       {
-        //return shock_bubble_val(pos, 1.0, 9.98625, 1.0);
-        return shock_bubble_val(pos, 0.1, 9.98625, 1.0);
+        return shock_bubble_val(pos, 1.0, 9.98625, 1.0);
+        //return shock_bubble_val(pos, 0.1, 9.98625, 1.0);
       }
     },
     {

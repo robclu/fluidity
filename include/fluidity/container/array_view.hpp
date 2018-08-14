@@ -88,7 +88,6 @@ class ArrayView {
     other._ptr = nullptr; other._step = 0;
   }
 
-
   /// Overload of access operator to return a reference to the \p ith element
   /// in the array.
   /// \param[in] i The index of the element to get a referemce to.

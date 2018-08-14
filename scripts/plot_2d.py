@@ -68,7 +68,7 @@ if cmap:
   if not cmaplevels:
     cmap_min = data.min()
     cmap_max = data.max()  
-  im      = ax.imshow(data, cmap=plt.cm.viridis, origin=origin, vmin=cmap_min, vmax=cmap_max)
+  im      = ax.imshow(data, cmap=plt.cm.gist_rainbow, origin=origin, vmin=cmap_min, vmax=cmap_max)
   col_bar = plt.colorbar(im, cax=cmap_ax, orientation="horizontal")
 
 if contour:
@@ -77,7 +77,7 @@ if contour:
     cont_min  = cont_data.min()
     cont_step = (cont_max - cont_min) / 20.0
     levels = np.arange(cont_min, cont_max, cont_step)
-  cont     = ax.contour(cont_data, levels, cmap=plt.cm.magma, origin=origin)
+  cont     = ax.contour(cont_data, levels, cmap=plt.cm.gist_gray, origin=origin)
   cont_bar = plt.colorbar(cont, cax=cont_ax)
 
 plt.show()
