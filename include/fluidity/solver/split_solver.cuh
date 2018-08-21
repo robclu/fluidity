@@ -16,6 +16,7 @@
 #ifndef FLUIDITY_SOLVER_SPLIT_SOLVER_CUH
 #define FLUIDITY_SOLVER_SPLIT_SOLVER_CUH
 
+#include "boundary_loader.hpp"
 #include <fluidity/utility/debug.hpp>
 #include <fluidity/utility/portability.hpp>
 #include <fluidity/utility/type_traits.hpp>

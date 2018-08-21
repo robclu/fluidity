@@ -13,18 +13,24 @@
 ///        wave interacts with a bubble.
 //
 //==------------------------------------------------------------------------==//
-
+/*
 #include <fluidity/flux_method/flux_methods.hpp>
 #include <fluidity/limiting/limiters.hpp>
 #include <fluidity/material/ideal_gas.hpp>
 #include <fluidity/reconstruction/reconstructors.hpp>
 #include <fluidity/simulator/generic_simulator.hpp>
 #include <fluidity/state/state.hpp>
+*/
+
+#include <fluidity/setting/configure.hpp>
+#include <fluidity/simulator/simulator_impl.hpp>
 #include <iostream>
 #include <memory>
 
 using namespace fluid;
 
+using real_t          = double;
+/*
 // Defines the type of data to use.
 using real_t          = double;
 // Defines a 1 dimensional primitive state.
@@ -48,11 +54,12 @@ using sim_traits_t =
   , solver::Type::split
   , execution_t
   >;
+*/
 
 int main(int argc, char** argv)
 {
-  using simulator_t = fluid::sim::GenericSimulator<sim_traits_t>;
-  auto simulator    = std::make_unique<simulator_t>();
+  //using simulator_t = fluid::sim::GenericSimulator<sim_traits_t>;
+  //auto simulator    = std::make_unique<simulator_t>();
 
   constexpr auto res             = real_t{0.004};
   constexpr auto size_x          = real_t{1.6};
@@ -62,8 +69,21 @@ int main(int argc, char** argv)
   constexpr auto bubble_centre_y = real_t{0.5}; 
   constexpr auto bubble_radius   = real_t{0.2};
 
+  if (argc < 2)
+  {
+    printf("Invalid usage, usage is:\n\n\t./<app> path-to-settings-file : %i\n",
+    argc);
+  }
+  auto settings_file = std::string(argv[1]);
+
+  fluid::sim::sim_option_manager_t sim_manager;
+  fluid::setting::configure_from_file(sim_manager, settings_file);
+
+  //auto simulator = sim_manager.create_default();
+
+/*
   simulator->configure_resolution(res)
-           ->configure_dimension(fluid::dim_x, 0.0, size_x)
+           ->configure_dimension(fluid::dim_x, 1.0, size_x)
            ->configure_dimension(fluid::dim_y, 0.0, size_y)
            ->configure_sim_time(0.15)
            ->configure_cfl(0.9);
@@ -110,4 +130,5 @@ int main(int argc, char** argv)
 
   simulator->simulate();
   simulator->write_results_separate_raw("2d_shock_bubble");
+*/
 }

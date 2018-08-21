@@ -49,7 +49,7 @@ class SimulationData<Traits, exec::DeviceKind::gpu> {
   /// Defines the type of the traits class.
   using traits_t            = Traits;
   /// Defines the type of the state data to store, always conservative.
-  using state_t             = typename traits_t::conservative_t;
+  using state_t             = typename traits_t::state_t;
   /// Defines the data type used in the state vector.
   using value_t             = typename state_t::value_t;
   /// Defines the type of the container used to store the host state data.

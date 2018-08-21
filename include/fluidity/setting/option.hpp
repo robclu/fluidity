@@ -35,7 +35,7 @@ template <typename OpImpl>
 struct Option {
   /// Defines the type of the option implementation.
   using op_impl_t = OpImpl;
-    
+   
   /// Returns true if the \p op_type matches the type of the option
   /// implementation.
   /// \param[in] op_type The type to check the validity of.

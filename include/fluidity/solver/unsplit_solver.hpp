@@ -27,16 +27,16 @@ namespace solver {
 /// case.
 /// \tparam Traits     The componenets used by the solver.
 /// \tparam Dimensions The number of dimensions to solve over.
-template <typename FluxSolver, typename Loader, std::size_t Dimensions = 1>
+template <typename FluxSolver, typename Loader, typename Dims = Num<1>>
 struct UnsplitSolver {
  private:
   /// Defines the type of the loader for the data.
   using loader_t = std::decay_t<Loader>;
 
   /// Defines the number of dimensions to solve over.
-  static constexpr std::size_t num_dimensions = 1;
+  static constexpr auto num_dimensions = std::size_t{Dims()};
   /// Defines the amount of padding in the data loader.
-  static constexpr std::size_t padding        = loader_t::padding;
+  static constexpr auto padding        = loader_t::padding;
 
  public:
   /// Solve function which invokes the solver.

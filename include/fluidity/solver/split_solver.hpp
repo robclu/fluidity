@@ -16,12 +16,13 @@
 #ifndef FLUIDITY_SOLVER_SPLIT_SOLVER_HPP
 #define FLUIDITY_SOLVER_SPLIT_SOLVER_HPP
 
-#include "solver_utilities.hpp"
+//#include "solver_utilities.hpp"
 #include "split_solver.cuh"
 #include <fluidity/dimension/dimension.hpp>
 #include <fluidity/execution/execution_policy.hpp>
 #include <fluidity/iterator/multidim_iterator.hpp>
 #include <fluidity/utility/cuda.hpp>
+#include <fluidity/utility/number.hpp>
 
 namespace fluid  {
 namespace solver {
@@ -33,7 +34,7 @@ namespace solver {
 /// \tparam FluxSolver The method to use for solving the face fluxes.
 /// \tparam Loader     The implementation for boundary loading.
 /// \tparam Dimensions The number of dimensions to solve over.
-template <typename FluxSolver, typename Loader, std::size_t Dimensions = 1>
+template <typename FluxSolver, typename Loader, typename Dims = Num<1>>
 struct SplitSolver {
  private:
   /// Defines the type of the flux solver.
@@ -46,7 +47,7 @@ struct SplitSolver {
   using setter_ref_t  = const BoundarySetter&;
 
   /// Defines the number of dimensions to solve over.
-  static constexpr auto num_dimensions  = Dimensions;
+  static constexpr auto num_dimensions  = std::size_t{Dims()};
   /// Defines the amount of padding in the data loader.
   static constexpr auto padding         = loader_t::padding;
   /// Defines the dispatch tag for dimension overloading.

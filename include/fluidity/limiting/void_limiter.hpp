@@ -23,9 +23,13 @@ namespace fluid {
 namespace limit {
 
 /// The Void limiter class defines a functor which just returns the state.
+/// \tparam Form The form of the limiting.
+template <typename Form>
 struct Void {
   /// Defines the type of this class.
   using self_t = Void;
+  /// Defines the form of the variables to limit on.
+  using form_t = Form;
 
   /// Defines the number of elements required for limiting.
   static constexpr std::size_t width = 1;

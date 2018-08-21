@@ -19,6 +19,7 @@
 
 #include "tensor_fwrd.hpp"
 #include <fluidity/algorithm/accumulate.hpp>
+#include <fluidity/dimension/dimension_info.hpp>
 #include <fluidity/utility/portability.hpp>
 #include <cstddef>
 #include <type_traits>

@@ -34,10 +34,6 @@ struct MHReconstructor : public Reconstructor<MHReconstructor<Limiter>> {
   /// Defines the type of the slope limiter used by the reconstructor.
   using limiter_t = Limiter;
 
-  /// Sets the number of elements which are required in the backward and forward
-  /// directions during the reconstruction process.
-  static constexpr size_t width = limiter_t::width;
-
   /// Defines the value of the reconstruction application to a right face.
   static constexpr auto right_face = int{1};
   /// Defiens the value of the reconstruction application to a left face.
@@ -132,6 +128,10 @@ struct MHReconstructor : public Reconstructor<MHReconstructor<Limiter>> {
   }
 
  public:
+  /// Sets the number of elements which are required in the backward and forward
+  /// directions during the reconstruction process.
+  static constexpr size_t width = limiter_t::width;
+
   /// Constructor, required so that the reconstructor can be created on both the
   /// host and the device.
   fluidity_host_device constexpr MHReconstructor() {}

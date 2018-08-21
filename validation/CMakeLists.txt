@@ -52,6 +52,13 @@ fluid_add_executable(
 )
 fluid_target_link_libraries(2d_shock_bubble ${CUDA_LIBRARIES})
 
+# 2D Shock bubble test case:
+fluid_add_executable(
+  2d_shock_bubble_new
+  ${SOURCE_DIR}/2d_shock_bubble_validation_new.cu
+)
+fluid_target_link_libraries(2d_shock_bubble_new ${CUDA_LIBRARIES})
+
 # 2D Riemann test case 4:
 fluid_add_executable(
   2d_liska_case_4

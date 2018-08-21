@@ -29,6 +29,8 @@ namespace limit {
 /// as per:
 /// 
 ///   Toro, page 506, equation 14.37, w = 0
+/// \tparam Form The form of the limiting.
+template <typename Form>
 struct Linear {
   /// Defines the type of this class.
   using self_t = Linear;

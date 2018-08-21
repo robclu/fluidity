@@ -19,6 +19,7 @@
 #include <fluidity/solver/solver_traits.hpp>
 #include <fluidity/solver/split_solver.hpp>
 #include <fluidity/solver/unsplit_solver.hpp>
+#include <fluidity/state/state.hpp>
 #include <fluidity/utility/portability.hpp>
 
 namespace fluid {

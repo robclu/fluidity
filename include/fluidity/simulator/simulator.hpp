@@ -16,6 +16,7 @@
 #ifndef FLUIDITY_SIMULATOR_SIMULATOR_HPP
 #define FLUIDITY_SIMULATOR_SIMULATOR_HPP
 
+#include <fluidity/container/array.hpp>
 #include <functional>
 #include <vector>
 
@@ -24,19 +25,20 @@ namespace sim   {
 
 /// The Simulator class defines the interface for simulation objects.
 /// \tparam Traits The traits of the simulator.
-template <typename Traits>
+//template <typename Traits>
 class Simulator {
  public:
   /// Defines the type of this simulator.
-  using self_t   = Simulator<Traits>;
+  //using self_t   = Simulator<Traits>;
+  using self_t   = Simulator;
   /// Defines the traits of the simulation.
-  using traits_t = std::decay_t<Traits>;
+  //using traits_t = std::decay_t<Traits>;
   /// Defines the type of the state which is used for the simulation.
-  using state_t  = typename traits_t::state_t;
+  //using state_t  = typename traits_t::state_t;
   /// Defines the type of the data used by the state.
-  using value_t  = typename state_t::value_t;
+  //using value_t  = typename state_t::value_t;
   /// Defines the type of the functor which can be used to fill elements.
-  using filler_t = std::function<value_t(const Array<float,3>&)>;
+  using filler_t = std::function<float(const Array<float,3>&)>;
 
   /// Defines a struct which stores information to fill the simulation data.
   struct FillInfo {
@@ -49,7 +51,7 @@ class Simulator {
 
   /// Enables invocation of the derived class constructor through a pointer to
   /// the base class.
-  ~Simulator() {}
+  virtual ~Simulator() {}
 
   /// Runs the simulation.
   virtual void simulate() = 0;

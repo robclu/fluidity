@@ -83,7 +83,7 @@ template <std::size_t I, typename Default, typename... Ts>
 struct TypeAt<true, I, Default, std::tuple<Ts...>>
 {
   /// Defines the type at position I of the tuple.
-  using type = std::tuple_element_t<I, std::tuple<Ts...>>;
+  using type = typename std::tuple_element<I, std::tuple<Ts...>>::type;
 };
 
 } // namespace detail

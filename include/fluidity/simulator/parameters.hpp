@@ -18,6 +18,7 @@
 #define FLUIDITY_SIMULATOR_PARAMETERS_HPP
 
 #include "domain.hpp"
+#include <fluidity/utility/portability.hpp>
 #include <type_traits>
 
 namespace fluid {

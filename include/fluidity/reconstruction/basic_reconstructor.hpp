@@ -29,13 +29,6 @@ namespace recon {
 /// \tparam Limter The type of the sloper limiter to use.
 template <typename Limiter>
 struct BasicReconstructor : public Reconstructor<BasicReconstructor<Limiter>> {
-  /// Defines the type of the limiter.
-  using limter_t = Limiter;
-
-  /// Sets the number of elements which are required in the backward and forward
-  /// directions during the reconstruction process.
-  static constexpr size_t width = 1;
-
  private:
   /// Defines the value of the reconstruction application to a forward face.
   static constexpr int  forward_face  = 1;
@@ -43,6 +36,13 @@ struct BasicReconstructor : public Reconstructor<BasicReconstructor<Limiter>> {
   static constexpr int  backward_face = -1;
 
  public:
+  /// Defines the type of the limiter.
+  using limter_t = Limiter;
+
+  /// Sets the number of elements which are required in the backward and forward
+  /// directions during the reconstruction process.
+  static constexpr size_t width = 1;
+
   /// Constructor, required so that the reconstructor can be created on both the
   /// host and the device.
   fluidity_host_device constexpr BasicReconstructor() {}
