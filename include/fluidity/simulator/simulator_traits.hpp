@@ -39,13 +39,10 @@ namespace sim   {
 /// \tparam Ts      The traits for the simulator implementation.
 template <typename SimBase, typename SimImpl, typename... Ts>
 struct SimTraits {
-  /// Defines the list of traits.
-  using traits_t = std::tuple<Ts...>;
-
   /// Defines the default data type to use.
   using def_data_t    = double;
   /// Defines the default number of dimensions.
-  using def_dims_t    = Num<1>;
+  using def_dims_t    = Num<2>;
   /// Defines the default material to use.
   using def_mat_t     = material::IdealGas<def_data_t>;
   /// Defines the default limiting form.
@@ -60,51 +57,59 @@ struct SimTraits {
   using def_exec_t    = fluid::exec::gpu_type;
 
   /// Defines the type of the state data to store, always conservative.
-  using data_t     = type_at_t<0, def_data_t, traits_t>;
+  using data_t     = type_at_t<0, def_data_t, Ts...>;
   /// Defines the number of dimensions for the simulation.
-  using dim_t      = type_at_t<1, def_dims_t, traits_t>;
+  using dim_t      = type_at_t<1, def_dims_t, Ts...>;
   /// Defines the type of the material for the simulation.
-  using material_t = type_at_t<2, def_mat_t, traits_t>;
+  using material_t = type_at_t<2, def_mat_t, Ts...>;
   /// Defines the form of limiting.
-  using lform_t    = type_at_t<3, def_form_t, traits_t>;
+  using lform_t    = type_at_t<3, def_form_t, Ts...>;
   /// Defines the type of the limiter to use.
-  using limiter_t  = type_at_t<4, def_limiter_t, traits_t>;
+  using limiter_t  = type_at_t<4, def_limiter_t, Ts...>;
   /// Defines the type of the reconstruction method to use.
-  using recon_t    = type_at_t<5, def_recon_t, traits_t>;
+  using recon_t    = type_at_t<5, def_recon_t, Ts...>;
   /// Defines the type of the flux method to use for solving.
-  using flux_t     = type_at_t<6, def_flux_t, traits_t>;
+  using flux_t     = type_at_t<6, def_flux_t, Ts...>;
   /// Defines execution policy for the simulator.
-  using exec_t     = type_at_t<7, def_exec_t, traits_t>;
-
-  /// Defines the type of the state for the simulation.
-  using state_t  = state::conservative_t<data_t, dim_t::value>;
+  using exec_t     = type_at_t<7, def_exec_t, Ts...>;
 
   /// Defines the type of the data loader.
-  using loader_t = solver::BoundaryLoader<recon_t::width>;
-
+  using loader_t     = solver::BoundaryLoader<recon_t::width>;
   /// Defines the type of the face flux solver.
-  using face_flux_t = solver::FaceFlux<recon_t, flux_t, material_t>;
-
+  using face_flux_t  = solver::FaceFlux<recon_t, flux_t, material_t>;
   /// Defines the default type of solver.
   using def_solver_t = solver::SplitSolver<face_flux_t, loader_t, dim_t>;
-
   /// Defines the type of the solver.
-  using solver_t   = type_at_t<8, def_solver_t, traits_t>;
+  using solver_t     = type_at_t<8, def_solver_t, Ts...>;
+
+  /// Defines the storage format for the state data.
+  static constexpr auto state_layout = StorageFormat::row_major;
+
+  /// Defines the type for primitive states for this solver.
+  using primitive_t = 
+    state::primitive_t<data_t, dim_t::value, 0, state_layout>;
+
+  /// Defines the type for conservative states for this solver.
+  using conservative_t =
+    state::conservative_t<data_t, dim_t::value, 0, state_layout>;
+
+  /// Defines the type of the states for this solver.
+  using state_t = conservative_t;
 
   /// Defines the type of the option manger to configure the simulation traits.
   using option_manager_t =
     setting::OptionManager<
-      SimBase               ,
-      SimImpl               ,
-      setting::DataOption      ,
-      setting::DimensionOption,
-      setting::MaterialOption<data_t>,
-      setting::LimitFormOption       ,
-      setting::LimiterOption<lform_t>         ,
-      setting::ReconOption<limiter_t>,
-      setting::FluxMethodOption            ,
-      setting::SolverOption<face_flux_t, loader_t, dim_t>,
-      setting::ExecutionOption       >;
+      SimBase                                            ,
+      SimImpl                                            ,
+      setting::DataOption                                ,
+      setting::DimensionOption                           ,
+      setting::MaterialOption<data_t>                    ,
+      setting::LimitFormOption                           ,
+      setting::LimiterOption<lform_t>                    ,
+      setting::ReconOption<limiter_t>                    ,
+      setting::FluxMethodOption                          ,
+      setting::ExecutionOption                           ,
+      setting::SolverOption<face_flux_t, loader_t, dim_t>>;
 
   /// Defines the number of dimensions for the simulation.
   static constexpr auto dimensions = std::size_t{dim_t::value};

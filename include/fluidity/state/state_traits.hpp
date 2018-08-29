@@ -33,9 +33,9 @@ enum class FormType {
 
 /// Defines a class to represent a state.
 /// \tparam T The type of data used by the state.
-template <typename T,
-          FormType      Form,         
-          std::size_t   Dimensions,
+template <typename      T             ,
+          FormType      Form          ,
+          std::size_t   Dimensions    ,
           std::size_t   Components = 0,
           StorageFormat Format     = StorageFormat::row_major>
 class State;

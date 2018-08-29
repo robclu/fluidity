@@ -38,7 +38,7 @@ struct DimensionOption : Option<DimensionOption> {
   static constexpr const char* type   = "dimensions";
 
   /// Defines the choices for the option.
-  constexpr auto choices() const
+  constexpr auto choice_list() const
   {
     return choice_list_t{"one", "two", "three"};
   }

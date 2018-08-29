@@ -109,26 +109,25 @@ class SimulatorImpl final : public Simulator {
 
   /// Configures the simulator to use the specified CFL number.
   /// \param[in] cfl The CFL number to use for the simulation.
-  base_t* configure_cfl(double cfl) override;
+  void configure_cfl(double cfl) override;
 
   /// Configures the simulator to set size and resolution of a dimension \p dim.
   /// \param[in] dim   The dimension to specify.
   /// \param[in] start The start value of the dimension.
   /// \param[in] end   The end value of the dimension.
-  base_t* 
-  configure_dimension(std::size_t dim, double start, double end) override;
+  void configure_dimension(std::size_t dim, double start, double end) override;
 
   /// Configures the simulator to simulate for a maximum number of iterations.
   /// \param[in] iters  The maximum number of iterations to simulate for.
-  base_t* configure_max_iterations(std::size_t iters) override;  
+  void configure_max_iterations(std::size_t iters) override;  
 
   /// Configures the simulator to use the \p resolution for the domain.
   /// \param[in] resolution The resolution to use for the domain.
-  base_t* configure_resolution(double resolution) override;
+  void configure_resolution(double resolution) override;
 
   /// Configures the simulator to simulate until a certain simulation time.
   /// \param[in] sim_time The time to run the simulation until.
-  base_t* configure_sim_time(double sim_time) override;
+  void configure_sim_time(double sim_time) override;
 
   /// Prints the results of the simulation to the standard output stream.
   void print_results() const override;
@@ -233,41 +232,36 @@ void SimulatorImpl<Ts...>::simulate()
 }
 
 template <typename... Ts>
-Simulator* SimulatorImpl<Ts...>::configure_cfl(double cfl)
+void SimulatorImpl<Ts...>::configure_cfl(double cfl)
 {
   _params.cfl = cfl;
-  return this;
 }
 
 template <typename... Ts>
-Simulator* SimulatorImpl<Ts...>::configure_dimension(std::size_t dim  ,
+void SimulatorImpl<Ts...>::configure_dimension(std::size_t dim  ,
                                                      double      start,
                                                      double      end  )
 {
   _params.domain.set_dimension(dim, start, end);
   _data.resize_dim(dim, _params.domain.elements(dim));
-  return this;
 }
 
 template <typename... Ts>
-Simulator* SimulatorImpl<Ts...>::configure_resolution(double res)
+void SimulatorImpl<Ts...>::configure_resolution(double res)
 {
   _params.domain.set_resolution(res);
-  return this;
 }
 
 template <typename... Ts>
-Simulator* SimulatorImpl<Ts...>::configure_sim_time(double sim_time)
+void SimulatorImpl<Ts...>::configure_sim_time(double sim_time)
 {
   _params.sim_time = sim_time;
-  return this;
 }
 
 template <typename... Ts>
-Simulator* SimulatorImpl<Ts...>::configure_max_iterations(std::size_t iters)
+void SimulatorImpl<Ts...>::configure_max_iterations(std::size_t iters)
 {
   _params.max_iters = iters;
-  return this;
 }
 
 template <typename... Ts>

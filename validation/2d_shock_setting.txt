@@ -1,11 +1,11 @@
 # Defines the setup for a 2d shock bubble simulation.
 
 data_type     : double
-dimensions    : 2
-material      : ideal_gas
+dimensions    : two
+material      : ideal-gas
 limit_form    : conservative
 limiter       : van-leer
 reconstructor : muscl-hancock
-flux_method   : hllc
+flux_method   : force
 solve_method  : split
 execution     : gpu

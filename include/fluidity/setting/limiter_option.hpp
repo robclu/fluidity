@@ -37,10 +37,10 @@ struct LimiterOption : Option<LimiterOption<Form>> {
   /// Defines the number of choices for the option.
   static constexpr size_t num_choices = std::tuple_size<choice_list_t>::value;
   /// Defines the type of the option.
-  static constexpr const char* type   = "limit_form";
+  static constexpr const char* type   = "limiter";
 
   /// Defines the choices for the option.
-  constexpr auto choices() const
+  constexpr auto choice_list() const
   {
     return choice_list_t{"void", "linear", "van_leer", "superbee"};
   }

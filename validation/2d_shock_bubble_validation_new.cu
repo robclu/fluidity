@@ -22,46 +22,18 @@
 #include <fluidity/state/state.hpp>
 */
 
-#include <fluidity/setting/configure.hpp>
+#include <fluidity/setting/settings.hpp>
 #include <fluidity/simulator/simulator_impl.hpp>
 #include <iostream>
 #include <memory>
 
 using namespace fluid;
 
-using real_t          = double;
-/*
-// Defines the type of data to use.
-using real_t          = double;
-// Defines a 1 dimensional primitive state.
-using primitive2d_t   = state::primitive_t<real_t, 2>;
-// Defines the material type to use for the tests.
-using material_t      = material::IdealGas<real_t>;
-/// Defines the type of the limiter to use.
-using limiter_t       = limit::VanLeer<limit::cons_form_t>;
-// Defines the type of the limiter for the simulations.
-using reconstructor_t = recon::MHReconstructor<limiter_t>;
-/// Defines the execution policy of the solver, CPU / GPU.
-using execution_t     = fluid::exec::gpu_type;
-
-// Defines the traits for the simulator to use the GPU.
-using sim_traits_t =
-  fluid::sim::SimulationTraits
-  < primitive2d_t
-  , material_t
-  , reconstructor_t
-  , flux::Hllc
-  , solver::Type::split
-  , execution_t
-  >;
-*/
+using real_t = double;
 
 int main(int argc, char** argv)
 {
-  //using simulator_t = fluid::sim::GenericSimulator<sim_traits_t>;
-  //auto simulator    = std::make_unique<simulator_t>();
-
-  constexpr auto res             = real_t{0.004};
+  constexpr auto res             = real_t{0.001};
   constexpr auto size_x          = real_t{1.6};
   constexpr auto size_y          = real_t{1.0};
   constexpr auto shock_start     = real_t{0.1};
@@ -74,19 +46,22 @@ int main(int argc, char** argv)
     printf("Invalid usage, usage is:\n\n\t./<app> path-to-settings-file : %i\n",
     argc);
   }
-  auto settings_file = std::string(argv[1]);
+  auto settings = fluid::setting::Settings(argv[1]);
 
   fluid::sim::sim_option_manager_t sim_manager;
-  fluid::setting::configure_from_file(sim_manager, settings_file);
+  sim_manager.configure(settings);
 
-  //auto simulator = sim_manager.create_default();
+  // This compiles a lot quicker, so use in debug mode:
+  auto simulator = sim_manager.create_default();
 
-/*
-  simulator->configure_resolution(res)
-           ->configure_dimension(fluid::dim_x, 1.0, size_x)
-           ->configure_dimension(fluid::dim_y, 0.0, size_y)
-           ->configure_sim_time(0.15)
-           ->configure_cfl(0.9);
+  // This compiles all functionality, so use in release mode:
+  //auto simulator = sim_manager.create();
+
+  simulator->configure_resolution(res);
+  simulator->configure_dimension(fluid::dim_x, 0.0, size_x);
+  simulator->configure_dimension(fluid::dim_y, 0.0, size_y);
+  simulator->configure_sim_time(0.4);
+  simulator->configure_cfl(0.9);
 
   // Returns the value based on whether the pos is inside the bubble,
   // or before or after the shock wave.
@@ -130,5 +105,4 @@ int main(int argc, char** argv)
 
   simulator->simulate();
   simulator->write_results_separate_raw("2d_shock_bubble");
-*/
 }

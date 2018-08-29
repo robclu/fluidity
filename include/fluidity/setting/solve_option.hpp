@@ -38,7 +38,7 @@ struct SolverOption : Option<SolverOption<Ts...>> {
   static constexpr const char* type   = "solve_method";
 
   /// Defines the choices for the option.
-  constexpr auto choices() const
+  constexpr auto choice_list() const
   {
     return choice_list_t{"split", "unsplit"};
   }

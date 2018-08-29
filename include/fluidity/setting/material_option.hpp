@@ -37,9 +37,9 @@ struct MaterialOption : Option<MaterialOption<T>> {
   static constexpr const char* type   = "material";
 
   /// Defines the choices for the option.
-  constexpr auto choices() const
+  constexpr auto choice_list() const
   {
-    return choice_list_t{"ideal_gas"};
+    return choice_list_t{"ideal-gas"};
   }
 };
 

@@ -37,7 +37,7 @@ struct BasicReconstructor : public Reconstructor<BasicReconstructor<Limiter>> {
 
  public:
   /// Defines the type of the limiter.
-  using limter_t = Limiter;
+  using limiter_t = Limiter;
 
   /// Sets the number of elements which are required in the backward and forward
   /// directions during the reconstruction process.

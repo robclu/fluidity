@@ -49,7 +49,7 @@ struct Option {
   /// \param[in] value The value to set the option to.
   bool set_option_value(std::string value)
   {
-    for (const auto choice : get_option_choices())
+    for (const auto choice : get_option_choice_list())
     {
       if (!(std::strcmp(choice.c_str(), value.c_str()) == 0)) { continue; }
                 
@@ -182,7 +182,7 @@ struct Option {
   }
     
   /// Returns an array of possible choices for the option.
-  auto get_option_choices() const 
+  auto get_option_choice_list() const 
   {
     std::array<std::string, op_impl_t::num_choices> choices;
     unrolled_for<op_impl_t::num_choices>([&] (auto i)
@@ -194,11 +194,19 @@ struct Option {
   }
     
   /// Returns the default choice for the option.
+  /// \param[in] invalid_choice The invalid choice which was given.
   auto get_default_choice() const
   {
-    auto choice = op_impl_t::default_choice();
-    printf("Option not specifier for : %s, using default: %s\n",    
-           op_impl_t::type, choice.value);
+    auto choice = std::get<0>(op_impl()->choice_list());
+    std::cout << "\nChoice : '"                << _value 
+              << "' is invalid for setting : " << op_impl_t::type 
+              << "\nChoices for the "          << op_impl_t::type
+              << " setting are:\n";
+    for (const auto& c : get_option_choice_list())
+    {
+      std::cout << "\t- " << c << "\n";
+    }
+    std::cout << "Using the default choice:\n\t- " << choice.value << "\n";
     return choice;
   }
 

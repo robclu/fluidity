@@ -63,7 +63,7 @@ int main(int argc, char** argv)
   constexpr auto bubble_radius   = real_t{0.2};
 
   simulator->configure_resolution(res)
-           ->configure_dimension(fluid::dim_x, 0.0, size_x)
+           ->configure_dimension(fluid::dim_x, 1.0, size_x)
            ->configure_dimension(fluid::dim_y, 0.0, size_y)
            ->configure_sim_time(0.15)
            ->configure_cfl(0.9);

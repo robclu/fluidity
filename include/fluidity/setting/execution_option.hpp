@@ -28,8 +28,7 @@ struct ExecutionOption : Option<ExecutionOption> {
 
   /// Defines the type of the choice list.
   using choice_list_t = 
-    std::tuple<OptionHolder<exec::cpu_type>,
-               OptionHolder<exec::gpu_type>>;
+    std::tuple<OptionHolder<exec::gpu_type>>;
 
   /// Defines the number of choices for the option.
   static constexpr size_t num_choices = std::tuple_size<choice_list_t>::value;
@@ -37,9 +36,9 @@ struct ExecutionOption : Option<ExecutionOption> {
   static constexpr const char* type   = "execution";
 
   /// Defines the choices for the option.
-  constexpr auto choices() const
+  constexpr auto choice_list() const
   {
-    return choice_list_t{"cpu", "gpu"};
+    return choice_list_t{"gpu"};
   }
 };
 

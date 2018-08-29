@@ -54,7 +54,7 @@ struct OptionBuilder {
                   "so a pointer to the base cannot be created through "
                   "this derived type.");
 */
-    base = std::make_unique<derived_type_t>();
+    base = std::move(std::make_unique<derived_type_t>());
   }
 };
 

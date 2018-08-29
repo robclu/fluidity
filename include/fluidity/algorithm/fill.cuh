@@ -30,19 +30,28 @@ namespace fluid  {
 namespace detail {
 namespace cuda   {
 
+/// Defines a valid type if the type T is convertible to the value type of the
+/// iterator I.
+/// \tparam T The type to check for conversion.
+/// \tparam I The type of the iterator.
+template <typename T, typename I>
+using it_conv_enable_t = conv_enable_t<T, typename I::value_t>;
+
+/// Defines a valid type if the type T is not convertible to the value type of
+/// the iterator I.
+/// \tparam T The type to check for conversion.
+/// \tparam I The type of the iterator.
+template <typename T, typename I>
+using it_conv_disable_t = conv_disable_t<T, typename I::value_t>;
+
 /// Kernel implementation which fills an iterator element \p begin with the
 /// value defined by \p value.
 /// \param[in] begin    The first iterator to fill with the \p value.
 /// \param[in] value    The value to fill the elements with.
-/// \tparam    Iterator The type of the iterator.
+/// \tparam    It       The type of the iterator.
 /// \tparam    T        The type of the element the iterator holds.
-template < typename Iterator
-         , typename T
-         , enable_if_t<
-             std::is_convertible<T, typename Iterator::value_t>::value, int
-           > = 0
-         >
-fluidity_global void fill_impl(Iterator begin, T value)
+template <typename It, typename T, it_conv_enable_t<T, It> = 0>
+fluidity_global void fill_impl(It begin, T value)
 {
   begin[flattened_id(dim_x)] = value;
 }
@@ -52,17 +61,11 @@ fluidity_global void fill_impl(Iterator begin, T value)
 /// \param[in] begin     The first iterator to fill with the \p value.
 /// \param[in] predicate The value to fill the elements with.
 /// \param[in] args      The arguments for the predicate.
-/// \tparam    Iterator  The type of the iterator.
-/// \tparam    Pred      The type of the predicate.
-/// \tparam    Args      The arguments for the predicate.
-template < typename    Iterator
-         , typename    Pred
-         , enable_if_t<
-            !std::is_convertible<Pred, typename Iterator::value_t>::value, int
-           > = 0
-         , typename... Args
-         >
-fluidity_global void fill_impl(Iterator begin, Pred pred, Args... args)
+/// \tparam    It        The type of the iterator.
+/// \tparam    P         The type of the predicate.
+/// \tparam    As        The arguments for the predicate.
+template <typename It, typename P, it_conv_disable_t<P, It> = 0, typename... As>
+fluidity_global void fill_impl(It begin, P pred, As... args)
 {
   pred(begin[flattened_id(dim_x)], args...);
 }
@@ -74,11 +77,11 @@ fluidity_global void fill_impl(Iterator begin, Pred pred, Args... args)
 /// \param[in] end        The iterator to end filling at.
 /// \param[in] value_pred The value/predicate to use to set the value.
 /// \param[in] args       Additional arguments if \p pred is callable.
-/// \tparam    Iterator   The type of the iterator.
+/// \tparam    It         The type of the iterator.
 /// \tparam    T          The type of the predicate/value.
 /// \tparam    Args       The type of arguments for a callable predicate.
-template <typename Iterator, typename T, typename... Args>
-void fill(Iterator begin, Iterator end, T&& value_pred, Args&&... args)
+template <typename It, typename T, typename... Args>
+void fill(It begin, It end, T&& value_pred, Args&&... args)
 {
 #if defined(__CUDACC__)
   const int      elements    = end - begin;

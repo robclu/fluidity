@@ -37,7 +37,7 @@ struct FluxMethodOption : Option<FluxMethodOption> {
   static constexpr const char* type   = "flux_method";
 
   /// Defines the choices for the option.
-  constexpr auto choices() const
+  constexpr auto choice_list() const
   {
     return choice_list_t{"force", "hllc", "lax-friedrichs", "richtmyer"};
   }

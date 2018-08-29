@@ -38,7 +38,7 @@ struct ReconOption : Option<ReconOption<Limiter>> {
   static constexpr const char* type   = "reconstructor";
 
   /// Defines the choices for the option.
-  constexpr auto choices() const
+  constexpr auto choice_list() const
   {
     return choice_list_t{"none", "muscl-hancock"};
   }

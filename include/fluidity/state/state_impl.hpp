@@ -276,7 +276,7 @@ template < typename State
          , typename Flux 
          , std::size_t Value
          , typename DecayedState = std::decay_t<State>
-         , enable_if_t<
+         , std::enable_if_t<
             (DecayedState::dimensions > 1 ||
              DecayedState::additional_components > 0), int> = 0>
 fluidity_host_device inline constexpr auto
@@ -310,7 +310,7 @@ template < typename State
          , typename Flux 
          , std::size_t Value
          , typename DecayedState = std::decay_t<State>
-         , enable_if_t<
+         , std::enable_if_t<
             !(DecayedState::dimensions > 1 ||
               DecayedState::additional_components > 0), int> = 0>
 fluidity_host_device inline constexpr auto

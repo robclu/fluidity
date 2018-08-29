@@ -60,7 +60,7 @@ namespace setting {
 /// // Define the option classes:
 /// struct FluxOption : Option<FluxOption> {
 ///   static constexpr const char* type = "flux";
-///   constexpr auto choices() {
+///   constexpr auto choice_list() {
 ///     return std::make_tuple(
 ///       OptionHolder<Hllc>("hllc"), 
 ///       OptionHolder<Force>("force")
@@ -144,14 +144,29 @@ struct OptionManager
     });
   }
 
+  /// Configures the option manager from a Settings configuration.
+  /// \param[in] settings The settings to configure the manager with.
+  void configure(Settings& settings)
+  {
+    for (auto& setting : settings)
+    {
+      if (setting.used) { continue; }
+      if (set(setting.name, setting.value))
+      {
+        setting.used = true;
+      }
+    }
+  }
+
   /// Sets an option with type \p op_type to have the value defined by \p
   /// op_value, returning the modified option manager. If either the \p op_type
   /// or the \p op_value is invalid, a message is logged and the manager is
-  /// unmodified. 
-  OptionManager& set(std::string op_type, std::string op_value)
+  /// unmodified. This returns true if the option was set.
+  /// \param[in] op_type  The type of the option.
+  /// \param[in] op_value The value of the option to set.
+  bool set(const std::string& op_type, const std::string& op_value)
   {
-    // namespace lg = logging;
-    bool found = false;
+    bool set = false;
     unrolled_for<total_opts_v>([&] (auto i)
     {
       constexpr auto idx = std::size_t{i};
@@ -159,25 +174,13 @@ struct OptionManager
             
       if (opt.is_valid_option_type(op_type))
       {
-        found = true;
-        if (!opt.set_option_value(op_value))
+        if (opt.set_option_value(op_value))
         {
-          /* auto s = std::string("invalid option value: ")
-                    + op_value
-                    + "for option type :"
-                    + op_type;
-             lg::log(lg::logger_t, s);
-          */
+          set = true;
         }
       }
     });
-    if (!found)
-    {
-      /* auto s = std::string("invalid option type: ") + op_type;
-         lg::log(lg::logger_t, s);
-      */
-    }
-    return *this;
+    return set;
   }
 
   /// Creates a unique pointer to a Base class type using a Derived type, where

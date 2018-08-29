@@ -81,6 +81,7 @@ class AsciiOutputter {
 class BlobOutputter : public DataOutputter {
  public:
   using DataOutputter::DataOutputter;
+  
  private:
 };
 

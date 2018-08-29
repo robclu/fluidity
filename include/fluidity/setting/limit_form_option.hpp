@@ -36,7 +36,7 @@ struct LimitFormOption : Option<LimitFormOption> {
   static constexpr const char* type   = "limit_form";
 
   /// Defines the choices for the option.
-  constexpr auto choices() const
+  constexpr auto choice_list() const
   {
     return choice_list_t{"conservative", "primitive"};
   }

@@ -30,8 +30,15 @@ namespace solver {
 template <typename FluxSolver, typename Loader, typename Dims = Num<1>>
 struct UnsplitSolver {
  private:
+  /// Defines the type of the flux solver.
+  using flux_solver_t = std::decay_t<FluxSolver>;
   /// Defines the type of the loader for the data.
-  using loader_t = std::decay_t<Loader>;
+  using loader_t      = std::decay_t<Loader>;
+  /// Defines the type of the boundary setter.
+  using setter_t      = BoundarySetter;
+  /// Defines a reference type to the boundary setter.
+  using setter_ref_t  = const BoundarySetter&;
+
 
   /// Defines the number of dimensions to solve over.
   static constexpr auto num_dimensions = std::size_t{Dims()};
@@ -39,6 +46,9 @@ struct UnsplitSolver {
   static constexpr auto padding        = loader_t::padding;
 
  public:
+  template <typename It>
+  UnsplitSolver(It&& it) {}
+
   /// Solve function which invokes the solver.
   /// \param[in] data     The iterator which points to the start of the global
   ///            state data. If the iterator does not have 1 dimension then a
@@ -46,11 +56,9 @@ struct UnsplitSolver {
   /// \param[in] flux     An iterator which points to the flux to update. 
   /// \tparam    Iterator The type of the iterator.
   /// \tparam    Flux     The type of the flux iterator.
-  template <typename It, typename T>
-  fluidity_device_only void solve(It&& in, It&& out, T dtdh) const
+  template <typename It, typename Mat, typename T, exec::gpu_enable_t<It> = 0>
+  void solve(It&& in, It&& out, Mat&& mat, T dtdh, setter_ref_t setter) const 
   {
-    static_assert(std::decay_t<It>::num_dimensions() == num_dimensions,
-                  "Dimensions of iterator do not match solver specialization");
 
   }
 };

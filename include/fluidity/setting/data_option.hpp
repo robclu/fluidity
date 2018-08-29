@@ -33,7 +33,7 @@ struct DataOption : Option<DataOption> {
   static constexpr const char* type   = "data_type";
 
   /// Defines the choices for the option.
-  constexpr auto choices() const
+  constexpr auto choice_list() const
   {
     return choice_list_t{"double", "float"};
   }

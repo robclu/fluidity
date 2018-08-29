@@ -32,10 +32,17 @@ static constexpr bool is_same_v = std::is_same<A, B>::value;
 template <typename T>
 using decay_t = typename std::decay<T>::type;
 
-/// Wrapper for std::enable_if_t to work with c++14.
-/// \tparam B The condition to base the enable on.
-template <bool B, typename T = void>
-using enable_if_t = typename std::enable_if<B, T>::type;
+/// This defines a valid type when T is convertible to U.
+/// \tparam T The first data type to check conversion from.
+/// \tparam U The second data type to check conversion to.
+template <typename T, typename U>
+using conv_enable_t = std::enable_if_t<std::is_convertible<T, U>::value, int>;
+
+/// This defines a valid type when T is not convertible to U.
+/// \tparam T The first data type to check conversion from.
+/// \tparam U The second data type to check conversion to.
+template <typename T, typename U>
+using conv_disable_t = std::enable_if_t<!std::is_convertible<T, U>::value, int>;
 
 namespace detail {
 

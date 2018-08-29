@@ -58,26 +58,26 @@ class Simulator {
 
   /// Configures the CFL number to use for the simulation.
   /// \param[in] cfl The CFL number for the simulation.
-  virtual self_t* configure_cfl(double cfl) = 0;
+  virtual void configure_cfl(double cfl) = 0;
 
   /// Configures the simulator to set size and resolution of a dimension \p dim.
   /// \param[in] dim   The dimension to specify.
   /// \param[in] start The start value of the dimension.
   /// \param[in] end   The end value of the dimension.
-  virtual self_t*
+  virtual void
   configure_dimension(std::size_t dim, double start, double end) = 0;
 
   /// Configures the simulator to use the \p resolution for the domain.
   /// \param[in] resolution The resolution to use for the domain.
-  virtual self_t* configure_resolution(double resolution) = 0;
+  virtual void configure_resolution(double resolution) = 0;
 
   /// Configures the simulator to simulate until a certain simulation time.
   /// \param[in] sim_time The time to run the simulation until.
-  virtual self_t* configure_sim_time(double sim_time) = 0;
+  virtual void configure_sim_time(double sim_time) = 0;
 
   /// Configures the simulator to simulate for a maximum number of iterations.
   /// \param[in] iters  The maximum number of iterations to simulate for.
-  virtual self_t* configure_max_iterations(std::size_t iters) = 0;
+  virtual void configure_max_iterations(std::size_t iters) = 0;
 
   /// Fills the simulator with simulation data for a simulator, where each of
   /// the fillers store the name of the property which they are filling, and 
