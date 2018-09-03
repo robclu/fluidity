@@ -44,6 +44,26 @@ using conv_enable_t = std::enable_if_t<std::is_convertible<T, U>::value, int>;
 template <typename T, typename U>
 using conv_disable_t = std::enable_if_t<!std::is_convertible<T, U>::value, int>;
 
+/// This defines a valid type when the type T is integral or when the pack is
+/// variadic.
+/// \tparam T   The type to check if integral.
+/// \tparam Ts  Optional other types if variadic.
+template <typename T, typename... Ts>
+using var_or_int_enable_t =
+  std::enable_if_t<
+    std::is_integral<std::decay_t<T>>::value || (sizeof...(Ts) > 0), int>;
+
+/// This defines a valid type when the variadic pack has more than one element.
+/// \tparam Ts  Types in the variadic pack.
+template <typename... Ts>
+using var_enable_t = std::enable_if_t<(sizeof...(Ts) > 1), int>;
+
+/// This defines a valid type when the variadic pack has only a single element,
+/// and can be used to disable variadic function overloads.
+/// \tparam Ts  Types in the variadic pack.
+template <typename... Ts>
+using var_disable_t = std::enable_if_t<!(sizeof...(Ts) > 1), int>;
+
 namespace detail {
 
 /// The TypeAt struct defines the type at a given Index in a typelist, with a

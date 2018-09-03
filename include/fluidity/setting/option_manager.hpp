@@ -17,6 +17,7 @@
 #ifndef FLUIDITY_SETTING_OPTION_MANAGER_HPP
 #define FLUIDITY_SETTING_OPTION_MANAGER_HPP
 
+#include "option.hpp"
 #include "option_tuple.hpp"
 
 namespace fluid   {
@@ -136,11 +137,10 @@ struct OptionManager
   /// interface.  
   OptionManager()
   {
-    unrolled_for<total_opts_v>([&] (auto i)
+    for_each_option(this->_opts, [] (const auto& opt)
     {
-      constexpr auto idx = std::size_t{i};
-      using option_t = decltype(opt_get<idx>(this->_opts).option);
-      static_assert(is_option_v<option_t>, "Type is not derived from Option<>");
+      //using option_t = std::decay_t<decltype(opt)>;
+      //static_assert(is_option_v<option_t>, "Type is not derived from Option<>");
     });
   }
 
@@ -150,7 +150,10 @@ struct OptionManager
   {
     for (auto& setting : settings)
     {
-      if (setting.used) { continue; }
+      if (setting.used)
+      {
+        continue;
+      }
       if (set(setting.name, setting.value))
       {
         setting.used = true;
@@ -167,11 +170,9 @@ struct OptionManager
   bool set(const std::string& op_type, const std::string& op_value)
   {
     bool set = false;
-    unrolled_for<total_opts_v>([&] (auto i)
+    for_each_option(this->_opts, [&] (auto& opt)
     {
-      constexpr auto idx = std::size_t{i};
-      auto& opt = opt_get<idx>(this->_opts).option;;
-            
+      //auto& opt = o.option;
       if (opt.is_valid_option_type(op_type))
       {
         if (opt.set_option_value(op_value))
@@ -208,25 +209,6 @@ struct OptionManager
     std::unique_ptr<base_t> base = std::make_unique<derived_t>();
     return std::move(base);
   }
-
-/*
-    void display_options()
-    {
-        printf("Chosen options are:\n");
-        std::size_t count = 0;
-        unrolled_for<total_opts_v>([&] (auto i)
-        {
-            constexpr std::size_t idx = Index<i>();
-            auto& opt = opt_get<idx>(_opts)._option;
-            
-            opt.print_opt_info();
-            if (count++ < total_opts_v)
-            {
-                printf(",\n");
-            }
-        });
-    }
-*/
 
  private:
   options_t _opts; //!< The options to manage.

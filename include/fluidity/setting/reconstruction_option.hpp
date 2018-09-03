@@ -18,6 +18,7 @@
 
 #include "option.hpp"
 #include "option_holder.hpp"
+#include "option_tuple.hpp"
 #include <fluidity/reconstruction/reconstructors.hpp>
 
 namespace fluid   {
@@ -29,16 +30,16 @@ template <typename Limiter>
 struct ReconOption : Option<ReconOption<Limiter>> {
   /// Defines the type of the choice list.
   using choice_list_t = 
-    std::tuple<OptionHolder<recon::BasicReconstructor<Limiter>>,
-               OptionHolder<recon::MHReconstructor<Limiter>>   >;
+    OptionTuple<OptionHolder<recon::BasicReconstructor<Limiter>>,
+                OptionHolder<recon::MHReconstructor<Limiter>>   >;
 
   /// Defines the number of choices for the option.
-  static constexpr size_t num_choices = std::tuple_size<choice_list_t>::value;
+  static constexpr size_t num_choices = choice_list_t::size;
   /// Defines the type of the option.
   static constexpr const char* type   = "reconstructor";
 
   /// Defines the choices for the option.
-  constexpr auto choice_list() const
+  static constexpr auto choice_list()
   {
     return choice_list_t{"none", "muscl-hancock"};
   }

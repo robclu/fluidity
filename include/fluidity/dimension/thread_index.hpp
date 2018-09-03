@@ -34,11 +34,10 @@ fluidity_device_only inline std::size_t block_size()
 /// generated.
 /// \param[in] dim    The dimension to get the thread index for.
 /// \tparam    Value  The value which defines the dimension.
-template <std::size_t Value>
-fluidity_device_only inline std::size_t block_size(Dimension<Value>)
+template <typename Dim>
+fluidity_device_only inline std::size_t block_size(Dim dim)
 {
-  static_assert(Value <= 2, "Can only get size for 3 dimensions {0,1,2}.");
-  return detail::BlockSizeImpl<Dimension<Value>>()();
+  return detail::block_size_impl(dim);
 }
 
 /// Returns the size of the block in a given dimension. The dimension
@@ -46,11 +45,10 @@ fluidity_device_only inline std::size_t block_size(Dimension<Value>)
 /// generated.
 /// \param[in] dim    The dimension to get the thread index for.
 /// \tparam    Value  The value which defines the dimension.
-template <std::size_t Value>
-fluidity_device_only inline std::size_t grid_size(Dimension<Value>)
+template <typename Dim>
+fluidity_device_only inline std::size_t grid_size(Dim dim)
 {
-  static_assert(Value <= 2, "Can only get size for 3 dimensions {0,1,2}.");
-  return detail::GridSizeImpl<Dimension<Value>>()();
+  return detail::grid_size_impl(dim);
 }
 
 /// Returns the total size of the grid (total number of threads in the grid).
@@ -64,11 +62,10 @@ fluidity_device_only inline std::size_t grid_size()
 /// will be generated. This returns the global flattened index.
 /// \param[in] dim    The dimension to get the thread index for.
 /// \tparam    Value  The value which defines the dimension.
-template <std::size_t Value>
-fluidity_device_only inline std::size_t flattened_id(Dimension<Value>)
+template <typename Dim>
+fluidity_device_only inline std::size_t flattened_id(Dim dim)
 {
-  static_assert(Value <= 2, "Can only get thread id for 3 dimensions {0,1,2}.");
-  return detail::FlattenedIdImpl<Dimension<Value>>()();
+  return detail::flattened_id_impl(dim);
 }
 
 /// Returns the value of the flattened block index in a given dimension. The
@@ -76,11 +73,10 @@ fluidity_device_only inline std::size_t flattened_id(Dimension<Value>)
 /// will be generated
 /// \param[in] dim    The dimension to get the thread index for.
 /// \tparam    Value  The value which defines the dimension.
-template <std::size_t Value>
-fluidity_device_only inline std::size_t flattened_block_id(Dimension<Value>)
+template <typename Dim>
+fluidity_device_only inline std::size_t flattened_block_id(Dim dim)
 {
-  static_assert(Value <= 2, "Can only get thread id for 3 dimensions {0,1,2}.");
-  return detail::FlattenedBlockIdImpl<Dimension<Value>>()();
+  return detail::flattened_block_id_impl(dim);
 }
 
 /// Returns the value of the thread index in a given dimension. The dimension
@@ -88,11 +84,10 @@ fluidity_device_only inline std::size_t flattened_block_id(Dimension<Value>)
 /// generated.
 /// \param[in] dim    The dimension to get the thread index for.
 /// \tparam    Value  The value which defines the dimension.
-template <std::size_t Value>
-fluidity_device_only inline std::size_t thread_id(Dimension<Value>)
+template <typename Dim>
+fluidity_device_only inline std::size_t thread_id(Dim dim)
 {
-  static_assert(Value <= 2, "Can only get thread id for 3 dimensions {0,1,2}.");
-  return detail::ThreadIdImpl<Dimension<Value>>()();
+  return detail::thread_id_impl(dim);
 }
 
 /// Returns the value of the block index in a given dimension. The dimension
@@ -100,11 +95,10 @@ fluidity_device_only inline std::size_t thread_id(Dimension<Value>)
 /// generated.
 /// \param[in] dim    The dimension to get the block index for.
 /// \tparam    Value  The value which defines the dimension.
-template <std::size_t Value>
-fluidity_device_only inline std::size_t block_id(Dimension<Value>)
+template <typename Dim>
+fluidity_device_only inline std::size_t block_id(Dim dim)
 {
-  static_assert(Value <= 2, "Can only get block id for 3 dimensions {0,1,2}.");
-  return detail::BlockIdImpl<Dimension<Value>>()();
+  return detail::block_id_impl(dim);
 }
 
 #else // __CUDACC__

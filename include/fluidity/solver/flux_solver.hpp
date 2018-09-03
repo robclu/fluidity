@@ -49,11 +49,11 @@ struct FaceFlux {
   /// \tparam    Iterator The type of the iterator over the state data.
   /// \tparam    Value    The value which defines the dimension to compute the
   ///                     flux difference in terms of.
-  template <typename Iterator, std::size_t Value>
+  template <typename Iterator, typename Dim>
   fluidity_host_device auto
-  flux_delta(Iterator&& state_it, Dimension<Value>) const
+  flux_delta(Iterator&& state_it, Dim dim) const
   {
-    constexpr auto dim = Dimension<Value>{};
+    //constexpr auto dim = Dimension<Value>{};
     return backward(std::forward<Iterator>(state_it), dim) -
            forward(std::forward<Iterator>(state_it), dim);
   }
@@ -65,11 +65,11 @@ struct FaceFlux {
   /// \tparam    Iterator The type of the iterator over the state data.
   /// \tparam    Value    The value which defines the dimension to compute the
   ///                     flux in terms of.
-  template <typename Iterator, std::size_t Value>
-  fluidity_host_device auto forward(Iterator&& state_it, Dimension<Value>) const
+  template <typename Iterator, typename Dim>
+  fluidity_host_device auto forward(Iterator&& state_it, Dim dim) const
   {
-    constexpr auto dim = Dimension<Value>();
-    const auto flux    = flux_method_t::get(_material, _dtdh, dim);
+    //constexpr auto dim = Dimension<Value>();
+    const auto flux = flux_method_t::get(_material, _dtdh, dim);
     return flux(_recon.forward_left(state_it, _material, _dtdh, dim),
                 _recon.forward_right(state_it, _material, _dtdh, dim));
   }
@@ -81,11 +81,11 @@ struct FaceFlux {
   /// \tparam    Iterator The type of the iterator over the state data.
   /// \tparam    Value    The value which defines the dimension to compute the
   ///                     flux in terms of.
-  template <typename Iterator, std::size_t Value>
+  template <typename Iterator, typename Dim>
   fluidity_host_device auto
-  backward(Iterator&& state_it, Dimension<Value>) const
+  backward(Iterator&& state_it, Dim dim) const
   {
-    constexpr auto dim = Dimension<Value>();
+    //constexpr auto dim = Dimension<Value>();
     const auto flux    = flux_method_t::get(_material, _dtdh, dim);
     return flux(_recon.backward_left(state_it, _material, _dtdh, dim) ,
                 _recon.backward_right(state_it, _material, _dtdh, dim));

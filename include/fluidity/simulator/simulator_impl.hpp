@@ -294,7 +294,8 @@ void SimulatorImpl<Ts...>::fill_data(fillinfo_container_t&& fillers)
     unrolled_for<dimensions>([&] (auto d)
     {
       constexpr auto dim = Dimension<d>{};
-      pos[d] = float(dim_info.flattened_index(i, dim)) / dim_info.size(dim);
+//      pos[d] = float(dim_info.flattened_index(i, dim)) / dim_info.size(dim);
+      pos[d] = float(flattened_index(dim_info, i, dim)) / dim_info.size(dim);
     });
 
     // Invoke each of the fillers on the each state data property:

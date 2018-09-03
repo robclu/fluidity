@@ -28,17 +28,17 @@ struct DimensionOption : Option<DimensionOption> {
 
   /// Defines the type of the choice list.
   using choice_list_t = 
-    std::tuple<OptionHolder<Num<1>>,
-               OptionHolder<Num<2>>,
-               OptionHolder<Num<3>>>;
+    OptionTuple<OptionHolder<Num<1>>,
+                OptionHolder<Num<2>>,
+                OptionHolder<Num<3>>>;
 
   /// Defines the number of choices for the option.
-  static constexpr size_t num_choices = std::tuple_size<choice_list_t>::value;
+  static constexpr size_t num_choices = choice_list_t::size;
   /// Defines the type of the option.
   static constexpr const char* type   = "dimensions";
 
   /// Defines the choices for the option.
-  constexpr auto choice_list() const
+  static constexpr auto choice_list()
   {
     return choice_list_t{"one", "two", "three"};
   }

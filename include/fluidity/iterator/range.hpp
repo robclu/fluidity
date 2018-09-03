@@ -183,7 +183,9 @@ class Range {
 template <typename T>
 fluidity_host_device constexpr inline auto range(T end)
 {
-  return Range<T>(T{0}, end, T{1});
+  return Range<std::size_t>(std::size_t{0}               ,
+                            static_cast<std::size_t>(end),
+                            std::size_t{1}               );
 }
 
 /// Creates a range from \p start to \p end, using a step size of \p step.

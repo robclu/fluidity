@@ -82,6 +82,11 @@ struct OptionElement<Index, Opt, false>
   /// Defines the index of the next option to append to the list of choices.
   static constexpr auto next_index = index - 1;
 
+  constexpr OptionElement() = default;
+
+  template <typename T>
+  constexpr OptionElement(T&& t) : option(std::forward<T>(t)) {}
+
   /// Appends the option type to the list of Choices and defines the next option
   /// element to use to get the next option type to append to the list.
   /// \param[in] options A reference to the list of all options.
@@ -115,6 +120,11 @@ struct OptionElement<Index, Opt, true>
 
   /// Defines the index of this option.
   static constexpr auto index = Index;
+
+  constexpr OptionElement() = default;
+
+  template <typename T>
+  constexpr OptionElement(T&& t) : option(std::forward<T>(t)) {}
 
   /// Finishes the creation of the option list from the choices by calling the
   /// finish method on the option.
@@ -154,6 +164,13 @@ OptionElement<N, Options, (N==0)>... {
  static constexpr auto size           = sizeof...(Options);
  /// Defines the index of the first option to get.
  static constexpr auto first_option_v = size - 1;
+
+ constexpr OptionTuple() = default;
+
+ template <typename... Ts>
+ constexpr OptionTuple(Ts&&... ts)
+ : OptionElement<N, Options, (N==0)>(std::forward<Ts>(ts))... {}
+
  /// Creates a unique pointer to the Base type of the Derived<...> type, where
  /// the template parameters of the derived type are filled based on the choices
  /// from the Options.
@@ -183,18 +200,149 @@ detail::OptionTuple<std::make_index_sequence<sizeof...(Options)>, Options...> {
   /// Defines the type of the base imlpementation.
   using impl_t    = detail::OptionTuple<indices_t, Options...>;
 
- /// Creates a unique pointer to the Base type of the Derived<...> type, where
- /// the template parameters of the derived type are filled based on the choices
- /// from the Options.
- /// \tparam base    A reference to the base class to set.
- /// \tparam Derived The type of the derived class to create.
- /// \tparam Base    The type of the base class. 
- template <typename Derived, typename Base>
- void create(Base& base) const
- {
-   impl_t::template create<Derived>(base);
- }
+  /// Defines the number of elements in the option tuple.
+  static constexpr auto size = sizeof...(Options);
+
+  constexpr OptionTuple() = default;
+
+  template <typename... Ts>
+  constexpr OptionTuple(Ts&&... ts) : impl_t{std::forward<Ts>(ts)...} {}
+
+  /// Creates a unique pointer to the Base type of the Derived<...> type, where
+  /// the template parameters of the derived type are filled based on the 
+  /// choices from the Options.
+  /// \tparam base    A reference to the base class to set.
+  /// \tparam Derived The type of the derived class to create.
+  /// \tparam Base    The type of the base class. 
+  template <typename Derived, typename Base>
+  void create(Base& base) const
+  {
+    impl_t::template create<Derived>(base);
+  }
 };
+
+namespace detail {
+
+/// Defines a struct which is used to invoke a functor for an element of an
+/// option tuple if the index I is less that the end of the option tuple indices
+/// E.
+/// \tparam I The index of the tuple element to invoke a functor for.
+/// \tparam E The number of elements in the tuple.
+/// \tparam C If the invoker must invoke further elements.
+template <std::size_t I, std::size_t E, bool C>
+struct Invoker;
+
+/// Specialization of the Invoker which must invoke a functor for an element of
+/// an option tuple.
+/// \tparam I The index of the tuple element to invoke a functor for.
+/// \tparam E The number of elements in the tuple.
+template <std::size_t I, std::size_t E>
+struct Invoker<I, E, true> : Invoker<I+1, E, (I+1<E)>
+{
+  /// Defines the type of the base class.
+  using base_t = Invoker<I+1, E, (I+1 < E)>;
+
+  /// Invokes the \p f functor for the Ith element of the tuple, when the tuple
+  /// is not constant.
+  /// \param[in] tuple   The tuple to get the element from.
+  /// \param[in] f       The functor to invoke.
+  /// \param[in] args    The arguments for the functor.
+  /// \tparam    OpTuple The type of the option tuple.
+  /// \tparam    F       The type of the functor.
+  /// \tparam    Args    The type of the arguments.
+  template <typename OpTuple, typename F, typename... Args>
+  Invoker(OpTuple&& tuple, F&& f, Args&&... args) 
+  : base_t{std::forward<OpTuple>(tuple),
+           std::forward<F>(f)          ,
+           std::forward<Args>(args)...}
+  {
+    f(opt_get<I>(tuple).option, std::forward<Args>(args)...);
+  }
+
+  /// Invokes the \p f functor for the Ith element of the tuple, when the tuple
+  /// is constant.
+  /// \param[in] tuple   The tuple to get the element from.
+  /// \param[in] f       The functor to invoke.
+  /// \param[in] args    The arguments for the functor.
+  /// \tparam    OpTuple The type of the option tuple.
+  /// \tparam    F       The type of the functor.
+  /// \tparam    Args    The type of the arguments.
+  template <typename OpTuple, typename F, typename... Args>
+  Invoker(const OpTuple& tuple, F&& f, Args&&... args)
+  : base_t{tuple,
+           std::forward<F>(f)          ,
+           std::forward<Args>(args)...}
+  {
+    f(opt_get<I>(tuple).option, std::forward<Args>(args)...);
+  }  
+};
+
+/// Specialization of the Invoker which must not invoke a functor on an element
+/// of an option tuple.
+/// \tparam I The index of the tuple element to invoke a functor for.
+/// \tparam E The number of elements in the tuple.
+template <std::size_t I, std::size_t E>
+struct Invoker<I, E, false>
+{
+
+  /// Invokes the \p f functor for the Ith element of the tuple, when the tuple
+  /// is not constant. This implementation does not actually invoke anything,
+  /// and terminates the invocation.
+  /// \param[in] tuple   The tuple to get the element from.
+  /// \param[in] f       The functor to invoke.
+  /// \param[in] args    The arguments for the functor.
+  /// \tparam    OpTuple The type of the option tuple.
+  /// \tparam    F       The type of the functor.
+  /// \tparam    Args    The type of the arguments.
+  template <typename OpTuple, typename F, typename... Args>
+  Invoker(OpTuple&& tuple, F&& f, Args&&... args) {}
+
+  /// Invokes the \p f functor for the Ith element of the tuple, when the tuple
+  /// is constant. This implementation does not actually invoke anything, and
+  /// terminates the invocation.
+  /// \param[in] tuple   The tuple to get the element from.
+  /// \param[in] f       The functor to invoke.
+  /// \param[in] args    The arguments for the functor.
+  /// \tparam    OpTuple The type of the option tuple.
+  /// \tparam    F       The type of the functor.
+  /// \tparam    Args    The type of the arguments.
+  template <typename OpTuple, typename F, typename... Args>
+  Invoker(const OpTuple& tuple, F&& f, Args&&... args) {}
+};
+
+} // namespace detail
+
+/// Invokes the functor \p f on each of the options in the \p tuple. This
+/// overload is for a non-const option tuple.
+/// \param[in] tuple   The tuple invoke the functor on.
+/// \param[in] f       The functor to invoke.
+/// \param[in] as      The arguments for the functor.
+/// \tparam    Options The types of the options.
+/// \tparam    F       The type of the functor.
+/// \tparam    As      The type of the arguments.
+template <typename F, typename... Options, typename... As>
+void for_each_option(OptionTuple<Options...>& tuple, F&& f, As&&... as)
+{
+  using invoker_t = 
+    detail::Invoker<0, sizeof...(Options), (0 < sizeof...(Options))>;
+  invoker_t{tuple, std::forward<F>(f), std::forward<As>(as)...};
+}
+
+/// Invokes the functor \p f on each of the options in the \p tuple. This
+/// overload is for a const option tuple.
+/// \param[in] tuple   The tuple invoke the functor on.
+/// \param[in] f       The functor to invoke.
+/// \param[in] as      The arguments for the functor.
+/// \tparam    Options The types of the options.
+/// \tparam    F       The type of the functor.
+/// \tparam    As      The type of the arguments.
+template <typename F, typename... Options, typename... As>
+void for_each_option(const OptionTuple<Options...>& tuple, F&& f, As&&... as)
+{
+  using invoker_t = 
+    detail::Invoker<0, sizeof...(Options), (0 < sizeof...(Options))>;
+  invoker_t{tuple, std::forward<F>(f), std::forward<As>(as)...};
+}
 
 }} // namespace fluid::setting
 

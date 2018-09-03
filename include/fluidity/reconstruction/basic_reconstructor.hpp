@@ -58,9 +58,9 @@ struct BasicReconstructor : public Reconstructor<BasicReconstructor<Limiter>> {
   /// \tparam     Material   The type of the material.
   /// \tparam     T          The type of the scaling factor.
   /// \tparam     Value      The value which defines the dimension.
-  template <typename Iterator, typename Material, typename T, std::size_t Value>
+  template <typename Iterator, typename Material, typename T, typename Dim>
   fluidity_host_device constexpr auto
-  input_fwrd_left(Iterator&& state_it, Material&&, T, Dimension<Value>) const
+  input_fwrd_left(Iterator&& state_it, Material&&, T, Dim dim) const
   {
     return *state_it;
   }
@@ -76,11 +76,11 @@ struct BasicReconstructor : public Reconstructor<BasicReconstructor<Limiter>> {
   /// \tparam     Material   The type of the material.
   /// \tparam     T          The type of the scaling factor.
   /// \tparam     Value      The value which defines the dimension.
-  template <typename Iterator, typename Material, typename T, std::size_t Value>
+  template <typename Iterator, typename Material, typename T, typename Dim>
   fluidity_host_device constexpr auto
-  input_fwrd_right(Iterator&& state_it, Material&&, T, Dimension<Value>) const
+  input_fwrd_right(Iterator&& state_it, Material&&, T, Dim dim) const
   {
-    return *state_it.offset(forward_face, Dimension<Value>{});
+    return *state_it.offset(forward_face, dim);
   }
 
   /// Returns the left input state in the backward direction, where the backward
@@ -94,11 +94,11 @@ struct BasicReconstructor : public Reconstructor<BasicReconstructor<Limiter>> {
   /// \tparam     Material   The type of the material.
   /// \tparam     T          The type of the scaling factor.
   /// \tparam     Value      The value which defines the dimension.
-  template <typename Iterator, typename Material, typename T, std::size_t Value>
+  template <typename Iterator, typename Material, typename T, typename Dim>
   fluidity_host_device constexpr auto
-  input_back_left(Iterator&& state_it, Material&&, T, Dimension<Value>) const
+  input_back_left(Iterator&& state_it, Material&&, T, Dim dim) const
   {
-    return *state_it.offset(backward_face, Dimension<Value>{});
+    return *state_it.offset(backward_face, dim);
   }
 
   /// Returns the right state in the backward direction, where the backward
@@ -112,9 +112,9 @@ struct BasicReconstructor : public Reconstructor<BasicReconstructor<Limiter>> {
   /// \tparam     Material   The type of the material.
   /// \tparam     T          The type of the scaling factor.
   /// \tparam     Value      The value which defines the dimension.
-  template <typename Iterator, typename Material, typename T, std::size_t Value>
+  template <typename Iterator, typename Material, typename T, typename Dim>
   fluidity_host_device constexpr auto
-  input_back_right(Iterator&& state_it, Material&&, T, Dimension<Value>) const
+  input_back_right(Iterator&& state_it, Material&&, T, Dim dim) const
   {
     return *state_it;
   }

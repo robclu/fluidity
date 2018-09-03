@@ -18,6 +18,7 @@
 
 #include "option.hpp"
 #include "option_holder.hpp"
+#include "option_tuple.hpp"
 #include <fluidity/solver/solvers.hpp>
 
 namespace fluid   {
@@ -29,16 +30,16 @@ template <typename... Ts>
 struct SolverOption : Option<SolverOption<Ts...>> {
   /// Defines the type of the choice list.
   using choice_list_t = 
-    std::tuple<OptionHolder<solver::SplitSolver<Ts...>>  ,
-               OptionHolder<solver::UnsplitSolver<Ts...>>>;
+    OptionTuple<OptionHolder<solver::SplitSolver<Ts...>>  ,
+                OptionHolder<solver::UnsplitSolver<Ts...>>>;
 
   /// Defines the number of choices for the option.
-  static constexpr size_t num_choices = std::tuple_size<choice_list_t>::value;
+  static constexpr size_t num_choices = choice_list_t::size;
   /// Defines the type of the option.
   static constexpr const char* type   = "solve_method";
 
   /// Defines the choices for the option.
-  constexpr auto choice_list() const
+  static constexpr auto choice_list()
   {
     return choice_list_t{"split", "unsplit"};
   }

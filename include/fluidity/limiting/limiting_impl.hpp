@@ -72,12 +72,11 @@ using enable_different_conservative_req_t =
 template < typename    Form
          , typename    Iterator
          , typename    Material
-         , std::size_t Value
+         , typename    Dim
          , enable_different_primitive_req_t<Iterator, Form> = 0>
 fluidity_host_device constexpr auto
-backward_diff(Iterator&& state_it, Material&& mat, Dimension<Value>)
+backward_diff(Iterator&& state_it, Material&& mat, Dim dim)
 {
-  constexpr auto dim = Dimension<Value>{};
   return state_it->primitive(mat) - state_it.offset(-1, dim)->primitive(mat);
 }
 
@@ -94,12 +93,11 @@ backward_diff(Iterator&& state_it, Material&& mat, Dimension<Value>)
 template < typename    Form
          , typename    Iterator
          , typename    Material
-         , std::size_t Value
+         , typename    Dim
          , enable_different_conservative_req_t<Iterator, Form> = 0>
 fluidity_host_device constexpr auto
-backward_diff(Iterator&& state_it, Material&& mat, Dimension<Value>)
+backward_diff(Iterator&& state_it, Material&& mat, Dim dim)
 {
-  constexpr auto dim = Dimension<Value>{};
   return state_it->conservative(mat)
        - state_it.offset(-1, dim)->conservative(mat);
 }
@@ -116,12 +114,12 @@ backward_diff(Iterator&& state_it, Material&& mat, Dimension<Value>)
 template < typename    Form
          , typename    Iterator
          , typename    Material
-         , std::size_t Value
+         , typename    Dim
          , enable_same_t<Iterator, Form> = 0>
 fluidity_host_device constexpr auto
-backward_diff(Iterator&& state_it, Material&& mat, Dimension<Value>)
+backward_diff(Iterator&& state_it, Material&& mat, Dim dim)
 {
-  return state_it.backward_diff(Dimension<Value>{});
+  return state_it.backward_diff(dim);
 }
 
 //==--- Forward difference -------------------------------------------------==//
@@ -139,12 +137,11 @@ backward_diff(Iterator&& state_it, Material&& mat, Dimension<Value>)
 template < typename    Form
          , typename    Iterator
          , typename    Material
-         , std::size_t Value
+         , typename    Dim
          , enable_different_primitive_req_t<Iterator, Form> = 0>
 fluidity_host_device constexpr auto
-forward_diff(Iterator&& state_it, Material&& mat, Dimension<Value>)
+forward_diff(Iterator&& state_it, Material&& mat, Dim dim)
 {
-  constexpr auto dim = Dimension<Value>{};
   return state_it.offset(1, dim)->primitive(mat) - state_it->primitive(mat);
 }
 
@@ -161,12 +158,11 @@ forward_diff(Iterator&& state_it, Material&& mat, Dimension<Value>)
 template < typename    Form
          , typename    Iterator
          , typename    Material
-         , std::size_t Value
+         , typename    Dim
          , enable_different_conservative_req_t<Iterator, Form> = 0>
 fluidity_host_device constexpr auto
-forward_diff(Iterator&& state_it, Material&& mat, Dimension<Value>)
+forward_diff(Iterator&& state_it, Material&& mat, Dim dim)
 {
-  constexpr auto dim = Dimension<Value>{};
   return state_it.offset(1, dim)->conservative(mat)
        - state_it->conservative(mat);
 }
@@ -183,12 +179,12 @@ forward_diff(Iterator&& state_it, Material&& mat, Dimension<Value>)
 template < typename    Form
          , typename    Iterator
          , typename    Material
-         , std::size_t Value
+         , typename    Dim
          , enable_same_t<Iterator, Form> = 0>
 fluidity_host_device constexpr auto
-forward_diff(Iterator&& state_it, Material&& mat, Dimension<Value>)
+forward_diff(Iterator&& state_it, Material&& mat, Dim dim)
 {
-  return state_it.forward_diff(Dimension<Value>{});
+  return state_it.forward_diff(dim);
 }
 
 //==--- Central difference -------------------------------------------------==//
@@ -206,12 +202,11 @@ forward_diff(Iterator&& state_it, Material&& mat, Dimension<Value>)
 template < typename    Form
          , typename    Iterator
          , typename    Material
-         , std::size_t Value
+         , typename    Dim
          , enable_different_primitive_req_t<Iterator, Form> = 0>
 fluidity_host_device constexpr auto
-central_diff(Iterator&& state_it, Material&& mat, Dimension<Value>)
+central_diff(Iterator&& state_it, Material&& mat, Dim dim)
 {
-  constexpr auto dim = Dimension<Value>{};
   return state_it.offset( 1, dim)->primitive(mat) - 
          state_it.offset(-1, dim)->primitive(mat);
 }
@@ -229,12 +224,11 @@ central_diff(Iterator&& state_it, Material&& mat, Dimension<Value>)
 template < typename    Form
          , typename    Iterator
          , typename    Material
-         , std::size_t Value
+         , typename    Dim
          , enable_different_conservative_req_t<Iterator, Form> = 0>
 fluidity_host_device constexpr auto
-central_diff(Iterator&& state_it, Material&& mat, Dimension<Value>)
+central_diff(Iterator&& state_it, Material&& mat, Dim dim)
 {
-  constexpr auto dim = Dimension<Value>{};
   return state_it.offset( 1, dim)->conservative(mat)
        - state_it.offset(-1, dim)->conservative(mat);
 }
@@ -252,12 +246,12 @@ central_diff(Iterator&& state_it, Material&& mat, Dimension<Value>)
   template < typename    Form
            , typename    Iterator
            , typename    Material
-           , std::size_t Value
+           , typename    Dim
            , enable_same_t<Iterator, Form> = 0>
 fluidity_host_device constexpr auto
-central_diff(Iterator&& state_it, Material&& mat, Dimension<Value>)
+central_diff(Iterator&& state_it, Material&& mat, Dim dim)
 {
-  return state_it.central_diff(Dimension<Value>{});
+  return state_it.central_diff(dim);
 }
 
 }}} // namespace fluid::limit::detail

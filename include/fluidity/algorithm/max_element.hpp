@@ -25,8 +25,8 @@ namespace fluid {
 /// \param[in] begin The first element to find the max element from.
 /// \param[in] end   The last element to find the max element from.
 /// \tparam    It    The type of the iterator.
-template <typename It>
-auto max_element(It&& begin, It&& end)
+template <typename It, typename Return = typename std::decay_t<It>::value_t>
+Return max_element(It&& begin, It&& end)
 {
   using value_t = typename std::decay_t<It>::value_t;
   auto max = [] fluidity_host_device (value_t& a, const value_t& b)

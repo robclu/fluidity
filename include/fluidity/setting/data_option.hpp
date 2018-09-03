@@ -18,6 +18,7 @@
 
 #include "option.hpp"
 #include "option_holder.hpp"
+#include "option_tuple.hpp"
 
 namespace fluid   {
 namespace setting {
@@ -25,15 +26,16 @@ namespace setting {
 /// Defines an Option implementation for choosing a data type.
 struct DataOption : Option<DataOption> {
   /// Defines the type of the choice list for the data options.
-  using choice_list_t = std::tuple<OptionHolder<double>, OptionHolder<float>>;
+  using choice_list_t = 
+    OptionTuple<OptionHolder<double>, OptionHolder<float>>;
 
   /// Defines the number of choices for the option.
-  static constexpr size_t num_choices = std::tuple_size<choice_list_t>::value;
+  static constexpr size_t num_choices = choice_list_t::size;
   /// Defines the type of the option.
   static constexpr const char* type   = "data_type";
 
   /// Defines the choices for the option.
-  constexpr auto choice_list() const
+  static constexpr auto choice_list()
   {
     return choice_list_t{"double", "float"};
   }

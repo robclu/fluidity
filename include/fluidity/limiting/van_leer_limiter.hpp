@@ -49,21 +49,14 @@ struct VanLeer : public Limiter<VanLeer<Form>> {
   /// \tparam     Iterator  The type of the state iterator.
   /// \tparam     Material  The type of the material.
   /// \tparam     Value     The value which defines the dimension.
-  template <typename Iterator, typename Material, std::size_t Value>
+  template <typename Iterator, typename Material, typename Dim>
   fluidity_host_device constexpr auto
-  limit_impl(Iterator&& state_it, Material&& mat, Dimension<Value>) const
+  limit_impl(Iterator&& state_it, Material&& mat, Dim dim) const
   {
     return this->limit_generic(std::forward<Iterator>(state_it),
                                std::forward<Material>(mat)     ,
-                               Dimension<Value>{}              );
+                               dim                             );
   }
-
- private:
-  /// Defines the type of the base class.
-  using base_t = Limiter<VanLeer<Form>>;
-
-  /// Make the base class a friend so that it can use implementation detrails.
-  friend base_t;
 
   /// Returns the limited value of a single element, as defined in the class
   /// description. 

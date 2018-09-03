@@ -39,6 +39,9 @@ class Limiter
   using impl_t   = LimiterImpl;
   /// Defines the type of the traits for the limiter.
   using traits_t = LimiterTraits<impl_t>;
+  /// Defines the form of the limiting (which variables are limited on which
+  /// variables.)
+  using form_t   = typename traits_t::form_t;
 
   /// Constructor, which is made private so that there is no bug if some
   /// limiter inherits from another one, i.e, given Impl1 and Impl2,
@@ -48,7 +51,7 @@ class Limiter
   ///
   ///   class Impl2 : Limter<Impl1> { ... }; // Error without fix.
   /// \end{code}
-  fluidity_host_device constexpr Limiter() {};
+  //fluidity_host_device constexpr Limiter() {};
 
   /// Returns a pointer to the implementation.
   fluidity_host_device impl_t* impl()
@@ -62,6 +65,10 @@ class Limiter
     return static_cast<const impl_t*>(this);
   }
 
+ public:
+  /// Defines the number of elements required for limiting.
+  static constexpr auto width = traits_t::width;
+
   /// Default implementation of the limiting, which requires that the
   /// implementation type has a `limit_single(left, right)` implementation.
   /// \param[in]  state_it  The state iterator to limit.
@@ -69,41 +76,29 @@ class Limiter
   /// \tparam     Iterator  The type of the state iterator.
   /// \tparam     Material  The type of the material.
   /// \tparam     Value     The value which defines the dimension to limit in.
-  template <typename Iterator, typename Material, std::size_t Value>
+  template <typename Iterator, typename Material, typename Dim>
   fluidity_host_device constexpr auto
-  limit_generic(Iterator&& state_it, Material&& mat, Dimension<Value>) const
+  limit_generic(Iterator&& state_it, Material&& mat, Dim dim) const
   {
     using state_t = std::decay_t<decltype(*state_it)>;
     using value_t = typename state_t::value_t;
-    Array<value_t, state_t::elements> limited;
+    //Array<value_t, state_t::elements> limited;
 
-    constexpr auto dim   = Dimension<Value>{};
-    constexpr auto scale = value_t{0.5};
+    //constexpr auto dim   = Dimension<Value>{};
+    //constexpr auto scale = value_t{0.5};
     
     const auto fwrd_diff = forward_diff<form_t>(state_it, mat, dim);
     const auto back_diff = backward_diff<form_t>(state_it, mat, dim);
-
+    auto limited = value_t{0.5}
+                 * (state_it.backward_diff(dim)
+                 +  state_it.forward_diff(dim));
+                
     unrolled_for<state_t::elements>([&] (auto i)
     {
-      limited[i] = scale
-                 * impl()->limit_single(back_diff[i], fwrd_diff[i])
-                 * (state_it.template backward_diff<i, Value>()
-                 +  state_it.template forward_diff<i, Value>());
+      limited[i] *= impl()->limit_single(back_diff[i], fwrd_diff[i]);
     });
     return limited;
   }
-
- public:
-  /// See constructor comment, need to allow onl LimiterImpl to call the
-  /// constructor.
-  friend impl_t;
-
-  /// Defines the form of the limiting (which variables are limited on which
-  /// variables.)
-  using form_t = typename traits_t::form_t;
-
-  /// Defines the number of elements required for limiting.
-  static constexpr auto width = traits_t::width;
 
   /// Defines an instance of the form of the variabl
   /// Limits the data pointed to by the \p state_it in the given dimension.
@@ -112,13 +107,13 @@ class Limiter
   /// \tparam     Iterator  The type of the state iterator.
   /// \tparam     Material  The type of the material.
   /// \tparam     Value     The value which defines the dimension to limit in.
-  template <typename Iterator, typename Material, std::size_t Value>
+  template <typename Iterator, typename Material, typename Dim>
   fluidity_host_device constexpr auto
-  limit(Iterator&& state_it, Material&& mat, Dimension<Value>) const
+  limit(Iterator&& state_it, Material&& mat, Dim dim) const
   {
     return impl()->limit_impl(std::forward<Iterator>(state_it),
                               std::forward<Material>(mat)     ,
-                              Dimension<Value>{}              );
+                              dim                             );
   }
 };
 

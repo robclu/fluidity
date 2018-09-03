@@ -75,17 +75,17 @@ static constexpr bool is_state_v = detail::IsState<T>::value;
 /// Constexpr trait function which returns true if the State is has a primitive
 /// form. This can be used to enable function overloads for a primitve state.
 /// \tparam State The state to check if in primitive form.
-template <typename State>
+template <typename StateType>
 static constexpr auto is_primitive_v = 
-  std::decay_t<State>::format == FormType::primitive;
+  std::decay_t<StateType>::format == FormType::primitive;
 
 /// Constexpr trait function which returns true if the State is has a
 /// conservative form. This can be used to enable function overloads for a
 /// conservative state.
 /// \tparam State The state to check if in primitive form.
-template <typename State>
+template <typename StateType>
 static constexpr auto is_conservative_v = 
-  std::decay_t<State>::format == FormType::conservative;
+  std::decay_t<StateType>::format == FormType::conservative;
 
 /// Alias for a primtiive dispatch tag type.
 using primitive_tag_t    = detail::StateDispatchTag<FormType::primitive>;
@@ -94,19 +94,20 @@ using conservative_tag_t = detail::StateDispatchTag<FormType::conservative>;
 
 /// Creates a consetexpr instance of a dispatch tag from a state.
 /// \tparam State The state to create a dispatch tag for.
-template <typename State>
+template <typename StateType>
 static constexpr auto state_dispatch_tag = 
-  detail::StateDispatchTag<std::decay_t<State>::format>{};
+  detail::StateDispatchTag<std::decay_t<StateType>::format>{};
 
 /// Defines a type which enables functions for a primitive state type.
 /// \tparam State The type to base the primitive enabling on.
-template <typename State>
-using primitive_enable_t = std::enable_if_t<is_primitive_v<State>, int>;
+template <typename StateType>
+using primitive_enable_t = std::enable_if_t<is_primitive_v<StateType>, int>;
 
 /// Defines a type which enables functions for a conservative state type.
 /// \tparam State The type to base the conservative enabling on.
-template <typename State>
-using conservative_enable_t = std::enable_if_t<is_conservative_v<State>, int>;
+template <typename StateType>
+using conservative_enable_t =
+  std::enable_if_t<is_conservative_v<StateType>, int>;
 
 /// Defines the storage type used by the state class. If the storage format is
 /// row major, then a traditional array is used which stores each element

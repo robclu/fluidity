@@ -64,18 +64,18 @@ struct MHReconstructor : public Reconstructor<MHReconstructor<Limiter>> {
   /// \tparam    Material The type of the material.
   /// \tparam    T        The type of the scaling factor.
   /// \tparam    V        The value which defines the the dimension.
-  template <typename Iterator, typename Material, typename T, std::size_t V> 
+  template <typename Iterator, typename Material, typename T, typename Dim> 
   fluidity_host_device static auto evolve(Iterator&&       state_it, 
                                           Material&&       mat     ,
                                           T                dtdh    ,
-                                          Dimension<V>     /*dim*/ ,
+                                          Dim              dim ,
                                           right_face_t     /*face*/)
   {
     using state_t = std::decay_t<decltype(*state_it)>;
     using value_t = std::decay_t<T>;
 
     constexpr auto half    = value_t{0.5};
-    constexpr auto dim     = Dimension<V>{};
+    //constexpr auto dim     = Dimension<V>{};
     const auto     limiter = limiter_t();
     const auto     delta   = half * limiter.limit(state_it, mat, dim);
 
@@ -101,18 +101,18 @@ struct MHReconstructor : public Reconstructor<MHReconstructor<Limiter>> {
   /// \tparam    Material The type of the material.
   /// \tparam    T        The type of the scaling factor.
   /// \tparam    V        The value which defines the the dimension.
-  template <typename Iterator, typename Material, typename T, std::size_t V> 
+  template <typename Iterator, typename Material, typename T, typename Dim> 
   fluidity_host_device static auto evolve(Iterator&&       state_it, 
                                           Material&&       mat     ,
                                           T                dtdh    ,
-                                          Dimension<V>     /*dim*/ ,
+                                          Dim              dim     ,
                                           left_face_t      /*face*/)
   {
     using state_t = std::decay_t<decltype(*state_it)>;
     using value_t = std::decay_t<T>;
 
     constexpr auto half    = value_t{0.5};
-    constexpr auto dim     = Dimension<V>{};
+    //constexpr auto dim     = Dimension<V>{};
     const auto     limiter = limiter_t();
     const auto     delta   = half * limiter.limit(state_it, mat, dim);
 
@@ -134,7 +134,7 @@ struct MHReconstructor : public Reconstructor<MHReconstructor<Limiter>> {
 
   /// Constructor, required so that the reconstructor can be created on both the
   /// host and the device.
-  fluidity_host_device constexpr MHReconstructor() {}
+  //fluidity_host_device constexpr MHReconstructor() {}
 
   /// Returns the left input state in the forward direction, where the forward
   /// direction is one of:
@@ -149,14 +149,14 @@ struct MHReconstructor : public Reconstructor<MHReconstructor<Limiter>> {
   /// \tparam     Material   The type of the material.
   /// \tparam     T          The type of the scaling factor.
   /// \tparam     Value      The value which defines the dimension.
-  template <typename Iterator, typename Material, typename T, std::size_t Value>
+  template <typename Iterator, typename Material, typename T, typename Dim>
   fluidity_host_device constexpr auto
   input_fwrd_left(Iterator&&        state_it,
                   Material&&        material, 
                   T                 dtdh    , 
-                  Dimension<Value>  /*dim*/ ) const
+                  Dim               dim ) const
   {
-    constexpr auto dim = Dimension<Value>{};
+    //constexpr auto dim = Dimension<Value>{};
     return evolve(state_it, material, dtdh, dim, right_face_select);
   }
 
@@ -173,14 +173,13 @@ struct MHReconstructor : public Reconstructor<MHReconstructor<Limiter>> {
   /// \tparam     Material   The type of the material.
   /// \tparam     T          The type of the scaling factor.
   /// \tparam     Value      The value which defines the dimension.
-  template <typename Iterator, typename Material, typename T, std::size_t Value>
+  template <typename Iterator, typename Material, typename T, typename Dim>
   fluidity_host_device constexpr auto
   input_fwrd_right(Iterator&&       state_it,
                    Material&&       material,
                    T                dtdh    ,
-                   Dimension<Value> /*dim*/ ) const
+                   Dim              dim     ) const
   {
-    constexpr auto dim = Dimension<Value>{};
     return evolve(state_it.offset(right_face, dim),
                   material                        ,
                   dtdh                            ,
@@ -201,14 +200,13 @@ struct MHReconstructor : public Reconstructor<MHReconstructor<Limiter>> {
   /// \tparam     Material   The type of the material.
   /// \tparam     T          The type of the scaling factor.
   /// \tparam     Value      The value which defines the dimension.
-  template <typename Iterator, typename Material, typename T, std::size_t Value>
+  template <typename Iterator, typename Material, typename T, typename Dim>
   fluidity_host_device constexpr auto
   input_back_left(Iterator&&       state_it,
                   Material&&       material,
                   T                dtdh    ,
-                  Dimension<Value> /*dim*/ ) const
+                  Dim              dim     ) const
   {
-    constexpr auto dim = Dimension<Value>{};
     return evolve(state_it.offset(left_face, dim),
                   material                       ,
                   dtdh                           ,
@@ -229,14 +227,13 @@ struct MHReconstructor : public Reconstructor<MHReconstructor<Limiter>> {
   /// \tparam     Material   The type of the material.
   /// \tparam     T          The type of the scaling factor.
   /// \tparam     Value      The value which defines the dimension.
-  template <typename Iterator, typename Material, typename T, std::size_t Value>
+  template <typename Iterator, typename Material, typename T, typename Dim>
   fluidity_host_device constexpr auto
   input_back_right(Iterator&&       state_it,
                    Material&&       material,
                    T                dtdh    ,
-                   Dimension<Value> /*dim*/ ) const
+                   Dim              dim     ) const
   {
-    constexpr auto dim = Dimension<Value>{};
     return evolve(state_it, material, dtdh, dim, left_face_select);
   }
 };

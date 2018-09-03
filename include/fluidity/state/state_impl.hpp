@@ -391,13 +391,13 @@ primitive(State&& state, Material&& mat)
 }
 
 /// Returns the primitive form of the state when the state is conservative.
-template < typename State
+template < typename StateType
          , typename Material
-         , conservative_enable_t<State> = 0>
+         , conservative_enable_t<StateType> = 0>
 fluidity_host_device inline constexpr auto
-primitive(State&& state, Material&& mat)
+primitive(StateType&& state, Material&& mat)
 {
-  using state_t  = std::decay_t<State>;
+  using state_t  = std::decay_t<StateType>;
   using result_t = ::fluid::state::State
                       < typename state_t::value_t
                       , FormType::primitive
@@ -421,13 +421,13 @@ primitive(State&& state, Material&& mat)
 }
 
 /// Returns the conservative form of the state when the state is primitive.
-template < typename State
+template < typename StateType
          , typename Material
-         , primitive_enable_t<State> = 0>
+         , primitive_enable_t<StateType> = 0>
 fluidity_host_device inline constexpr auto
-conservative(State&& state, Material&& mat)
+conservative(StateType&& state, Material&& mat)
 {
-  using state_t  = std::decay_t<State>;
+  using state_t  = std::decay_t<StateType>;
   using result_t = ::fluid::state::State
                       < typename state_t::value_t
                       , FormType::conservative

@@ -211,7 +211,7 @@ class Array {
   template <std::size_t E, small_enable_t<E> = 0>
   fluidity_host_device constexpr void initialize(T value)
   {
-    unrolled_for<E>([&, this] fluidity_host_device (auto i)
+    unrolled_for<E>([&, this] /*fluidity_host_device*/ (auto i)
     {
       this->_data[i] = value;
     });

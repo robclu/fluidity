@@ -1,6 +1,13 @@
 {
   "files.associations": {
     "locale": "cpp",
-    "string": "cpp"
-  }
+    "string": "cpp",
+    "ratio": "cpp",
+    "system_error": "cpp",
+    "hash_map": "cpp",
+    "forward_list": "cpp",
+    "initializer_list": "cpp",
+    "chrono": "cpp"
+  },
+  "C_Cpp.dimInactiveRegions": false
 }

@@ -17,12 +17,14 @@
 #ifndef FLUIDITY_SETTING_OPTION_HPP
 #define FLUIDITY_SETTING_OPTION_HPP
 
-#include <fluidity/algorithm/unrolled_for.hpp>
+//#include <fluidity/algorithm/unrolled_for.hpp>
+#include "option_tuple.hpp"
 #include <array>
 #include <cstring>
 #include <string>
 #include <tuple>
 #include <type_traits>
+#include <vector>
 
 namespace fluid   {
 namespace setting {
@@ -80,16 +82,13 @@ struct Option {
   void append(const OpList& options, const NextOp& next, Base& base) const
   {
     bool match = false;
-    unrolled_for<op_impl_t::num_choices>([&] (auto i)
+    for_each_option(op_impl_t::choice_list(), [&] (const auto& choice)
     {
-      constexpr auto choice_index = std::size_t{i};
-      const auto choice = std::get<choice_index>(op_impl()->choice_list());
-            
       if (_value == choice.value)
       {
         log_set_message();
         match = true;
-        using new_t         = typename decltype(choice)::type;
+        using new_t         = typename std::decay_t<decltype(choice)>::type;
         using new_choices_t = typename Choices::template appended_t<new_t>;
         next.template append<new_choices_t, Derived>(options, base);
       }
@@ -98,7 +97,7 @@ struct Option {
     {
       log_set_message();
       const auto choice = get_default_choice();
-      using new_t         = typename decltype(choice)::type;
+      using new_t         = typename std::decay_t<decltype(choice)>::type;
       using new_choices_t = typename Choices::template appended_t<new_t>;
       next.template append<new_choices_t, Derived>(options, base);
     }
@@ -123,16 +122,13 @@ struct Option {
   void finish(const OpList& options, Base& base) const
   {
     bool match = false;
-    unrolled_for<op_impl_t::num_choices>([&] (auto i)
+    for_each_option(op_impl_t::choice_list(), [&] (const auto& choice)
     {
-      constexpr auto choice_index = std::size_t{i};
-      const auto choice = std::get<choice_index>(op_impl()->choice_list());
-            
       if (_value == choice.value)
       {
         log_set_message();
         match = true;
-        using new_t         = typename decltype(choice)::type;
+        using new_t         = typename std::decay_t<decltype(choice)>::type;
         using new_choices_t = typename Choices::template appended_t<new_t>;
         new_choices_t::template build<Derived>(base);
       }
@@ -141,7 +137,7 @@ struct Option {
     {
       log_set_message();
       const auto choice = get_default_choice();
-      using new_t         = typename decltype(choice)::type;
+      using new_t         = typename std::decay_t<decltype(choice)>::type;
       using new_choices_t = typename Choices::template appended_t<new_t>;
       new_choices_t::template build<Derived>(base);
     }
@@ -184,11 +180,10 @@ struct Option {
   /// Returns an array of possible choices for the option.
   auto get_option_choice_list() const 
   {
-    std::array<std::string, op_impl_t::num_choices> choices;
-    unrolled_for<op_impl_t::num_choices>([&] (auto i)
+    std::vector<std::string> choices;
+    for_each_option(op_impl_t::choice_list(), [&] (const auto& choice)
     {
-      constexpr auto idx = std::size_t{i};
-      choices[idx] = std::get<idx>(op_impl()->choice_list()).value;
+      choices.push_back(choice.value);
     });
     return choices;
   }
@@ -197,7 +192,7 @@ struct Option {
   /// \param[in] invalid_choice The invalid choice which was given.
   auto get_default_choice() const
   {
-    auto choice = std::get<0>(op_impl()->choice_list());
+    auto choice = opt_get<0>(op_impl_t::choice_list());
     std::cout << "\nChoice : '"                << _value 
               << "' is invalid for setting : " << op_impl_t::type 
               << "\nChoices for the "          << op_impl_t::type

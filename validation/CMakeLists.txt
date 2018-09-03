@@ -14,7 +14,11 @@ set(LIBS -lstdc++-fs)
 if (APPLE)
   set(CUDA_LIBRARIES -lcudart -ldl -lrt -lcudadevrt -pthread)
 else()
-  set(CUDA_LIBRARIES -lcudart_static -ldl -lrt -lcudadevrt -pthread)
+  set(CUDA_LIBRARIES -lcudart_static -ldl -lrt -lcudadevrt)
+endif()
+
+if (${USING_CLANG})
+  set(CUDA_LIBRARIES "${CUDA_LIBRARIES} -pthread")
 endif()
 
 set(SOURCE_DIR ${fluidity_SOURCE_DIR}/validation)

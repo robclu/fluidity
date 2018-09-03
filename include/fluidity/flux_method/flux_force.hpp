@@ -51,6 +51,9 @@ struct Force {
     /// Defines the data type used in the implementation.
     using value_t    = typename material_t::value_t;
 
+    /// Defines the dimension to solve for.
+    static constexpr auto dim = Dimension<Value>();
+
     /// Stores a reference to the material to use for the implementation.
     material_t _mat;   //!< The material to solve for.
     value_t    _dtdh;  //!< Time delta for the iteration.
@@ -70,7 +73,6 @@ struct Force {
     template <typename State>
     fluidity_host_device auto operator()(const State& ul, const State& ur) const
     {
-      constexpr auto dim  = Dimension<Value>();
       constexpr auto half = value_t{0.5};
 
       // Get invokable flux method functors
