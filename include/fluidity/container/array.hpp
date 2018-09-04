@@ -121,7 +121,7 @@ class Array {
   fluidity_host_device constexpr self_t operator-(Container&& container) const
   {
     auto result = *this;
-    unrolled_for_bounded<max_unroll_depth>([&] (auto i)
+    unrolled_for_bounded<Elements>([&] (auto i)
     {
       result[i] -= container[i];
     });
@@ -136,7 +136,7 @@ class Array {
   fluidity_host_device constexpr self_t operator+(Container&& container) const
   {
     auto result = *this;
-    unrolled_for_bounded<max_unroll_depth>([&] (auto i)
+    unrolled_for_bounded<Elements>([&] (auto i)
     {
       result[i] += container[i];
     });
@@ -150,7 +150,7 @@ class Array {
   template <typename Container>
   fluidity_host_device constexpr self_t& operator-=(Container&& container)
   {
-    unrolled_for_bounded<max_unroll_depth>([&] (auto i)
+    unrolled_for_bounded<Elements>([&] (auto i)
     {
       this->operator[](i) -= container[i];
     });
@@ -164,7 +164,7 @@ class Array {
   template <typename Container>
   fluidity_host_device constexpr self_t& operator+=(Container&& container)
   {
-    unrolled_for_bounded<max_unroll_depth>([&] (auto i)
+    unrolled_for_bounded<Elements>([&] (auto i)
     {
       this->operator[](i) += container[i];
     });
@@ -246,7 +246,7 @@ template <typename T, typename U, std::size_t S, conv_enable_t<T, U> = 0>
 fluidity_host_device constexpr auto operator*(T scalar, const Array<U, S>& a)
 {
   auto result = a;
-  unrolled_for_bounded<max_unroll_depth>([&] (auto i)
+  unrolled_for_bounded<S>([&] (auto i)
   {
     result[i] *= scalar;
   });
@@ -264,7 +264,7 @@ template <typename T, typename U, std::size_t S, conv_enable_t<T, U> = 0>
 fluidity_host_device constexpr auto operator/(T scalar, const Array<U, S>& a)
 {
   auto result = a;
-  unrolled_for_bounded<max_unroll_depth>([&] (auto i)
+  unrolled_for_bounded<S>([&] (auto i)
   {
     result[i] = scalar / result[i];
   });
@@ -282,7 +282,7 @@ template <typename T, typename U, std::size_t S, conv_enable_t<T, U> = 0>
 fluidity_host_device constexpr auto operator+(T scalar, const Array<U, S>& a)
 {
   auto result = a;
-  unrolled_for_bounded<max_unroll_depth>([&] (auto i)
+  unrolled_for_bounded<S>([&] (auto i)
   {
     result[i] += scalar;
   });
@@ -300,7 +300,7 @@ template <typename T, typename U, std::size_t S, conv_enable_t<T, U> = 0>
 fluidity_host_device constexpr auto operator-(T scalar, const Array<U, S>& a)
 {
   auto result = a;
-  unrolled_for_bounded<max_unroll_depth>([&] (auto i)
+  unrolled_for_bounded<S>([&] (auto i)
   {
     result[i] = scalar - result[i];
   });

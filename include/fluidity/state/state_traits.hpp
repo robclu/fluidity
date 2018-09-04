@@ -101,13 +101,35 @@ static constexpr auto state_dispatch_tag =
 /// Defines a type which enables functions for a primitive state type.
 /// \tparam State The type to base the primitive enabling on.
 template <typename StateType>
-using primitive_enable_t = std::enable_if_t<is_primitive_v<StateType>, int>;
+using prim_enable_t = std::enable_if_t<is_primitive_v<StateType>, int>;
 
 /// Defines a type which enables functions for a conservative state type.
 /// \tparam State The type to base the conservative enabling on.
 template <typename StateType>
-using conservative_enable_t =
+using cons_enable_t =
   std::enable_if_t<is_conservative_v<StateType>, int>;
+
+/// Defines a primitive state with the same properties as the S type.
+/// \tparam S The state to get a primitive form of.
+template <typename S, typename state_t = std::decay_t<S>>
+using make_prim_form_t =
+  State<
+    typename state_t::value_t     ,
+    FormType::primitive           ,
+    state_t::dimensions           ,
+    state_t::additional_components,
+    state_t::storage_layout       >;
+
+/// Defines a conservatice state with the same properties as the S type.
+/// \tparam S The state to get a conservative form of.
+template <typename S, typename state_t = std::decay_t<S>>
+using make_cons_form_t =
+  State<
+    typename state_t::value_t     ,
+    FormType::conservative        ,
+    state_t::dimensions           ,
+    state_t::additional_components,
+    state_t::storage_layout       >;
 
 /// Defines the storage type used by the state class. If the storage format is
 /// row major, then a traditional array is used which stores each element

@@ -108,14 +108,11 @@ fluidity_device_only inline std::size_t block_id(Dim dim)
 /// generated.
 /// \param[in] dim    The dimension to get the thread index for.
 /// \tparam    Value  The value which defines the dimension.
-template <std::size_t Value>
-fluidity_host_only constexpr inline std::size_t thread_id(Dimension<Value>)
+template <typename Dim>
+fluidity_host_only constexpr std::size_t thread_id(Dim&& dim)
 {
   // \todo, add implementation ... 
-  static_assert(Value <= 2, "Can only get thread id for 3 dimensions {0,1,2}.");
-  if constexpr (Value == 0) { return 0; }
-  if constexpr (Value == 1) { return 1; }
-  if constexpr (Value == 2) { return 2; }
+  return 0;
 }
 
 /// Returns the value of the thread index in a given dimension. The dimension
@@ -123,14 +120,11 @@ fluidity_host_only constexpr inline std::size_t thread_id(Dimension<Value>)
 /// generated.
 /// \param[in] dim    The dimension to get the thread index for.
 /// \tparam    Value  The value which defines the dimension.
-template <std::size_t Value>
-fluidity_host_only constexpr inline std::size_t flattened_id(Dimension<Value>)
+template <typename Dim>
+fluidity_host_only constexpr std::size_t flattened_id(Dim&& dim)
 {
   // \todo, add implementation ... 
-  static_assert(Value <= 2, "Can only get thread id for 3 dimensions {0,1,2}.");
-  if constexpr (Value == 0) { return 0; }
-  if constexpr (Value == 1) { return 1; }
-  if constexpr (Value == 2) { return 2; }
+  return 0;
 }
 
 #endif // __CUDACC__
@@ -143,11 +137,10 @@ template <typename It>
 fluidity_device_only bool in_range(It&& it)
 {
   using iter_t = std::decay_t<It>;
-  bool result = true;
+  bool result  = true;
   unrolled_for<iter_t::dimensions>([&] (auto i)
   {
-    constexpr auto dim = Dimension<i>();
-    result *= flattened_id(dim) < it.size(dim);
+    result *= flattened_id(i) < it.size(i);
   });
   return result;
 }

@@ -41,18 +41,18 @@ struct Force {
  private:
   /// The Impl struct provides the implementation of the LF flux method for a
   /// given material type in a specific dimension.
-  /// \tparam Material The type of the material used for the flux computation.
-  /// \tparam Value    The value which defines the dimension.
-  template <typename Material, std::size_t Value>
+  /// \tparam Mat   The type of the material used for the flux computation.
+  /// \tparam Dim   The type of the dimension.
+  template <typename Mat, typename Dim>
   struct Impl {
    private:
     /// Defines the type of material used for the flux computation.
-    using material_t = std::decay_t<Material>;
+    using material_t = std::decay_t<Mat>;
     /// Defines the data type used in the implementation.
     using value_t    = typename material_t::value_t;
 
     /// Defines the dimension to solve for.
-    static constexpr auto dim = Dimension<Value>();
+    static constexpr auto dim = Dim();
 
     /// Stores a reference to the material to use for the implementation.
     material_t _mat;   //!< The material to solve for.
@@ -70,8 +70,9 @@ struct Force {
     /// \param[in] left   The left state for the Riemann problem.
     /// \param[in] right  The right state for the Riemann problem.
     /// \tparam    State  The type of the states.
-    template <typename State>
-    fluidity_host_device auto operator()(const State& ul, const State& ur) const
+    template <typename StateType>
+    fluidity_host_device auto
+    operator()(const StateType& ul, const StateType& ur) const
     {
       constexpr auto half = value_t{0.5};
 
@@ -86,15 +87,14 @@ struct Force {
  public:
   /// Gets an instance of the flux evaluator for a give material \p mat and a
   /// given dimension.
-  /// \param[in] mat      The material to use for the flux method.
-  /// \param[in] dtdh     The space and time discretization factor.
-  /// \tparam    Material The type of the material.
-  /// \tparam    Value    The value which defines the dimension. 
-  template <typename Material, typename T, std::size_t Value>
-  fluidity_host_device static auto 
-  get(const Material& mat, T dtdh, Dimension<Value> /*dim*/)
+  /// \param[in] mat    The material to use for the flux method.
+  /// \param[in] dtdh   The space and time discretization factor.
+  /// \tparam    Mat    The type of the material.
+  /// \tparam    Dim    The type of the dimension.
+  template <typename Mat, typename T, typename Dim>
+  fluidity_host_device static auto get(const Mat& mat, T dtdh, Dim)
   {
-    using flux_impl_t = Impl<Material, Value>;
+    using flux_impl_t = Impl<Mat, Dim>;
     return flux_impl_t{mat, dtdh};
   }
 };

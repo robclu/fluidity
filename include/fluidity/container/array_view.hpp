@@ -139,7 +139,7 @@ class ArrayView {
   fluidity_host_device constexpr auto operator-(Container&& container) const
   {
     auto result = Array<value_t, Elements>();
-    unrolled_for_bounded<max_unroll_depth>([&] (auto i)
+    unrolled_for_bounded<Elements>([&] (auto i)
     {
       result[i] = this->operator[](i) - container[i];
     });
@@ -154,7 +154,7 @@ class ArrayView {
   fluidity_host_device constexpr auto operator+(Container&& container) const
   {
     auto result = Array<value_t, Elements>();
-    unrolled_for_bounded<max_unroll_depth>([&] (auto i)
+    unrolled_for_bounded<Elements>([&] (auto i)
     {
       result[i] = this->operator[](i) + container[i];
     });
@@ -168,7 +168,7 @@ class ArrayView {
   template <typename Container>
   fluidity_host_device constexpr self_t& operator-=(Container&& container)
   {
-    unrolled_for_bounded<max_unroll_depth>([&] (auto i)
+    unrolled_for_bounded<Elements>([&] (auto i)
     {
       this->operator[](i) -= container[i];
     });
@@ -182,7 +182,7 @@ class ArrayView {
   template <typename Container>
   fluidity_host_device constexpr self_t& operator+=(Container&& container)
   {
-    unrolled_for_bounded<max_unroll_depth>([&] (auto i)
+    unrolled_for_bounded<Elements>([&] (auto i)
     {
       this->operator[](i) += container[i];
     });
@@ -253,7 +253,7 @@ template <typename T, typename U, std::size_t S, conv_enable_t<T, U> = 0>
 fluidity_host_device constexpr auto operator*(T s, const ArrayView<U, S>& a)
 {
   auto result = Array<U, S>();
-  unrolled_for_bounded<max_unroll_depth>([&] (auto i)
+  unrolled_for_bounded<S>([&] (auto i)
   {
     result[i] = s * a[i];
   });
@@ -272,7 +272,7 @@ template <typename T, typename U, std::size_t S, conv_enable_t<T, U> = 0>
 fluidity_host_device constexpr auto operator/(T s, const ArrayView<U, S>& a)
 {
   auto result = Array<U, S>();
-  unrolled_for_bounded<max_unroll_depth>([&] (auto i)
+  unrolled_for_bounded<S>([&] (auto i)
   {
     result[i] = s / a[i];
   });
@@ -291,7 +291,7 @@ template <typename T, typename U, std::size_t S, conv_enable_t<T, U> = 0>
 fluidity_host_device constexpr auto operator+(T s, const ArrayView<U, S>& a)
 {
   auto result = Array<U, S>();
-  unrolled_for_bounded<max_unroll_depth>([&] (auto i)
+  unrolled_for_bounded<S>([&] (auto i)
   {
     result[i] = s + a[i];
   });
@@ -310,7 +310,7 @@ template <typename T, typename U, std::size_t S, conv_enable_t<T, U> = 0>
 fluidity_host_device constexpr auto operator-(T s, const ArrayView<U, S>& a)
 {
   auto result = Array<U, S>(s);
-  unrolled_for_bounded<max_unroll_depth>([&] (auto i)
+  unrolled_for_bounded<S>([&] (auto i)
   {
     result[i] = s - a[i];
   });
@@ -322,7 +322,7 @@ fluidity_host_device constexpr auto operator-(T s, const ArrayView<U, S>& a)
 template <typename T, std::size_t Elements> template <typename Container>
 void ArrayView<T, Elements>::copy_from_container(Container&& container)
 {
-  unrolled_for_bounded<max_unroll_depth>([&] (auto i)
+  unrolled_for_bounded<Elements>([&] (auto i)
   {
     _ptr[i * _step] = container[i];
   });

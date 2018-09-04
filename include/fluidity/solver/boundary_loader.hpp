@@ -43,53 +43,52 @@ struct BoundarySetter {
   static constexpr uint16_t mask = 0x0001;
 
   /// Configures the \p ith boundary for \p dim.
-  /// \param[in]  dim   The dimension to configure the type of boundary setting
-  ///                   for.
+  /// \param[in]  dim   The dimension to configure the boundary setting for.
   /// \param[in]  index The index of the boundary to set (first or second)
+  /// \param[in]  kind  The kind of the boundary.
   /// \param[in]  type  The type to set the boundary to.
-  /// \tparam     Value The value which defines the dimension.
-  template <std::size_t Value>
+  /// \tparam     Dim   The type of the dimension.
+  template <typename Dim>
   fluidity_host_device constexpr void
-  configure(Dimension<Value> /*dim*/, BoundaryIndex index, BoundaryKind kind)
+  configure(Dim dim, BoundaryIndex index, BoundaryKind kind)
   {
-    _configuration ^= (-static_cast<uint8_t>(kind) ^ _configuration) // Value
-                    & (1 << bit_index(Dimension<Value>{}, index));
+    _configuration ^= (-static_cast<uint8_t>(kind) ^ _configuration)
+                    & (1 << bit_index(dim, index));
   }
 
   /// Overload of operator() to set the value of the \p boundary state to that
   /// of the \p internal state. If the configured type of the boundary for the
   /// \p index boundary in the given dimension is BoundaryKind::reflective, then
   /// the velocity normal to the dimension is flipped.
-  /// \param[in] internal The internal state to use to set the boundary state.
-  /// \param[in] boundary The boundary state to load.
-  /// \param[in] index    The index of the boundary (first or second).
-  /// \tparam    State    The type of the state.
-  /// \tparam    Value    The value which defines the dimension.
-  template <typename State, std::size_t Value>
-  fluidity_host_device void operator()(const State&     internal,
-                                       State&           boundary,
-                                       Dimension<Value> /*dim*/ ,
+  /// \param[in] internal   The internal state to use to set the boundary state.
+  /// \param[in] boundary   The boundary state to load.
+  /// \param[in] dim        The dimension to set the value in.
+  /// \param[in] index      The index of the boundary (first or second).
+  /// \tparam    StateType  The type of the state.
+  /// \tparam    Dim        The type of the dimension.
+  template <typename StateType, typename Dim>
+  fluidity_host_device void operator()(const StateType& internal,
+                                       StateType&       boundary,
+                                       Dim              dim     ,
                                        BoundaryIndex    index   ) const
   {
     boundary = internal;
-    set_velocity(std::forward<State>(boundary), Dimension<Value>{}, index);
+    set_velocity(std::forward<StateType>(boundary), dim, index);
   }
 
   /// Sets the velocity of the \p boundary by flipping it's value if the kind
   /// of the boundary is BoundaryKind::reflective, otherwise nothing is done.
-  /// \param[in] boundary The boundary state to set the velocity for.
-  /// \param[in] index    The index of the boundary (first or second).
-  /// \tparam    State    The type of the state.
-  /// \tparam    Value    The value which defines the dimension.
-  template <typename State, std::size_t Value>
-  fluidity_host_device void set_velocity(State&&          boundary,
-                                         Dimension<Value> /*dim*/ ,
-                                         BoundaryIndex    index   ) const
+  /// \param[in] boundary   The boundary state to set the velocity for.
+  /// \param[in] dim        The dimension to set the velocity for.
+  /// \param[in] index      The index of the boundary (first or second).
+  /// \tparam    StateType  The type of the state.
+  /// \tparam    Dim        The type of the dimension.
+  template <typename StateType, typename Dim>
+  fluidity_host_device void
+  set_velocity(StateType&& boundary, Dim dim, BoundaryIndex index) const
   {
-    // Simply need to change the velocity for dimension __dim__. 
-    if (get_kind(Dimension<Value>{}, index) == BoundaryKind::reflective)
+    if (get_kind(dim, index) == BoundaryKind::reflective)
     {
-      constexpr auto dim = Dimension<Value>{};
       boundary.set_velocity(-boundary.velocity(dim), dim);
     }
   }
@@ -100,28 +99,26 @@ struct BoundarySetter {
   /// Returns the shift amount to move the bits for the boundary type for
   /// dimension \p dim and \p index into the LSB position.
   /// \param[in]  dim     The dimension to get the bit index for.
-  /// \param[in]  index   The index (0 = front, 1 = back) of the boundary type
-  ///                     to get.
-  template <std::size_t Value>
+  /// \param[in]  index   The index (0 = front, 1 = back) of the boundary.
+  /// \tparam     Dim     The type of the dimension.
+  template <typename Dim>
   fluidity_host_device constexpr std::size_t
-  bit_index(Dimension<Value> /*dim*/, BoundaryIndex index) const
+  bit_index(Dim dim, BoundaryIndex index) const
   {
-    return (static_cast<std::size_t>(Value) << 2) + 
-           (static_cast<std::size_t>(index) << 1);
+    return (static_cast<std::size_t>(dim) << 2) + 
+           (static_cast<std::size_t>(dim) << 1);
   }
 
   /// Returns the type of the boundary for dimension \p with index \p index.
   /// \param[in]  dim     The dimension to get the boundary type for.
-  /// \param[in]  index   The index (0 = front, 1 = back) of the boundary type
-  ///                     to get.
-  template <std::size_t Value>
+  /// \param[in]  index   The index (0 = front, 1 = back) of the boundary.
+  /// \tparam     Dim     The type of the dimension.
+  template <typename Dim>
   fluidity_host_device constexpr BoundaryKind
-  get_kind(Dimension<Value> /*dim*/, BoundaryIndex index) const
+  get_kind(Dim dim, BoundaryIndex index) const
   {
-    return
-      static_cast<BoundaryKind>(
-        (_configuration >> bit_index(Dimension<Value>{}, index)) & mask
-      );
+    return static_cast<BoundaryKind>(
+             (_configuration >> bit_index(dim, index)) & mask);
   }
 };
 
@@ -169,48 +166,39 @@ struct BoundaryLoader {
   /// 
   /// \param[in]  data     An iterator to global data.
   /// \param[in]  patch    An iterator to the patch data.
-  /// \param[in]  elements The number of elements in the data for the dim.
   /// \param[in]  dim      The dimension to set the boundary in.
   /// \param[in]  setter   The object which is used to set the elements.
-  /// \tparam     It       The type of the iterators.
-  /// \tparam     Value    The value which defines the dimension.
-  template < typename    DataIt
-           , typename    PatchIt
-           , std::size_t Value
-           , exec::gpu_enable_t<DataIt> = 0>
+  /// \tparam     I1       The type of the data iterator.
+  /// \tparam     I2       The type of the patch iterator.
+  /// \tparam     Dim      The type of the dimension.
+  template < typename I1, typename I2, typename Dim, exec::gpu_enable_t<I1> = 0>
   static fluidity_host_device void
-  load_boundary(DataIt&&         data_it ,
-                PatchIt&&        patch_it,
-                Dimension<Value> /*dim*/ ,
-                BoundarySetter   setter  )
+  load_boundary(I1&& data, I2&& patch, Dim dim, BoundarySetter setter)
   {
-    constexpr auto dim = Dimension<Value>{};
-    const auto     elements = data_it.size(dim);
-
     int global_idx = flattened_id(dim), local_idx = thread_id(dim);
     if (global_idx < padding)
     {
       constexpr auto bi = BoundaryIndex::first;
-      setter(*patch_it, *patch_it.offset(-2 * global_idx - 1, dim), dim, bi);
+      setter(*patch, *patch.offset(-2 * global_idx - 1, dim), dim, bi);
     }
     else if (local_idx < padding)
     {
       const auto shift = -2 * local_idx - 1;
-      *patch_it.offset(shift, dim) = *data_it.offset(shift, dim);
+      *patch.offset(shift, dim) = *data.offset(shift, dim);
     }
 
-    global_idx = static_cast<int>(data_it.size(dim)) - global_idx - 1;
+    global_idx = static_cast<int>(data.size(dim)) - global_idx - 1;
     local_idx  = static_cast<int>(block_size(dim)) - local_idx - 1;
 
     if (global_idx < padding)
     {
       constexpr auto bi = BoundaryIndex::second;
-      setter(*patch_it, *patch_it.offset(2 * global_idx + 1, dim), dim, bi);
+      setter(*patch, *patch.offset(2 * global_idx + 1, dim), dim, bi);
     }
     else if (local_idx < padding)
     {
       const auto shift = 2 * local_idx + 1;
-      *patch_it.offset(shift, dim) = *data_it.offset(shift, dim);
+      *patch.offset(shift, dim) = *data.offset(shift, dim);
     }
   }
 
@@ -242,32 +230,19 @@ struct BoundaryLoader {
   /// 
   /// \param[in]  data     An iterator to global data.
   /// \param[in]  patch    An iterator to the patch data.
-  /// \param[in]  elements The number of elements in the data for the dim.
   /// \param[in]  dim      The dimension to set the boundary in.
   /// \param[in]  setter   The object which is used to set the elements.
-  /// \tparam     Iterator The type of the iterators.
-  /// \tparam     Value    The value which defines the dimension.
-  template < typename    DataIt
-           , typename    PatchIt
-           , std::size_t Value
-           , exec::cpu_enable_t<DataIt> = 0>
+  /// \tparam     I1       The type of the data iterator.
+  /// \tparam     I2       The type of the patch iterator.
+  /// \tparam     Dim      The type of the dimension.
+  template < typename I1, typename I2, typename Dim, exec::cpu_enable_t<I1> = 0>
   static fluidity_host_device void
-  load_boundary(DataIt&&         data_it ,
-                PatchIt&&        patch_it,
-                Dimension<Value> /*dim*/ ,
-                BoundarySetter   setter  )
+  load_boundary(I1&& data, I2&& patch, Dim dim, BoundarySetter setter)
   {
-    constexpr auto dim = Dimension<Value>{};
-
-    auto front = data_it.offset(padding, dim);
-    auto back  = data_it.offset(data_it.size(dim) - padding, dim);
-
-    unrolled_for<padding>([&] (auto i)
-    {
-
-    });
+    /*
+     * TODO: Implement ...
+     */
   }
-
 };
 
 }} // namespace fluid::solver

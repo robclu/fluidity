@@ -17,7 +17,6 @@
 #ifndef FLUIDITY_SETTING_OPTION_HPP
 #define FLUIDITY_SETTING_OPTION_HPP
 
-//#include <fluidity/algorithm/unrolled_for.hpp>
 #include "option_tuple.hpp"
 #include <array>
 #include <cstring>

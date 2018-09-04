@@ -44,18 +44,18 @@ struct Superbee : public Limiter<Superbee<Form>> {
 
   /// Implementation of the limit function which applies the limiting to an
   /// iterator, calling the limit method on each of the iterator elements.
-  /// \param[in]  state_it  The state iterator to limit.
-  /// \param[in]  material  The material for the system.
-  /// \tparam     Iterator  The type of the state iterator.
-  /// \tparam     Material  The type of the material.
-  /// \tparam     Value     The value which defines the dimension.
-  template <typename Iterator, typename Material, std::size_t Value>
+  /// \param[in]  state   The state iterator to limit.
+  /// \param[in]  mat     The material for the system.
+  /// \tparam     IT      The type of the state iterator.
+  /// \tparam     Mat     The type of the material.
+  /// \tparam     Dim     The tyoe of the dimension.
+  template <typename IT, typename Mat, typename Dim>
   fluidity_host_device constexpr auto
-  limit_impl(Iterator&& state_it, Material&& mat, Dimension<Value>) const
+  limit_impl(IT&& state, Mat&& mat, Dim dim) const
   {
-    return this->limit_generic(std::forward<Iterator>(state_it),
-                               std::forward<Material>(mat)     ,
-                               Dimension<Value>{}              );
+    return this->limit_generic(std::forward<IT>(state),
+                               std::forward<Mat>(mat) ,
+                               dim                    );
   }
 
  private:

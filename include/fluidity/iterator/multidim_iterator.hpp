@@ -37,9 +37,9 @@ namespace fluid {
 /// \tparam T         The type of the data to iterate over.
 /// \tparam DimInfo   Information for the dimensions.
 /// \tparam Exec      The execution policy for the iterator.
-template < typename T
-         , typename DimensionInfo = DimInfo<2>
-         , typename Exec          = exec::default_type>
+template <typename T,
+          typename DimensionInfo = DimInfo<2>,
+          typename Exec          = exec::default_type>
 struct MultidimIterator : public DimensionInfo {
   /// Defines the type of this iterator.
   using self_t          = MultidimIterator;
@@ -110,18 +110,9 @@ struct MultidimIterator : public DimensionInfo {
   /// Overload of operator() to offset the iterator in a specific dimension.
   /// \param[in] amount The amount (number of elements) to iterate over.
   /// \param[in] dim    The dimension to iterator over.
-  /// \tparam    Value  The value which defines the dimension.
-/*
-  template <std::size_t Value>
-  fluidity_host_device constexpr auto
-  operator()(int amount, Dimension<Value> dim) const
-  {
-    return self_t{_ptr + amount * offset(Dimension<Value>{}), *this};
-  }
-*/
+  /// \tparam    Dim    The type of the dimension.
   template <typename Dim>
-  fluidity_host_device constexpr auto
-  operator()(int amount, Dim dim) const
+  fluidity_host_device constexpr auto operator()(int amount, Dim dim) const
   {
     return self_t{_ptr + amount * offset(dim), *this};
   }
@@ -172,17 +163,7 @@ struct MultidimIterator : public DimensionInfo {
 
   /// Returns a strided iterator which can iterate over the \p dim dimension.
   /// \param[in] dim   The dimension for the iterator to iterate over.
-  /// \tparam    value The value which defines the dimension.
-/*
-  template <std::size_t Value>
-  fluidity_host_device strided_iter_t
-  as_strided_iterator(Dimension<Value> dim)
-  {
-    using stride_t = typename strided_iter_t::stride_t;
-    return strided_iter_t{_ptr,
-                          static_cast<stride_t>(stride(Dimension<Value>{}))};
-  }
-*/
+  /// \tparam    Dim   The type of the dimension.
   template <typename Dim>
   fluidity_host_device strided_iter_t as_strided_iterator(Dim dim)
   {
@@ -205,46 +186,15 @@ struct MultidimIterator : public DimensionInfo {
   /// auto diff = state.backward_diff(fluid::dim_x, 1);
   /// ~~~
   /// 
-  /// \param[in]  amount  The amount to offset the iterator by.
   /// \param[in]  dim     The dimension to offset in.
-  /// \tparam     Value   The value which defines the dimension.
+  /// \param[in]  amount  The amount to offset the iterator by.
+  /// \tparam     Dim     The type of the dimension.
   template <typename Dim>
   fluidity_host_device constexpr value_t
   backward_diff(Dim dim, unsigned int amount = 1) const
   {
     return *_ptr - *(_ptr - amount * stride(dim));
   }
-
-  /// Returns the backward difference between this iterator and the iterator \p
-  /// amount places from from this iterator in dimension \p dim, for the Nth
-  /// element of the data which the iterator points to. This method can only be
-  /// used when the iterated data has overloaded operator[]. I.e
-  /// 
-  /// \begin{equation}
-  ///   \Delta U = U_\textrm{dim}(i)[n] -
-  ///            - U_{\textrm{dim}(i - \texrm{amount})}[n]
-  /// \end{equation}
-  /// 
-  /// The default is that \p amount is 1, i.e:
-  /// 
-  /// ~~~cpp
-  /// // The following is the same:
-  /// auto diff = state.backward_diff<N>(fluid::dim_x);
-  /// auto diff = state.backward_diff<N>(fluid::dim_x, 1);
-  /// ~~~
-  /// 
-  /// \param[in]  amount  The amount to offset the iterator by.
-  /// \param[in]  dim     The dimension to offset in.
-  /// \tparam     N       The index of the element to compute the difference of.
-  /// \tparam     Value   The value which defines the dimension.
-  /*
-  template <std::size_t N, typename Dim>
-  fluidity_host_device constexpr auto
-  backward_diff(Dim dim, unsigned int amount = 1) const
-  {
-    return (*_ptr)[N] - (*(_ptr - amount * stride(dim)))[N];
-  }
-  */
 
   /// Returns the central difference between this iterator and the iterators \p
   /// amount places forward and backward from this iterator in dimension \p dim.
@@ -262,9 +212,9 @@ struct MultidimIterator : public DimensionInfo {
   /// auto diff = state.centralDiff(fluid::dim_z, 1);
   /// ~~~
   /// 
-  /// \param[in]  amount  The amount to offset the iterator by.
   /// \param[in]  dim     The dimension to offset in.
-  /// \tparam     Value   The value which defines the dimension.
+  /// \param[in]  amount  The amount to offset the iterator by.
+  /// \tparam     Dim     The type of the dimension.
   template <typename Dim>
   fluidity_host_device constexpr value_t
   central_diff(Dim dim, unsigned int amount = 1) const
@@ -272,38 +222,6 @@ struct MultidimIterator : public DimensionInfo {
     const auto shift = amount * stride(dim);
     return *(_ptr + shift) - *(_ptr - shift);
   }
-
-  /// Returns the central difference between this iterator and the iterators \p
-  /// amount places forward and backward from this iterator in dimension \p dim,
-  /// for the Nth element of the iterated over data. This method can only be
-  /// used when the iterated data overloads operator[].
-  /// 
-  /// \begin{equation}
-  ///   \Delta U = U_{\textrm{dim}(i + \texrm{amount})}[N] 
-  ///            - U_{\textrm{dim}(i - \texrm{amount})}[N]
-  /// \end{equation}
-  /// 
-  /// The default is that \p amount is 1, i.e:
-  /// 
-  /// ~~~cpp
-  /// // The following is the same:
-  /// auto diff = state.centralDiff<N>(fluid::dim_z);
-  /// auto diff = state.centralDiff<N>(fluid::dim_z, 1);
-  /// ~~~
-  /// 
-  /// \param[in]  amount  The amount to offset the iterator by.
-  /// \param[in]  dim     The dimension to offset in.
-  /// \tparam     N       The index of the element to difference.
-  /// \tparam     Value   The value which defines the dimension.
-  /*
-  template <std::size_t N, std::size_t Value>
-  fluidity_host_device constexpr auto
-  central_diff(unsigned int amount = 1) const
-  {
-    const auto shift = amount * stride(Dimension<Value>{});
-    return (*(_ptr + shift))[N] - (*(_ptr - shift))[N];
-  }
-  */
 
   /// Returns the forward difference between this iterator and the iterator \p
   /// amount places from from this iterator in dimension \p dim. I.e
@@ -325,9 +243,9 @@ struct MultidimIterator : public DimensionInfo {
   /// auto diff = state.forward_diff(fluid::dim_y, 2);
   /// ~~~
   /// 
-  /// \param[in]  amount  The amount to offset the iterator by.
   /// \param[in]  dim     The dimension to offset in.
-  /// \tparam     Value   The value which defines the dimension.
+  /// \param[in]  amount  The amount to offset the iterator by.
+  /// \tparam     Dim     The type of the dimension.
   template <typename Dim>
   fluidity_host_device constexpr value_t
   forward_diff(Dim dim, unsigned int amount = 1) const
@@ -335,84 +253,35 @@ struct MultidimIterator : public DimensionInfo {
     return *(_ptr + amount * stride(dim)) - *_ptr;
   }
 
-  /// Returns the forward difference between this iterator and the iterator \p
-  /// amount places from from this iterator in dimension \p dim, for the Nth
-  /// element in the data pointed to by the iterator. This function can only be
-  /// used when the iterator iterates over data which overloads operator[]. The
-  /// forward difference is:
-  /// 
-  /// \begin{equation}
-  ///   \Delta U = U_{\textrm{dim}(i + \texrm{amount})}[N] 
-  ///            - U_\textrm{dim}(i)[N]
-  /// \end{equation}
-  /// 
-  /// The default is that \p amount is 1, i.e:
-  /// 
-  /// ~~~cpp
-  /// // The following is the same:
-  /// auto diff = state.forward_diff<N>(fluid::dim_y);
-  /// auto diff = state.forward_diff<N>(fluid::dim_y, 1);
-  /// 
-  /// // But is different from (as this returns the forward difference between
-  /// // the element 2 positions ahead of the iterator's element and the
-  /// // iterator's element):
-  /// auto diff = state.forward_diff<N>(fluid::dim_y, 2);
-  /// ~~~
-  /// 
-  /// \param[in]  amount  The amount to offset the iterator by.
-  /// \tparam     Value   The value which defines the dimension.
-  /// \tparam     N       The index of the element to to difference.
-  /// \tparam     Value   The value which defines the dimension.
-  /*
-  template <std::size_t N, std::size_t Value>
-  fluidity_host_device constexpr auto
-  forward_diff(unsigned int amount = 1) const
-  {
-    return (*(_ptr + amount * stride(Dimension<Value>{})))[N] - (*_ptr)[N];
-  }
-  */
- 
   /// Returns the number of dimensions which can be iterated over.
   fluidity_host_device constexpr std::size_t num_dimensions() const
   {
     return dimensions;
   }
 
-  /// Offsets the iterator by \p amount in the dimension defined by \p dim, and
-  /// returns a new iterator to the offset element.
+  /// Offsets the iterator by \p amount in the 0 (x) dimension, returning the
+  /// new, offset iterator.
   /// \param[in]  amount  The amount of offset from this iterator.
-  /// \param[in]  dim     The dimension in which to offset.
-  /// \tparam     Value   The value which defines the dimension.
   fluidity_host_device constexpr self_t offset(int amount) const
   {
     return self_t{_ptr + amount * stride(dim_x), *this};
   }
 
   /// Offsets the iterator by \p amount in the dimension defined by \p dim, and
-  /// returns a new iterator to the offset element.
+  /// returns a new offset iterator.
   /// \param[in]  amount  The amount of offset from this iterator.
   /// \param[in]  dim     The dimension in which to offset.
-  /// \tparam     Value   The value which defines the dimension.
-/*
-  template <std::size_t Value>
-  fluidity_host_device constexpr self_t
-  offset(int amount, Dimension<Value> dim) const
-  {
-    return self_t{_ptr + amount * stride(Dimension<Value>{}), *this};
-  }
-*/
+  /// \tparam     Dim     The type of the dimension.
   template <typename Dim>
   fluidity_host_device constexpr self_t offset(int amount, Dim dim) const
   {
     return self_t{_ptr + amount * stride(dim), *this};
   }
 
-  /// Shifts the iterator by \p amount in dimension \p dim, modifying this
-  /// iterator. This can shift the iterator forward and backward in the given
-  /// dimension based on the sign of \p amount (+ = forward).
+  /// Shifts the iterator by \p amount in 0 (x) dimension, returning the
+  /// shifted iterator. This can shift the iterator forward and backward in the
+  /// x dimension based on the sign of \p amount (+ = forward).
   /// \param[in]  amount  The amount to advance the iterator by.
-  /// \param[in]  dim     The dimension to advance the iterator in.
-  /// \tparam     Value   The value which defines the dimension.
   fluidity_host_device constexpr self_t& shift(int amount)
   {
     _ptr += amount * stride(dim_x);
@@ -422,18 +291,13 @@ struct MultidimIterator : public DimensionInfo {
   /// Shifts the iterator by \p amount in dimension \p dim, modifying this
   /// iterator. This can shift the iterator forward and backward in the given
   /// dimension based on the sign of \p amount (+ = forward).
+
+  /// Shifts the iterator by \p amount in 0 (x) dimension, returning the
+  /// shifted iterator. This can shift the iterator forward and backward in the
+  /// given \p dim dimension based on the sign of \p amount (+ = forward).
   /// \param[in]  amount  The amount to advance the iterator by.
   /// \param[in]  dim     The dimension to advance the iterator in.
-  /// \tparam     Value   The value which defines the dimension.
-/*
-  template <std::size_t Value>
-  fluidity_host_device constexpr self_t&
-  shift(int amount, Dimension<Value> dim)
-  {
-    _ptr += amount * stride(Dimension<Value>{});
-    return *this;
-  }
-*/
+  /// \tparam     Dim     The type of the dimension.
   template <typename Dim>
   fluidity_host_device constexpr self_t& shift(int amount, Dim dim)
   {
@@ -441,31 +305,22 @@ struct MultidimIterator : public DimensionInfo {
     return *this;
   }
   /// Returns the size of a given dimension of iteration. This is the number of
-  /// elements which can be iterated over in the dimension.
-  /// \param[in]  dim     The dimension to advance the iterator in.
-  /// \tparam     Value   The value which defines the dimension.
-/*
-  template <std::size_t Value>
-  fluidity_host_device constexpr std::size_t
-  size(Dimension<Value> dim) const
-  {
-    return dim_info_t::size(Dimension<Value>());
-  }
-*/
+  /// elements which can be iterated over in the \p dim dimension.
+  /// \param[in]  dim   The dimension to advance the iterator in.
+  /// \tparam     Dim   The type of the dimension.
   template <typename Dim>
   fluidity_host_device constexpr std::size_t size(Dim dim) const
   {
     return dim_info_t::size(dim);
   }
-  /// Returns stride required to iterate in the dimension \p dim. The stride in
+  /// Returns stride required to iterate in the \p dim dimension. The stride in
   /// the 0 dimension (Value = 0) is always taken to be one.
   /// \param[in] dim    The dimension to get the offset for.
-  /// \tparam    Value  The value which defines the dimension.
+  /// \tparam    Dim    The type of the dimension.
   template <typename Dim> 
   fluidity_host_device constexpr std::size_t stride(Dim dim) const
   {
     return dim_stride(static_cast<const dim_info_t&>(*this), dim);
-//    return dim_info_t::offset(Dimension<Value>{});
   }
 };
 

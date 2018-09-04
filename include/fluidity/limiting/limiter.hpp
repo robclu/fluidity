@@ -82,10 +82,6 @@ class Limiter
   {
     using state_t = std::decay_t<decltype(*state_it)>;
     using value_t = typename state_t::value_t;
-    //Array<value_t, state_t::elements> limited;
-
-    //constexpr auto dim   = Dimension<Value>{};
-    //constexpr auto scale = value_t{0.5};
     
     const auto fwrd_diff = forward_diff<form_t>(state_it, mat, dim);
     const auto back_diff = backward_diff<form_t>(state_it, mat, dim);

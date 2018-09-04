@@ -48,8 +48,10 @@ struct SplitSolver {
 
   /// Defines the number of dimensions to solve over.
   static constexpr auto num_dimensions  = std::size_t{Dims()};
-  /// Defines the amount of padding in the data loader.
+  /// Defines the amount of padding in the data loader, on one side of a dim.
   static constexpr auto padding         = loader_t::padding;
+  /// Defines the amount of padding on both sides of a domain.
+  static constexpr auto padding_both    = (padding << 1);
   /// Defines the dispatch tag for dimension overloading.
   static constexpr auto dispatch_tag    = dim_dispatch_tag<num_dimensions>;
 
@@ -117,31 +119,28 @@ struct SplitSolver {
   /// \tparam    Mat    The type of the material for the system.
   /// \tparam    T      The data type for the scaling factor.
   /// \tparam    Value  The value which defines the dimension for the pass.
-  template <typename It, typename Mat, typename T, std::size_t Value>
+  template <typename It, typename Mat, typename T, typename Dim>
   fluidity_device_only static void invoke(It&&             in    ,
                                           It&&             out   ,
                                           Mat&&            mat   ,
                                           T                dtdh  ,
                                           setter_ref_t     setter,
-                                          Dimension<Value>       )
+                                          Dim              dim   )
   {
-    constexpr auto dim = Dimension<Value>();
     if (in_range(in))
     {
       const auto flux_solver = flux_solver_t(mat, dtdh);
             auto patch       = make_patch_iterator(in, dispatch_tag, dim);
 
       // Shift the iterators to offset the padding, then set the patch data:
-      unrolled_for<num_dimensions>([&] (auto i) 
+      unrolled_for<num_dimensions>([&] (auto dim_off)
       {
-        constexpr auto dim_offset = Dimension<i>();
-        shift_iterators(in, out, patch, dim, dim_offset);
+        shift_iterators(in, out, patch, dim_off, dim);
       });
       *patch = *in;
 
       __syncthreads();
       loader_t::load_boundary(in, patch, dim, setter);
-//      __syncthreads();
 
       // Update states as (for dimension i):
       //  U_i + dt/dh * [F_{i-1/2} - F_{i+1/2}]
@@ -150,20 +149,30 @@ struct SplitSolver {
   }
 
  private:
-  /// Offsets the global iterator in the given dimension.
-  /// \param[in] it       The iterator to offset.
-  /// \tparam    Iterator The type of te iterator.
-  /// \tparam    Value    The type which defines the dimension to solve in.
-  /// \tparam    VO       The type which defines the dimension to offset in.
-  template <typename I1, typename I2, typename DS, typename DO>
+  /// Offsets the iterators used by the solver. This will offset the iterators
+  /// in the dimension defined by \p dim_off, and will additionally offset the
+  /// patch iterator by the padding amount if the \p dim_solve is the same as
+  /// the offset dim \p dim_off.
+  /// \param[in] in        The input data iterator for solving.
+  /// \param[in] out       The output data iterator for solving.
+  /// \param[in] patch     The iterator over the patch data.
+  /// \param[in] dim_off   The dimension to offset in.
+  /// \param[in] dim_solve The dimension to solve in.
+  /// \tparam    I1        The type of the input and output iterators.
+  /// \tparam    I2        The type of the patch iterator.
+  /// \tparam    ODim      The type of the offset dimension specifier.
+  /// \tparam    SDim      The type of the solve dimension specifier.
+  template <typename I1, typename I2, typename ODim, typename SDim>
   fluidity_host_device static auto
-  shift_iterators(I1&& in, I1&& out, I2&& patch, DS, DO)
+  shift_iterators(I1&& in, I1&& out, I2&& patch, ODim dim_off, SDim dim_solve)
   {
-    constexpr auto dim_off = DO();
-    constexpr auto pad_off = DS::value == DO::value ? padding : 0;
-    in.shift(flattened_id(dim_off), dim_off);
-    out.shift(flattened_id(dim_off), dim_off);
-    patch.shift(thread_id(dim_off) + pad_off, dim_off);
+    const auto in_out_shift = flattened_id(dim_off);
+    in.shift(in_out_shift , dim_off);
+    out.shift(in_out_shift, dim_off);
+
+    const auto shift = thread_id(dim_off)
+                     + (dim_solve == dim_off ? padding : 0);
+    patch.shift(shift, dim_off);
   }
 
   /// Returns a shared memory multi dimensional iterator over a patch. 

@@ -27,8 +27,6 @@ enum class Type {
   unsplit = 1,  //!< Defines an unsplit type implementation.
 };
 
-
-
 /// The SolverTraits class defines the properties of a solver.
 /// \tparam Loader        The type used to load in data for the solver.
 /// \tparam Reconstructor The type used to reconstruct cell data.

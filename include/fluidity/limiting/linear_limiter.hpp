@@ -39,20 +39,19 @@ struct Linear {
   static constexpr std::size_t width = 1;
 
   /// Implementation of the linear limiting functionality.
-  /// \param[in]  state_it  The state iterator to limit.
-  /// \tparam     Iterator  The type of the state iterator.
-  /// \tparam     Material  The type of the material for the system.
-  /// \tparam     Value     The value which defines the dimension.
-  template <typename Iterator, typename Material, std::size_t Value>
-  fluidity_host_device constexpr auto
-  operator()(Iterator&& state_it, Material&&, Dimension<Value>) const
+  /// \param[in]  state  The state iterator to limit.
+  /// \tparam     IT    The type of the state iterator.
+  /// \tparam     Mat   The type of the material for the system.
+  /// \tparam     Dim   The type of the dim.
+  template <typename IT, typename Mat, typename Dim>
+  fluidity_host_device constexpr auto operator()(IT&& state, Mat&&, Dim) const
   {
-    using state_t     = typename std::decay_t<decltype(*state_it)>;
+    using state_t     = typename std::decay_t<decltype(*state)>;
     using value_t     = typename state_t::value_t;
     using container_t = Array<value_t, state_t::elements>;
 
     container_t container;
-    unrolled_for<state_t::elements>([&] (auto i)
+    unrolled_for_bounded<state_t::elements>([&] (auto i)
     {
       container[i] = value_t{0};
     });
