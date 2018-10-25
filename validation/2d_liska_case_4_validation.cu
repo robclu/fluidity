@@ -14,12 +14,8 @@
 //
 //==------------------------------------------------------------------------==//
 
-#include <fluidity/flux_method/flux_methods.hpp>
-#include <fluidity/limiting/limiters.hpp>
-#include <fluidity/material/ideal_gas.hpp>
-#include <fluidity/reconstruction/reconstructors.hpp>
-#include <fluidity/simulator/generic_simulator.hpp>
-#include <fluidity/state/state.hpp>
+#include <fluidity/setting/settings.hpp>
+#include <fluidity/simulator/simulator_impl.hpp>
 #include <iostream>
 #include <memory>
 
@@ -27,42 +23,21 @@ using namespace fluid;
 
 // Defines the type of data to use.
 using real_t          = double;
-// Defines a 1 dimensional primitive state.
-using primitive2d_t   = state::primitive_t<real_t, 2>;
-// Defines the material type to use for the tests.
-using material_t      = material::IdealGas<real_t>;
-/// Defines the type of the limiter to use.
-using limiter_t       = limit::VanLeer<limit::cons_form_t>;
-// Defines the type of the limiter for the simulations.
-using reconstructor_t = recon::MHReconstructor<limiter_t>;
-/// Defines the execution policy of the solver, CPU / GPU.
-using execution_t     = fluid::exec::gpu_type;
-
-// Defines the traits for the simulator to use the GPU.
-using sim_traits_t =
-  fluid::sim::SimulationTraits
-  < primitive2d_t
-  , material_t
-  , reconstructor_t
-  , flux::Hllc
-  , solver::Type::split
-  , execution_t
-  >;
 
 int main(int argc, char** argv)
 {
-  using simulator_t = fluid::sim::GenericSimulator<sim_traits_t>;
-  auto simulator    = std::make_unique<simulator_t>();
+  constexpr auto res     = real_t{0.0025};
+  constexpr auto size_x  = real_t{1.0};
+  constexpr auto size_y  = real_t{1.0};
 
-  constexpr auto size  = real_t{1.0};
-  constexpr auto cells = real_t{400};
-  constexpr auto res   = size / cells;
+  fluid::sim::sim_option_manager_t sim_manager;
+  auto simulator = sim_manager.create_default();
 
-  simulator->configure_resolution(res)
-           ->configure_dimension(fluid::dim_x, 0.0, size)
-           ->configure_dimension(fluid::dim_y, 0.0, size)
-           ->configure_sim_time(0.25)
-           ->configure_cfl(0.87);
+  simulator->configure_resolution(res);
+  simulator->configure_dimension(fluid::dim_x, 0.0, size_x);
+  simulator->configure_dimension(fluid::dim_y, 0.0, size_y);
+  simulator->configure_sim_time(0.25);
+  simulator->configure_cfl(0.9);
 
   simulator->fill_data({
     {

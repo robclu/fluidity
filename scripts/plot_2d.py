@@ -13,20 +13,32 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 plt.rc('xtick', labelsize=25) 
 plt.rc('ytick', labelsize=25) 
 
-plt.figure(figsize=(20, 20))
+plt.figure(figsize=(25, 25))
 plt.rc('text', usetex=True)
 plt.rc('font', family='serif')
+plt.rc('font', weight='bold')
+
+plt.rcParams['text.latex.preamble'] = [r'\usepackage{sfmath} \boldmath']
 
 #data = np.genfromtxt(sys.argv[1])
 
-argc       = len(sys.argv)
-grid       = False
-contour    = False
-copts      = False
-cmap       = True
-cmaplevels = False
-origin     = 'lower'
-levels     = np.arange(0, 1)
+argc        = len(sys.argv)
+grid        = False
+contour     = False
+copts       = False
+cmap        = False
+cmaplevels  = False
+show_ticks  = True
+save        = False
+black       = False
+quiver       = False
+output_name = ""
+origin      = 'lower'
+levels      = np.arange(0, 1)
+xlabel      = ""
+ylabel      = ""
+title       = ""
+fontsize    = 36
 
 for i in range(1, argc):
   arg = sys.argv[i]
@@ -44,17 +56,41 @@ for i in range(1, argc):
     cont_max  = float(sys.argv[i+2])
     cont_step = float(sys.argv[i+3])
     levels    = np.arange(cont_min, cont_max, cont_step)
+  elif (arg == "--contour-black"):
+    black = True
   elif (arg == "--cmap-levels"):
     cmap_min   = float(sys.argv[i+1])
     cmap_max   = float(sys.argv[i+2])
     cmaplevels = True
+  elif (arg == "--quiver"):
+    quiver  = True
+    vx_data = np.genfromtxt(sys.argv[i+1])
+    vy_data = np.genfromtxt(sys.argv[i+2])
+  elif (arg == "--xlabel"):
+    xlabel = sys.argv[i+1]
+  elif (arg == "--ylabel"):
+    ylabel = sys.argv[i+1]
+  elif (arg == "--title"):
+    title = sys.argv[i+1]
+  elif (arg == "--no-ticks"):
+    show_ticks = False
+  elif (arg == '--save'):
+    save        = True
+    output_name = sys.argv[i+1]
   else:
     continue
 
-ax         = plt.gca()
+ax = plt.gca()
+if (not show_ticks):
+  ax.axes.get_xaxis().set_visible(False)
+  ax.axes.get_yaxis().set_visible(False)
+
 ax_divider = make_axes_locatable(ax)
 cmap_ax    = ax_divider.append_axes("bottom", size="7%", pad=0.6)
-cont_ax    = ax_divider.append_axes("right" , size="7%", pad=0.6)
+
+#if contour:
+  #cont_ax    = ax_divider.append_axes("right" , size="7%", pad=0.6)
+
 if grid:
   lenx = len(data[0,:])
   leny = len(data[:,0])
@@ -68,8 +104,10 @@ if cmap:
   if not cmaplevels:
     cmap_min = data.min()
     cmap_max = data.max()  
-  im      = ax.imshow(data, cmap=plt.cm.gist_rainbow, origin=origin, vmin=cmap_min, vmax=cmap_max)
+  im      = ax.imshow(data, cmap=plt.cm.jet, origin=origin, vmin=cmap_min, vmax=cmap_max)
   col_bar = plt.colorbar(im, cax=cmap_ax, orientation="horizontal")
+  plt.xlabel(r"\textbf{{{}}}".format(xlabel), fontsize=fontsize)
+  
 
 if contour:
   if not copts:
@@ -77,7 +115,25 @@ if contour:
     cont_min  = cont_data.min()
     cont_step = (cont_max - cont_min) / 20.0
     levels = np.arange(cont_min, cont_max, cont_step)
-  cont     = ax.contour(cont_data, levels, cmap=plt.cm.gist_gray, origin=origin)
-  cont_bar = plt.colorbar(cont, cax=cont_ax)
+  if black:
+    cont = ax.contour(cont_data, levels, colors='k', origin=origin)
+  else:
+    cont = ax.contour(cont_data, levels, cmap=plt.cm.gist_gray, origin=origin)
+  #cont_bar = plt.colorbar(cont, cax=cont_ax)
 
-plt.show()
+if quiver:
+  # At high resolution, plotting every velocity component makes it difficult
+  # to view the filed, so we plot only a few:
+  data_size     = vx_data[0, :].size
+  skip_pcnt     = 0.06
+  skip_elements = math.floor(data_size * skip_pcnt)
+  skip         = (slice(None, None, skip_elements),
+                  slice(None, None, skip_elements))
+  x, y = np.meshgrid(np.linspace(start=0, stop=data_size, num=data_size),
+                     np.linspace(start=0, stop=data_size, num=data_size))  
+  ax.quiver(x[skip], y[skip], vx_data[skip], vy_data[skip], width=0.0015)
+
+if save:
+  plt.savefig(output_name, bbox_inches='tight')
+else:
+  plt.show()

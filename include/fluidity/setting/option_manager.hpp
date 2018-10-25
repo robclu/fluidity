@@ -19,6 +19,8 @@
 
 #include "option.hpp"
 #include "option_tuple.hpp"
+#include <fluidity/algorithm/for_each.hpp>
+//#include "parameter_manager.hpp"
 
 namespace fluid   {
 namespace setting {
@@ -120,59 +122,97 @@ namespace setting {
 /// \tparam Base    The type of the base class for creation.
 /// \tparam Derived The type of the derived class to use to create the Base.
 /// \tparam Options The list of Option types.
-template <typename Base, typename Derived, typename... Options>
+template <typename    Base        ,
+          typename    Derived     ,
+          typename    ParamManager,
+          typename... Options     >
 struct OptionManager
 {
   /// Defines the type of the base pointer to create.
-  using base_t    = Base;
+  using base_t          = Base;
   /// Defines the type of the derived pointer to use to create the base pointer.
-  using derived_t = Derived;
+  using derived_t       = Derived;
   /// Defines the type of the options.
-  using options_t = OptionTuple<Options...>;
+  using options_t       = OptionTuple<Options...>;
+  /// Defines the type of the parameter manager
+  using param_manager_t = std::shared_ptr<ParamManager>;
+  //using param_manager_t = std::shared_ptr<ParameterManager>;
     
   /// Defines the total number of options.
-  static constexpr auto total_opts_v = sizeof...(Options);
+  static constexpr auto total_opts_v    = sizeof...(Options);
+  /// Defines the string for all options.
+  static constexpr const char* all_opts = "all";
 
   /// Constructor which checks that each of the options conforms to Option
   /// interface.  
   OptionManager()
   {
-    for_each_option(this->_opts, [] (const auto& opt)
+    _param_manager = std::make_shared<ParamManager>();
+  }
+
+  /// Displays the option informtation for the option \p op_type, or for all 
+  /// options by default.
+  /// \param[in] op_type The option to display the information for.
+  void display_option_info(std::string op_type = all_opts)
+  {
+    for_each_option(this->_opts, [&] (auto& opt)
     {
-      //using option_t = std::decay_t<decltype(opt)>;
-      //static_assert(is_option_v<option_t>, "Type is not derived from Option<>");
+      if (opt.is_valid_option_type(op_type) || std::string(all_opts) == op_type)
+      {
+        opt.print();
+      }
     });
+  }
+
+  /// Sets the parameter manager for the option manager.
+  /// \param  manager The parameter manager.
+  /// \tparam Manager The type of the parameter manager implementation.
+  template <typename Manager>
+  void set_param_manager(std::unique_ptr<Manager>&& manager)
+  {
+    _param_manager = std::move(manager);
   }
 
   /// Configures the option manager from a Settings configuration.
   /// \param[in] settings The settings to configure the manager with.
-  void configure(Settings& settings)
+  void configure(const std::vector<Setting>& settings)
   {
     for (auto& setting : settings)
     {
+      /*
       if (setting.used)
       {
         continue;
       }
-      if (set(setting.name, setting.value))
+      */
+      //if (try_set_option(setting.name, setting.value))
+      //{
+        //setting.used = true;
+      //  continue;
+        //std::cout << "Setting set:\n" << setting << "\n";
+      //}
+      if (_param_manager->try_set_param(setting))
       {
-        setting.used = true;
+        continue;
       }
+      /*
+      std::cout << "\tUnused setting:\n" << setting << "\n"
+                << "\tSetting does not match any simulator option type "
+                << "or simulation paramter type.\n";
+      */
     }
+    _param_manager->display_parameters();
   }
 
-  /// Sets an option with type \p op_type to have the value defined by \p
-  /// op_value, returning the modified option manager. If either the \p op_type
-  /// or the \p op_value is invalid, a message is logged and the manager is
-  /// unmodified. This returns true if the option was set.
+  /// Tries to sets an option with type \p op_type to have the value defined by
+  /// \p op_value, returning true on success and false on failure.
   /// \param[in] op_type  The type of the option.
   /// \param[in] op_value The value of the option to set.
-  bool set(const std::string& op_type, const std::string& op_value)
+  bool try_set_option(const std::string& op_type, const std::string& op_value)
   {
     bool set = false;
     for_each_option(this->_opts, [&] (auto& opt)
     {
-      //auto& opt = o.option;
       if (opt.is_valid_option_type(op_type))
       {
         if (opt.set_option_value(op_value))
@@ -182,6 +222,16 @@ struct OptionManager
       }
     });
     return set;
+  }
+
+  /// Tries to set a simulation parameter with type \p param_type to have the
+  /// values(s) defined by the sequence \p seq, returning true on success and
+  /// false on failure.
+  /// \param[in] param_type The type of the parameter
+  /// \param[in] seq        The sequence to get the values from.
+  bool try_set_param(const Setting& setting)
+  {
+    return _param_manager->try_set_param(setting);
   }
 
   /// Creates a unique pointer to a Base class type using a Derived type, where
@@ -207,11 +257,17 @@ struct OptionManager
                "options. This method is a debug build optimisation.");
     */
     std::unique_ptr<base_t> base = std::make_unique<derived_t>();
+// /    base->configure(_param_manager);
+    for_each(_param_manager->get_params(), [&] (const auto& param)
+    {
+      //base->configure(param);
+    });
     return std::move(base);
   }
 
  private:
-  options_t _opts; //!< The options to manage.
+  options_t       _opts;          //!< The options to manage.
+  param_manager_t _param_manager; //!< The manager for simulation parameters.
 };
 
 }} // fluid::setting

@@ -66,6 +66,7 @@ if (${CUDA_CLANG})
 
   # If we use clang for cuda, we use clang for c++ as well
   set(FLUID_CXX_COMPILER ${CLANG_COMPILER_PATH})
+  set(CUDA_PATH "/lsc/opt/cuda-9.0")
   set(USING_CLANG TRUE)
 else()
   set(USING_CLANG FALSE)
@@ -135,6 +136,10 @@ message("-- CUDA LIBRARY DIR: ${CUDA_LIB_DIRS}"   )
 set(CUDA_DEFS "-DFLUIDITY_CUDA_AVAILABLE=1")
 set(CUDA_ARCH_VER "35")
 
+if (NOT MAX_REG_COUNT)
+  set(MAX_REG_COUNT 64)
+endif()
+
 if(WIN32)
 
 else(APPLE)
@@ -150,6 +155,7 @@ else(APPLE)
     set(CUDA_ARCH_FLAG "${CUDA_ARCH_FLAG}code=sm_${CUDA_ARCH_VER}")
     set(CUDA_EXP_FLAGS "-expt-relaxed-constexpr -expt-extended-lambda")
     set(CUDA_FLAGS     "-use_fast_math -O3 -std=c++14 ${CUDA_EXP_FLAGS}")
+    set(CUDA_FLAGS     "${CUDA_FLAGS} -maxrregcount=${MAX_REG_COUNT}")
     set(CUDA_FLAGS     "${CUDA_FLAGS} ${CUDA_ARCH_FLAG}")
     set(CUDA_FLAGS     "${CUDA_FLAGS} -lineinfo -Xptxas=-v")
   else()

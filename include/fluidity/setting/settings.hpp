@@ -16,62 +16,22 @@
 #ifndef FLUIDITY_SETTING_CONFIGURE_HPP
 #define FLUIDITY_SETTING_CONFIGURE_HPP
 
+#include "setting.hpp"
 #include <fluidity/utility/string.hpp>
-#include <cstddef>
-#include <iomanip>
-#include <iostream>
+//#include <cstddef>
+//#include <iomanip>
+//#include <iostream>
 #include <fstream>
+#include <streambuf>
 
 namespace fluid   {
 namespace setting {
 
-/// The Setting class holds the name of a setting, and a value for the setting.
-struct Setting {
-  /// Constructor to create a setting from a string, where the name of the
-  /// setting and the setting 
-  /// \param[in] seq    The sequence to extact the setting from.
-  /// \param[in] delim  The delimeter for the sequence. 
-  Setting(const std::string& seq, char delim)
-  {
-    auto results = util::tokenize(seq, delim, true);
-    if (results.size() != 2)
-    {
-      // logging::logger_t::log(logging::debug_v, 
-      //   "Attempt to create a setting which does not have the form:\n\n't"
-      //   "setting_name delimeter setting_value\n");
-    }
-    else
-    {
-      name  = results.front();
-      value = results.back();
-    }
-  }
-
-  /// Returns true if the setting is empty.
-  bool is_empty() const { return name.size() == 0 || value.size() == 0; }
-
-  /// Overload of stream operator to output a setting to a stream.
-  /// \param[in] o The output stream to output to.
-  /// \param[in] s The setting to output to the stream.
-  friend std::ostream& operator<<(std::ostream& o, const Setting& s)
-  {
-    o << "{\n    setting-name  : " 
-      << std::right    << std::setw(15) << s.name
-      << "\n    setting-value : " 
-      << std::right    << std::setw(15) << s.value
-      << "\n}";
-    return o;
-  }
-
-  std::string name  = "";     //!< The name of the setting.
-  std::string value = "";     //!< The value of the setting.
-  bool        used  = false;  //!< If the setting has been used.
-};
-
 /// The Settings class holds a list of settings.
 class Settings {
+  //using setting_t            = std::unique_ptr<Setting>;
   /// Defines the type of the container for the settings.
-  using settings_container_t = std::vector<Setting>;
+  //using settings_container_t = std::vector<Setting>;
 
   /// Defines the type of the delimeter used for the settings.
   static constexpr const char delim   = ':';
@@ -79,66 +39,120 @@ class Settings {
   static constexpr const char comment = '#';
   /// Defines a space character.
   static constexpr const char space   = ' ';
+  /// Defines the separator for setting types.
+  static constexpr const char sep     = ',';
+  /// Defines the identifier for opening an object.
+  static constexpr const char open    = '{';
+  /// Defines the identifier for closing an object.
+  static constexpr const char close   = '}'; 
 
  public:
-  /// Constructor to create the settings from a file.
+  /// Returns a list of settings from a string \p data.
+  /// \param[in] data The data to load the settings from.
+  static auto from_string(const std::string& data)
+  {
+    std::vector<Setting> settings;
+
+    std::size_t start = 0, match = 0; 
+    int setting_end = 0;
+    do {
+      // Know that the form is <name> : <value>, so look for the :
+      if ((match = data.find(delim, start)) == std::string::npos)
+        break;
+
+      settings.emplace_back();
+      auto& setting = settings.back();
+
+      setting.name = data.substr(start, match - start);
+      util::remove(setting.name, ' ', '{', '\n');
+      
+      start = ++match;
+      while (setting_end != -1)
+      {
+        auto& c = data[match++];
+        if (c == open)
+        {
+          setting_end += 1;
+          setting.complex = true;
+        }
+        if ((c == sep && !setting_end) || c == close)
+        {
+          setting_end -= 1;
+        }
+      }
+      setting.value = data.substr(start, match - start);
+      start         = ++match;
+      setting_end   = 0;
+      //std::cout << setting << "\n";
+    } while (match != std::string::npos);
+    return settings;
+  }
+
+  /// Returns a list of settings from a file at the location \path.
   /// \param[in] path The path to the file to load the settings from.
-  Settings(const std::string& path)
+  static auto from_file(const std::string& path)
   {
-    load_from_file(path);
+    std::string   data;
+    std::ifstream f(path);
+
+    f.seekg(0, std::ios::end);
+    data.reserve(f.tellg());
+    f.seekg(0, std::ios::beg);
+    data.assign((std::istreambuf_iterator<char>(f)),
+                 std::istreambuf_iterator<char>());
+    return from_string(data);
   }
 
-  /// Overload of operator[] to get the \p ith setting.
-  /// \param[in] i The index of the setting to get.
-  Setting& operator[](std::size_t i)
-  {
-    return _settings[i];
-  }
+ //private:
 
-  /// Returns the total number of settings.
-  std::size_t size() const { return _settings.size(); }
-
-  /// Returns a const iterator to the start of the settings.
-  auto begin() { return _settings.begin(); }
-
-  /// Returns a const iterator to the end of the settings.
-  auto end() { return _settings.end(); }
-
- private:
-  settings_container_t _settings; //!< The list of settings.
-
+/*
   /// Loads the settings container with the settings in the file at the \p path.
   /// \param[in] path The path to the settings file.
   void load_from_file(const std::string& path)
-  {
-    std::string   line;
+  {    std::string   line, data;
     std::ifstream f(path);
 
-    if (!f.is_open())
-    {
-      // logging::logger_t::log(logging::debug_v,
-      //   "Failed to open the settings file: %s", path.c_str());
-      return;
-    }
+    f.seekg(0, std::ios::end);
+    data.reserve(f.tellg());
+    f.seekg(0, std::ios::beg);
+    data.assign((std::istreambuf_iterator<char>(f)),
+                 std::istreambuf_iterator<char>());
 
-    while (std::getline(f, line))
-    {
-      // Check to see that this is a valid line
-      int start = 0;
-      while (line[start] == space) { start++; }
-      if (line[start] == comment)  { continue; }
+    std::size_t pos = 0, res = 0; 
+    int it = 0, term = 0;
+    do {
+      if ((res = data.find(delim, pos)) == std::string::npos)
+        break;
 
-      _settings.emplace_back(Setting(line, delim));
-      if (_settings.back().is_empty())
+      _settings.emplace_back();
+      auto& setting = _settings.back();
+
+      setting.name = data.substr(pos, res - pos);
+      util::remove(setting.name, ' ', '{', '\n');
+      
+      pos = ++res;
+      while (term != -1)
       {
-        _settings.pop_back();
+        auto& c = data[res++];
+        if (c == open)
+        {
+          term += 1;
+          setting.complex = true;
+        }
+        if ((c == sep && !term) || c == close)
+        {
+          term -= 1;
+        }
       }
-    }
-    for (const auto& setting : _settings)
-    {
+      term = 0;
+      setting.value = data.substr(pos, res - pos);
+      //util::remove(setting.value, ' ', '\n');
+      pos = ++res;
       std::cout << setting << "\n";
-    }
+    } while (res != std::string::npos);
+
   }
+*/
 };
 
 }} // namespace fluid::setting

@@ -26,6 +26,7 @@
 #include <fluidity/setting/option_manager.hpp>
 #include <fluidity/setting/reconstruction_option.hpp>
 #include <fluidity/setting/solve_option.hpp>
+#include <fluidity/setting/parameter/parameter_managers.hpp>
 #include <fluidity/solver/flux_solver.hpp>
 #include <fluidity/state/state.hpp>
 #include <fluidity/utility/type_traits.hpp>
@@ -42,7 +43,7 @@ struct SimTraits {
   /// Defines the default data type to use.
   using def_data_t    = double;
   /// Defines the default number of dimensions.
-  using def_dims_t    = Num<2>;
+  using def_dims_t    = Num<1>;
   /// Defines the default material to use.
   using def_mat_t     = material::IdealGas<def_data_t>;
   /// Defines the default limiting form.
@@ -52,7 +53,7 @@ struct SimTraits {
   /// Defines the default reconstructor to use.
   using def_recon_t   = recon::MHReconstructor<def_limiter_t>;
   /// Defines the default flux method to use.
-  using def_flux_t    = flux::Force;
+  using def_flux_t    = flux::Hllc;
   /// Defines the default execution type for the simulation.
   using def_exec_t    = fluid::exec::gpu_type;
 
@@ -101,6 +102,7 @@ struct SimTraits {
     setting::OptionManager<
       SimBase                                            ,
       SimImpl                                            ,
+      setting::param_manager_t                           ,
       setting::DataOption                                ,
       setting::DimensionOption                           ,
       setting::MaterialOption<data_t>                    ,

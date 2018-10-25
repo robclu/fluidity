@@ -48,12 +48,6 @@ struct OptionBuilder {
   static auto build(Base& base)
   {
     using derived_type_t = typename Derived::template make_type_t<Ts...>;
-/*
-    static_assert(std::is_base_of<Base, derived_type_t>::value,
-                  "Derived type is not derived from the base class, "
-                  "so a pointer to the base cannot be created through "
-                  "this derived type.");
-*/
     base = std::move(std::make_unique<derived_type_t>());
   }
 };
@@ -67,14 +61,6 @@ template <> struct OptionBuilder<> {
   /// Defines the type of the builder with an appended paramter.
   /// \tparam T The type to append.
   template <typename T> using appended_t = OptionBuilder<T>;
-
-  /// This simply does nothing since there are no type parameters to instantiate
-  /// the derived type with.
-  /// \param[in] base     The base class unique_ptr to modify.
-  /// \tparam    Derived  The type of the derived class.
-  /// \tparam    Base     The type of the base class.
-  //template <typename Derived, typename Base>
-  //static auto build(Base& base) {}
 };
 
 } // namespace detail

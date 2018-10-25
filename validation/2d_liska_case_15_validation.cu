@@ -1,4 +1,4 @@
-//==--- fluidity/tests/2d_liska_case_4_validation.cu ---------*- C++ -*- ---==//
+//==--- fluidity/tests/2d_liska_case_15_validation.cu --------*- C++ -*- ---==//
 //            
 //                                Fluidity
 // 
@@ -8,7 +8,7 @@
 //
 //==------------------------------------------------------------------------==//
 //
-/// \file  2d_liska_case_12_validation.cu
+/// \file  2d_liska_case_15_validation.cu
 /// \brief This file defines a validation test for 2D solvers where the input
 ///        data is a 2D riemann problem.
 //
@@ -36,7 +36,7 @@ int main(int argc, char** argv)
   simulator->configure_resolution(res);
   simulator->configure_dimension(fluid::dim_x, 0.0, size_x);
   simulator->configure_dimension(fluid::dim_y, 0.0, size_y);
-  simulator->configure_sim_time(0.25);
+  simulator->configure_sim_time(0.2);
   simulator->configure_cfl(0.9);
 
   simulator->fill_data({
@@ -45,9 +45,9 @@ int main(int argc, char** argv)
       {
         return pos[1] > 0.5
         ? pos[0] < 0.5
-          ? 1.0 : 0.5313        // (top left) | (top right)
+          ? 0.5197 : 1.0        // (top left) | (top right)
         : pos[0] < 0.5          // -----------|-------------
-          ? 0.8 : 1.0;          // (bot left) | (bot right)
+          ? 0.8 : 0.5313;       // (bot left) | (bot right)
       }
     },
     {
@@ -55,9 +55,9 @@ int main(int argc, char** argv)
       {
         return pos[1] > 0.5
           ? pos[0] < 0.5
-            ? 1.0 : 0.4           // (top left) | (top right)
+            ? 0.4 : 1.0           // (top left) | (top right)
           : pos[0] < 0.5          // -----------|-------------
-            ? 1.0 : 1.0;          // (bot left) | (bot right)
+            ? 0.4 : 0.4;          // (bot left) | (bot right)
       }
     },
     {
@@ -65,9 +65,9 @@ int main(int argc, char** argv)
       {
         return pos[1] > 0.5
           ? pos[0] < 0.5
-            ? 0.7276 : 0.0        // (top left) | (top right)
-          : pos[0] < 0.5          // -----------|-------------
-            ? 0.0 : 0.0;          // (bot left) | (bot right)
+            ? -0.6259 : 0.1        // (top left) | (top right)
+          : pos[0] < 0.5           // -----------|-------------
+            ? 0.1     : 0.1;       // (bot left) | (bot right)
       }
     },
     {
@@ -75,13 +75,13 @@ int main(int argc, char** argv)
       {
         return pos[1] > 0.5
           ? pos[0] < 0.5
-            ? 0.0 : 0.0           // (top left) | (top right)
-          : pos[0] < 0.5          // -----------|-------------
-            ? 0.0 : 0.7276;       // (bot left) | (bot right)
+            ? -0.3 : -0.3           // (top left) | (top right)
+          : pos[0] < 0.5            // -----------|-------------
+            ? -0.3 : 0.4276;        // (bot left) | (bot right)
       }
     }
   });
 
   simulator->simulate();
-  simulator->write_results_separate_raw("2d_liska_case_12");
+  simulator->write_results_separate_raw("2d_liska_case_15");
 }

@@ -61,17 +61,17 @@ class SimulatorImpl final : public Simulator {
   using traits_t = SimTraits<base_t, this_t, Traits...>;
 
   /// Defines the type of the state for the simulation.
-  using state_t    = typename traits_t::state_t;
+  using state_t      = typename traits_t::state_t;
   /// Defines the data type used in the state vector.
-  using value_t    = typename traits_t::data_t;
+  using value_t      = typename traits_t::data_t;
   /// Defines the type of the material for the simulation.
-  using material_t = typename traits_t::material_t;
+  using material_t   = typename traits_t::material_t;
   /// Defines the type of the reconstruction method to use.
-  using recon_t    = typename traits_t::recon_t;
+  using recon_t      = typename traits_t::recon_t;
   /// Defines execution policy for the simulator.
-  using exec_t     = typename traits_t::exec_t;
+  using exec_t       = typename traits_t::exec_t;
   /// Defines the type of the solver.
-  using solver_t   = typename traits_t::solver_t;
+  using solver_t     = typename traits_t::solver_t;
 
   /// Defines the type of the parameter container.
   using params_t    = Parameters<value_t>;
@@ -100,6 +100,20 @@ class SimulatorImpl final : public Simulator {
   /// Runs the simulation until completion.
   void simulate() override;
 
+/*
+  void configure(const setting::Parameter* param) override
+  {
+    std::cout << "Don't know how to set this parameter\n";
+  }
+*/
+/*
+  /// Configures the simulator from using the paramter manager.
+  void configure(const setting::CflParameter* cfl_param) override
+  {
+    _params.cfl = cfl_param->cfl();
+    std::cout << "Set sim cfl param : " << _params.cfl << "\n";
+  }
+*/
   /// Fills the simulator with simulation data for a simulator, where each of
   /// the fillers store the name of the property which they are filling, and 
   /// a function object which can fill values based on their position in the
@@ -154,6 +168,15 @@ class SimulatorImpl final : public Simulator {
   storage_t _data;    //!< Data for the simulation.
   params_t  _params;  //!< The parameters for the simulation.
   setter_t  _setter;  //!< The boundary setter.
+
+
+
+/*
+  void configure(const setting::Parameter* param)
+  {
+    std::cout << "Don't know how to set this param : " << param->type() << "\n";
+  }
+*/
 
   /// Returns the dimension information for the simulator.
   auto dimension_info() const;

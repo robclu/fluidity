@@ -40,6 +40,10 @@ class Simulator {
   /// Defines the type of the functor which can be used to fill elements.
   using filler_t = std::function<float(const Array<float,3>&)>;
 
+  /// Defines the type of the parameter manager used to set the parameters for
+  /// the simulation.
+  //using param_ptr_t = std::shared_ptr<setting::ParameterManager>;
+
   /// Defines a struct which stores information to fill the simulation data.
   struct FillInfo {
     const char* data_name;  //!< Name of the data to fill.
@@ -55,6 +59,15 @@ class Simulator {
 
   /// Runs the simulation.
   virtual void simulate() = 0;
+
+  //virtual void configure(const setting::Parameter* param)
+  //{
+  //  std::cout << "Don't know how to set this parameter\n";
+  //}
+
+  /// Overload of configuration function to set the CFL number.
+  /// \param[in] param The parameter which defins the cfl.
+  //virtual void configure(const setting::CflParameter* param) = 0;
 
   /// Configures the CFL number to use for the simulation.
   /// \param[in] cfl The CFL number for the simulation.

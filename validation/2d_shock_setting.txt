@@ -1,5 +1,6 @@
 # Defines the setup for a 2d shock bubble simulation.
 
+# Settings for simulator
 data_type     : double
 dimensions    : two
 material      : ideal-gas
@@ -9,3 +10,43 @@ reconstructor : muscl-hancock
 flux_method   : force
 solve_method  : split
 execution     : gpu
+
+# Settings for the problem
+resolution      : { 0.001 }
+cfl             : { 0.9   }
+domain_x        : { 0.0, 1.6 }
+domain_y        : 0.0, 1.0
+ambient_state   : rho=1.0, v_x=0, v_y=0, p=1.0
+bubble_state    : rho=0.1, v_x=0, v_y=0, p=1.0
+shock_position  : 0.1
+bubble_geometry : type=circle, x=0.4, y=0.5, r=0.2 
+{
+  ambient_state : {
+    rho : 1.0,
+    v_x : 0.0,
+    v_y : 0.0,
+    p   : 1.0
+  } 
+},
+{
+  domain : {
+   x : { 0.0, 1.6 },
+   y : { 0.0, 1.0 }
+  }
+},
+{
+  geometry : {
+    type : circle,
+    x    : 0.4,
+    y    : 0.5,
+    r    : 0.2,
+    state : {
+      rho : 1.0,
+      v_x : 0.0,
+      v_y : 0.0,
+      p   : 0.1
+    }
+  }
+}
+
+

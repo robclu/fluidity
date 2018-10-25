@@ -85,7 +85,6 @@ struct Option {
     {
       if (_value == choice.value)
       {
-        log_set_message();
         match = true;
         using new_t         = typename std::decay_t<decltype(choice)>::type;
         using new_choices_t = typename Choices::template appended_t<new_t>;
@@ -94,7 +93,6 @@ struct Option {
     });
     if (!match)
     {
-      log_set_message();
       const auto choice = get_default_choice();
       using new_t         = typename std::decay_t<decltype(choice)>::type;
       using new_choices_t = typename Choices::template appended_t<new_t>;
@@ -125,7 +123,6 @@ struct Option {
     {
       if (_value == choice.value)
       {
-        log_set_message();
         match = true;
         using new_t         = typename std::decay_t<decltype(choice)>::type;
         using new_choices_t = typename Choices::template appended_t<new_t>;
@@ -134,7 +131,6 @@ struct Option {
     });
     if (!match)
     {
-      log_set_message();
       const auto choice = get_default_choice();
       using new_t         = typename std::decay_t<decltype(choice)>::type;
       using new_choices_t = typename Choices::template appended_t<new_t>;
@@ -160,9 +156,25 @@ struct Option {
            , typename Base
            , std::enable_if_t<(Choices::size + 1 != OpList::size), int> = 0>
   void finish(const OpList& options, Base& base) const {}
+
+  /// Displays the name of the options and the alailable values for the option.
+  /// \param[in] o The output stream to output to.
+  /// \param[in] s The setting to output to the stream.
+  void print() const
+  {
+    std::cout << "{\n" << pad << op_impl_t::type << " : {";
+    for (const auto choice : get_option_choice_list())
+    {
+      std::cout << "\n" << pad << pad
+                << std::left  << std::setw(15) << choice;
+    }
+    std::cout <<"\n" << pad << "}" << "\n}\n";
+  }
     
  private:
   std::string _value; //!< The value of the option.
+
+  static constexpr const char* pad = "  ";
   
   /// Returns a pointer to a non-const implementation.
   op_impl_t* op_impl()
@@ -202,17 +214,6 @@ struct Option {
     }
     std::cout << "Using the default choice:\n\t- " << choice.value << "\n";
     return choice;
-  }
-
-  /// Logs the type of the option and the value.
-  void log_set_message() const
-  {
-    /* auto s = std::string("setting option type :")
-              + op_impl_t::type
-              + " with value : "
-              + _value;
-      logging::log(logging::logger_t, s);
-    */
   }
 };
 
