@@ -31,7 +31,7 @@ struct ShockParameter : public Parameter<ShockParameter> {
   /// Defines the format for a domain parameter.
   static constexpr const char* format_string = 
     "shock : {\n"
-    "  mach : value,"
+    "  mach : value,\n"
     "  x    : value,\n"
     "  [y   : value][,]\n"
     "  [z   : value][,]\n"
@@ -99,7 +99,7 @@ struct ShockParameter : public Parameter<ShockParameter> {
       }
       if (std::strcmp(prop.name.c_str(), mach) == 0)
       {
-        _mach = std::stod(setting.value);
+        _mach = std::stod(prop.value);
         continue;
       }
       for (const auto pos : pos_values)
@@ -109,16 +109,16 @@ struct ShockParameter : public Parameter<ShockParameter> {
           continue;
         }
 
-        if (setting.complex)
+        if (prop.complex)
         {
           std::cout << "Failed to parse position component : " << pos
-                    << "for shock. Shock parameter must have the following "
+                    << " for shock. Shock parameter must have the following "
                     << "format:\n" << format_string;
           return false;
         }
         _positions.emplace_back();
         auto &p = _positions.back();
-        p.dim = setting.name; p.pos = std::stod(setting.value);
+        p.dim = prop.name; p.pos = std::stod(prop.value);
         util::remove(p.dim, ' ');
         break;
       }

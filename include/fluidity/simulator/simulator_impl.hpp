@@ -24,6 +24,7 @@
 #include <fluidity/algorithm/fill.hpp>
 #include <fluidity/algorithm/max_element.hpp>
 #include <fluidity/dimension/dimension_info.hpp>
+#include <fluidity/setting/parameter/configurable.hpp>
 #include <fluidity/utility/timer.hpp>
 #include <fluidity/utility/type_traits.hpp>
 #include <fstream>
@@ -36,11 +37,13 @@ namespace sim   {
 
 namespace fs = std::experimental::filesystem;
 
-/// The SimulatorImpl class implements the simulation interface. It also
-/// provides functionality to be configured through the option manager.
+/// The SimulatorImpl class implements the simulation interface, as well as the
+/// configurable interface to allow the configuration of the simulation.
 /// \tparam Traits The traits which define the simulation parameters.
 template <typename... Traits>
-class SimulatorImpl final : public Simulator {
+class SimulatorImpl : 
+  public Simulator  ,
+  public setting::Configurable<SimulatorImpl<Traits...>> {
  public:
   /// Allows the OptionManager class to build the simulator implementation.
   /// \tparam Ts The traits to make the simulator implementation with.
