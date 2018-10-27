@@ -93,7 +93,8 @@ struct AmbientParameter : public Parameter<AmbientParameter> {
       util::remove(prop.value, ',', '}', ' ', '\n');
       _properties.push_back(prop);
     }
-    return true;
+    this->_set = true;
+    return this->_set;
   }
 
  private:

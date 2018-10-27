@@ -29,11 +29,20 @@ struct ParamSpecifier : public Param {
   /// Defines the type of the parameter.
   using parameter_t = Param;
 
-  /// Defines if the parameter is required or not.
-  static constexpr auto required = Required;
-
   /// Inherit all the constructors of the parameter.
   using Param::Param;
+
+  /// Returns true if the parameter is required, otherwise returns false.
+  constexpr auto is_required() const -> bool
+  {
+    return Required;
+  }
+
+  /// Returns a reference to the paramter being specifier.
+  auto get_param() const -> const Param&
+  {
+    return static_cast<const Param&>(*this);
+  }
 };
 
 /// Defines an alias for a required parameter.

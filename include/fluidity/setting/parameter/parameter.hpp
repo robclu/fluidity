@@ -56,7 +56,7 @@ struct Parameter {
   /// Returns the type of the identifier. This is the name of the identidier
   /// which is used in the settings file to set properties of the paramter with
   /// the type returned here.
-  std::string name() const
+  std::string type() const
   {
     return impl_t::name;
   }
@@ -123,7 +123,16 @@ struct Parameter {
     }
     return false;
   }
+
+  /// Returns true if the parameter is set.
+  auto is_set() const -> bool
+  {
+    return _set;
+  }
  
+ protected:
+  bool _set = false;  //!< If the paramter is set.
+
  private:
   /// Returns a pointer to a non-const implementation.
   impl_t* impl()

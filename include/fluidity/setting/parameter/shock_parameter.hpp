@@ -130,7 +130,8 @@ struct ShockParameter : public Parameter<ShockParameter> {
                 << format_string;
       return false;
     }
-    return true;
+    this->_set = true;
+    return this->_set;
   }
 
  private:

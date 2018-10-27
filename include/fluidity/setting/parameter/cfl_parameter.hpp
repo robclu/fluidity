@@ -74,7 +74,8 @@ struct CflParameter : public Parameter<CflParameter> {
       return false;
     }
     _cfl = std::stod(setting.value);
-    return _cfl > cfl_min &&_cfl <= cfl_max;
+    this->_set = _cfl > cfl_min &&_cfl <= cfl_max;
+    return this->_set;
   }
 
   /// Returns the value of the CFL.

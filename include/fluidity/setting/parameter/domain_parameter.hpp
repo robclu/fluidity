@@ -142,7 +142,8 @@ struct DomainParameter : public Parameter<DomainParameter> {
                 << "The following format is required:\n" << format_string;
       return false;
     }
-    return true;
+    this->_set = true;
+    return this->_set;
   }
 
  private:

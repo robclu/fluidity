@@ -201,6 +201,7 @@ struct OptionManager
                 << "or simulation paramter type.\n";
       */
     }
+    _param_manager->check_parameters_are_set();
     _param_manager->display_parameters();
   }
 
