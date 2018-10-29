@@ -17,7 +17,7 @@
 #define FLUIDITY_SOLVER_SPLIT_SOLVER_HPP
 
 //#include "solver_utilities.hpp"
-#include "split_solver.cuh"
+#include "cuda/split_solver.cuh"
 #include <fluidity/dimension/dimension.hpp>
 #include <fluidity/execution/execution_policy.hpp>
 #include <fluidity/iterator/multidim_iterator.hpp>
@@ -170,8 +170,8 @@ struct SplitSolver {
     in.shift(in_out_shift , dim_off);
     out.shift(in_out_shift, dim_off);
 
-    const auto shift = thread_id(dim_off)
-                     + (dim_solve == dim_off ? padding : 0);
+    const auto shift =
+      thread_id(dim_off) + (dim_solve == dim_off ? padding : 0);
     patch.shift(shift, dim_off);
   }
 
@@ -197,9 +197,10 @@ struct SplitSolver {
   {
     constexpr auto pad_amount = padding << 1;
     using state_t    = std::decay_t<decltype(*(it))>;
-    using dim_info_t = DimInfoCt<
-      threads_per_block_2d_x + (DS::value == dimx_t::value ? pad_amount : 0),
-      threads_per_block_2d_y + (DS::value == dimy_t::value ? pad_amount : 0)>;
+    using dim_info_t = 
+      DimInfoCt<
+        threads_per_block_2d_x + (DS::value == dimx_t::value ? pad_amount : 0),
+        threads_per_block_2d_y + (DS::value == dimy_t::value ? pad_amount : 0)>;
     return make_multidim_iterator<state_t, dim_info_t>();
   }
 
@@ -213,10 +214,11 @@ struct SplitSolver {
   {
     constexpr auto pad_amount = padding << 1;
     using state_t    = std::decay_t<decltype(*(it))>;
-    using dim_info_t = DimInfoCt<
-      threads_per_block_3d_x + (DS::value == dimx_t::value ? pad_amount : 0), 
-      threads_per_block_3d_y + (DS::value == dimy_t::value ? pad_amount : 0),
-      threads_per_block_3d_z + (DS::value == dimz_t::value ? pad_amount : 0)>;
+    using dim_info_t = 
+      DimInfoCt<
+        threads_per_block_3d_x + (DS::value == dimx_t::value ? pad_amount : 0), 
+        threads_per_block_3d_y + (DS::value == dimy_t::value ? pad_amount : 0),
+        threads_per_block_3d_z + (DS::value == dimz_t::value ? pad_amount : 0)>;
     return make_multidim_iterator<state_t, dim_info_t>();
   }
 };

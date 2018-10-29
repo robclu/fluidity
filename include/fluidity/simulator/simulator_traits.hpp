@@ -43,7 +43,7 @@ struct SimTraits {
   /// Defines the default data type to use.
   using def_data_t    = double;
   /// Defines the default number of dimensions.
-  using def_dims_t    = Num<1>;
+  using def_dims_t    = Num<2>;
   /// Defines the default material to use.
   using def_mat_t     = material::IdealGas<def_data_t>;
   /// Defines the default limiting form.

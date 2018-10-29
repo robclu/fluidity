@@ -16,7 +16,7 @@
 #ifndef FLUIDITY_SOLVER_SPLIT_SOLVER_CUH
 #define FLUIDITY_SOLVER_SPLIT_SOLVER_CUH
 
-#include "boundary_loader.hpp"
+#include "../boundary_loader.hpp"
 #include <fluidity/utility/debug.hpp>
 #include <fluidity/utility/portability.hpp>
 #include <fluidity/utility/type_traits.hpp>
@@ -25,9 +25,6 @@ namespace fluid  {
 namespace solver {
 namespace detail {
 namespace cuda   {
-
-/// Updater function for updating the simulation using the GPU. This invokes 
-/// the updating CUDA kernel for the simulation.
 
 /// Wrapper function to invoke a solving kernel for solving in the \p dim
 /// dimension.
@@ -84,4 +81,4 @@ void solve_impl(Solver&&               solver,
 
 }}}} // namespace fluid::sim::detail::cuda
 
-#endif // FLUIDITY_SIMULATOR_SIMULATION_UPDATER_CUH
+#endif // FLUIDITY_SOLVER_SPLIT_SOLVER_CUH

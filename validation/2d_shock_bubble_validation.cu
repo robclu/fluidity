@@ -25,6 +25,7 @@ using real_t = double;
 
 int main(int argc, char** argv)
 {
+  // TODO: Remove this once the configuration from file is complete ...
   constexpr auto res             = real_t{0.001};
   constexpr auto size_x          = real_t{1.6};
   constexpr auto size_y          = real_t{1.0};
@@ -33,24 +34,30 @@ int main(int argc, char** argv)
   constexpr auto bubble_centre_y = real_t{0.5}; 
   constexpr auto bubble_radius   = real_t{0.2};
 
+  fluid::sim::sim_option_manager_t sim_manager;
+/*
+  TODO : Use this once completed implementation of simulation configuration
+         from a file is complete ..
   if (argc < 2)
   {
     printf("Invalid usage, usage is:\n\n\t./<app> path-to-settings-file : %i\n",
     argc);
   }
-  auto settings = fluid::setting::Settings::from_file(argv[1]);
+  sim_manager.configure(fluid::setting::Settings::from_file(argv[1]));
+*/
 
-   fluid::sim::sim_option_manager_t sim_manager;
-  //sim_manager.display_option_info("reconstructor");
-  sim_manager.configure(settings);
-
-  // This compiles a lot quicker, so use in debug mode:
+// Creating a simulator with all the possible options bloats compile-time
+// significantly, so in debug mode we build the default, but in release mode the
+// version with all functionality is built.
+#if !defined(NDEBUG)
   auto simulator = sim_manager.create_default();
-
+#else
+  auto simulator = sim_manager.create();
+#endif
 /*
-  // This compiles all functionality, so use in release mode:
-  //auto simulator = sim_manager.create();
-
+  TODO: Remove all the configurations once the configuration from file is
+        complete ...
+*/
   simulator->configure_resolution(res);
   simulator->configure_dimension(fluid::dim_x, 0.0, size_x);
   simulator->configure_dimension(fluid::dim_y, 0.0, size_y);
@@ -99,5 +106,4 @@ int main(int argc, char** argv)
 
   simulator->simulate();
   simulator->write_results_separate_raw("2d_shock_bubble");
-*/
 }
