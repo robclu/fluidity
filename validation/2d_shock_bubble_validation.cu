@@ -49,11 +49,11 @@ int main(int argc, char** argv)
 // Creating a simulator with all the possible options bloats compile-time
 // significantly, so in debug mode we build the default, but in release mode the
 // version with all functionality is built.
-#if !defined(NDEBUG)
+//#if !defined(NDEBUG)
   auto simulator = sim_manager.create_default();
-#else
-  auto simulator = sim_manager.create();
-#endif
+//#else
+//  auto simulator = sim_manager.create();
+//#endif
 /*
   TODO: Remove all the configurations once the configuration from file is
         complete ...

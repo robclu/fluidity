@@ -39,7 +39,7 @@ namespace cuda   {
 /// \tparam    Dim     s The type of the dimension.
 template <typename S, typename IT, typename Mat, typename T, typename Dim>
 fluidity_global void
-solve_dim(IT in, IT out, Mat mat, T dtdh, BoundarySetter setter, Dim dim)
+solve(IT in, IT out, Mat mat, T dtdh, BoundarySetter setter, Dim dim)
 {
   S::invoke(in, out, mat, dtdh, setter, dim);
 }
@@ -65,19 +65,11 @@ void solve_impl(Solver&&               solver,
 {
   using iter_t   = std::decay_t<IT>;
   using solver_t = std::decay_t<Solver>;
-  unrolled_for<iter_t::dimensions>([&] (auto i)
-  {
-    constexpr auto dim = Dimension<i>();
-    solve_dim<solver_t><<<solver.block_sizes(), solver.thread_sizes()>>>
-    (
-      in, out, mat, dtdh, setter, dim
-    );
-    fluidity_check_cuda_result(cudaDeviceSynchronize());
-    if (iter_t::dimensions != 1 && i < iter_t::dimensions - 1)
-    {
-      std::swap(in, out);
-    }
-  });
+  solve<solver_t><<<solver.block_sizes(), solver.thread_sizes()>>>
+  (
+    in, out, mat, dtdh, setter, dim
+  );
+  fluidity_check_cuda_result(cudaDeviceSynchronize());
 }
 
 }}}} // namespace fluid::sim::detail::cuda

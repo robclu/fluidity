@@ -38,12 +38,26 @@ struct UnsplitSolver {
   using setter_t      = BoundarySetter;
   /// Defines a reference type to the boundary setter.
   using setter_ref_t  = const BoundarySetter&;
+  /// Defines the type of the reconstructor.
+  using recon_t       = typename flux_solver_t::reconstructor_t;
+  /// Defines the type of the limiter.
+  using limiter_t     = typename recon_t::limiter_t;
 
+  /// Define the type of the flux solver for the perpendicular fluxes.
+  using perp_flux_solver_t = 
+    FaceFlux<
+      recon::BasicReconstructor<limiter_t> ,
+      typename flux_solver_t::flux_method_t,
+      typename flux_solver_t::material_t   >;
 
   /// Defines the number of dimensions to solve over.
   static constexpr auto num_dimensions = std::size_t{Dims()};
   /// Defines the amount of padding in the data loader.
   static constexpr auto padding        = loader_t::padding;
+  /// Defines the dispatch tag for dimension overloading.
+  static constexpr auto dispatch_tag   = dim_dispatch_tag<num_dimensions>;
+  /// Defines the width of the stencil.
+  static constexpr auto width          = recon_t::width;
 
  public:
   /// Creates the unsplit solver.
@@ -85,13 +99,20 @@ struct UnsplitSolver {
   {
     if (in_range(in))
     {
-      const auto flux_solver = flux_solver_t(mat, dtdh);
-            auto patch       = make_patch_iterator(in, dispatch_tag);
+      const auto flux_solver     = flux_solver_t(mat, dtdh);
+      const auto perpflux_solver = perp_flux_solver_t(mat, dtdh); 
+            auto patch           = make_patch_iterator(in, dispatch_tag);
+            auto flux            = make_patch_iterator(in, dispatch_tag);
 
       // Shift the iterators to offset the padding, then set the patch data:
       unrolled_for<num_dimensions>([&] (auto dim)
       {
-        shift_iterators(in, out, patch, dim);
+        const auto shift_global = flattened_id(dim);
+        const auto shift_local  = thread_id(dim);
+        in.shift(shift_global, dim);
+        out.shift(shift_global, dim);
+        patch.shift(shift_local, dim);
+        flux.shift(shift_local, dim);
       });
       *patch = *in;
       __syncthreads();
@@ -100,35 +121,60 @@ struct UnsplitSolver {
       {
         loader_t::load_boundary(in, patch, dim, setter);
       });
-      __syncthreads();
+      //__syncthreads();
       
+      using flux_sum_t = decltype(*flux);
+      auto flux_sum    = flux_sum_t(0);
+
+      // Compute the flux contibution from each of the threads:
+      unrolled_for<num_dimensions>([&] (auto dim)
+      {
+        // For each thread, compute the flux difference in the perpendicular
+        // directions, and store those in the shared flux memory:
+        unrolled_for<num_dimensions - 1>([&] (auto i)
+        {
+          constexpr auto pdim = (dim + i) % num_dimensions;
+
+          // Move the iterators forward in the dim dimension to load the
+          // perpendicular fluxes in the padded region:
+          *flux = perpflux_solver.flux_delta(patch.offset(width, dim), pdim);
+
+          // Need to load 2 * width more fluxes (width fluxes at the start
+          // because of the shift above, and width fluxes in the padded region
+          // at the start of the dim dimension):
+          if (thread_id(dim) < (width << 1))
+          {
+            *flux = perpflux_solver.flux_delta(patch.offset(-width, dim), pdim);
+          }
+
+          // Need to sync here since we are now going to use the flux delta's on
+          // either side (in the dim direction) of this cell.
+          __syncthreads();
+
+          // Lastly, compute the flux delta in the dim direction:
+          flux_sum += 
+            flux_solver.backward(patch, dim, [&] (auto& l, auto& r)
+            {
+              l -= *flux.offset(-1, dim);
+              r -= *flux;
+            })
+          -
+            flux.solver.forward(patch, dim, [&] (auto& l, auto& r)
+            {
+              l -= *flux;
+              r -= *flux.offset(1, dim);
+            });
+        });
+        // Can't start on the next dimension until this one is done ...
+        __syncthreads();
+      });
       // Update states as (for dimension i):
-      //  U_i + dt/dh * [F_{i-1/2} - F_{i+1/2}]
-      *out = *patch + dtdh * flux_solver.flux_delta(patch, dim);
+      //  U_i + dt/dh * lambda + sum_{i=0..D} [F_{i-1/2} - F_{i+1/2}]
+      *out = *patch + dtdh * flux_sum;
     }
   }
 
  private:
-  /// Offsets the iterators used by the solver. This will offset the iterators
-  /// in the dimension defined by \p dim, and will additionally offset the
-  /// patch iterator by the padding amount in the given dimension.
-  /// \param[in] in        The input data iterator for solving.
-  /// \param[in] out       The output data iterator for solving.
-  /// \param[in] patch     The iterator over the patch data.
-  /// \param[in] dim       The dimension to offset in.
-  /// \tparam    I1        The type of the input and output iterators.
-  /// \tparam    I2        The type of the patch iterator.
-  /// \tparam    Dim       The type of the offset dimension specifier.
-  template <typename I1, typename I2, typename Dim>
-  fluidity_host_device static auto
-  shift_iterators(I1&& in, I1&& out, I2&& patch, Dim dim)
-  {
-    const auto shift_amount = flattened_id(dim_off);
-    in.shift(shift_amount , dim);
-    out.shift(shift_amount, dim);
-    patch.shift(thread_id(dim) + padding);
-  }
-
   /// Returns a shared memory multi dimensional iterator over a patch. This
   /// overload is specifically for solving a 1D system.
   /// \param[in] it   The iterator to the start of the global data.
@@ -144,8 +190,8 @@ struct UnsplitSolver {
   /// Returns a shared memory multi dimensional iterator over a patch. This
   /// overload is specifically for solving a 2D system.
   /// \param[in] it   The iterator to the start of the global data.
-  /// \tparam    IT   The type of the iterator.
-  template <typename IT>
+  /// \tparam    It   The type of the iterator.
+  template <typename It>
   fluidity_device_only static auto make_patch_iterator(It&& it, tag_2d_t)
   {
     constexpr auto pad_amount = padding << 1;
@@ -160,8 +206,8 @@ struct UnsplitSolver {
   /// Returns a shared memory multi dimensional iterator over a patch. This
   /// overload is specifically for solving a 2D system.
   /// \param[in] it   The iterator to the start of the global data.
-  /// \tparam    IT   The type of the iterator.
-  template <typename IT>
+  /// \tparam    It   The type of the iterator.
+  template <typename It>
   fluidity_device_only static auto make_patch_iterator(It&& it, tag_3d_t)
   {
     constexpr auto pad_amount = padding << 1;

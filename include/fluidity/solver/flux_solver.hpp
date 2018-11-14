@@ -57,6 +57,17 @@ struct FaceFlux {
            forward(std::forward<Iterator>(state_it), dim);
   }
 
+/*
+  template <typename It, typename P, typename Dim, typename Args...>
+  fluidity_host_device auto
+  flux_delta_pred(It&& it, Pred&& pred, Dim dim, Args&&... args)
+  {
+    return 
+      backward_basic(std::forward<It>(it), std::forward<P>(pred), dim, args...)
+    - forward_basic(std::forward<It>(it), std::forward<P>(pred), dim, args...);
+  }
+*/
+
   /// Solves for the face flux between the state pointed to by the iterator and
   /// the state state in the forward direction in the given dimension,
   /// reconstructing the data before using the appropriate face flux.
@@ -70,6 +81,17 @@ struct FaceFlux {
     const auto flux = flux_method_t::get(_material, _dtdh, dim);
     return flux(_recon.forward_left(state_it, _material, _dtdh, dim),
                 _recon.forward_right(state_it, _material, _dtdh, dim));
+  }
+
+  template <typename It, typename Pred, typename Dim, typename... Args>
+  fluidity_host_device auto
+  forward(It&& it, Pred&& pred, Dim dim, Args&&... args) const
+  {
+    const auto flux = flux_method_t::get(_material, _dtdh, dim);
+    auto left  = _recon.forward_left(state_it, _material, _dtdh, dim);
+    auto right = _recon.forward_right(state_it, _material, _dtdh, dim);
+    pred(left, right, std::forward<Args>(args)...);
+    return flux(left, right);
   }
 
   /// Solves for the face flux between the state pointed to by the iterator and
@@ -87,6 +109,17 @@ struct FaceFlux {
     return flux(_recon.backward_left(state_it, _material, _dtdh, dim) ,
                 _recon.backward_right(state_it, _material, _dtdh, dim));
   }
+
+  template <typename It, typename Pred, typename Dim, typename... Args>
+  fluidity_host_device auto
+  backward(It&& it, Pred&& pred, Dim dim, Args&&... args) const
+  {
+    const auto flux = flux_method_t::get(_material, _dtdh, dim);
+    auto left  = _recon.backward_left(state_it, _material, _dtdh, dim);
+    auto right = _recon.backward_right(state_it, _material, _dtdh, dim);
+    pred(left, right, std::forward<Args>(args)...);
+    return flux(left, right);
+  } 
 
  private:
   reconstructor_t _recon;    //!< The reconstructor for the data.
