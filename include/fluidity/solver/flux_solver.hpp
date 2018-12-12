@@ -83,13 +83,43 @@ struct FaceFlux {
                 _recon.forward_right(state_it, _material, _dtdh, dim));
   }
 
-  template <typename It, typename Pred, typename Dim, typename... Args>
+  /// Solves for the face flux between the state pointed to by the iterator and
+  /// the state state in the forward direction in the given dimension \p dim,
+  /// reconstructing the data before using the appropriate face flux. In
+  /// addition to reconstructing the data, the \p predicate is applied to the
+  /// left and right reconstructed inputs to the flux solver, before the flux is
+  /// sovled for. For example, given a predicate $$p()$$, the following is the
+  /// resultant flux:
+  ///
+  /// \code{cpp}
+  /// // recon() =  reconstruction operation
+  /// delta_l = recon(left input state from iterator)
+  /// delta_r = recon(right input state from iterator)
+  ///
+  /// l_flux_input, r_flux_input = p(delta_l, delta_r)
+  ///
+  /// flux = flux_solver(l_flux_input, r_flux_input)
+  /// \endcode
+  ///
+  /// The predicate must have the form ``void p(state_t& l, state_t& r) const``
+  /// where the inputs ``l, r`` are references to the state input vectors, 
+  /// which are modified by the predicate before being used to solve the flux.
+  ///
+  /// \param[in] it     An iterator which iterates over the state data.
+  /// \param[in] dim    The dimension to solve the flux in terms of.
+  /// \param[in] pred   The predicate to apply to the flux input.
+  /// \param[in] args   Additional arguments for the predicate.
+  /// \tparam    It     The type of the iterator over the state data.
+  /// \tparam    Dim    The type of the dimension to solve the flux for.
+  /// \tparam    Pred   The type of the predicate to apply to the inputs.
+  /// \tparam    Args   The type of additional arguments for the predicate.
+  template <typename It, typename Dim, typename Pred, typename... Args>
   fluidity_host_device auto
-  forward(It&& it, Pred&& pred, Dim dim, Args&&... args) const
+  forward(It&& it, Dim dim, Pred&& pred, Args&&... args) const
   {
     const auto flux = flux_method_t::get(_material, _dtdh, dim);
-    auto left  = _recon.forward_left(state_it, _material, _dtdh, dim);
-    auto right = _recon.forward_right(state_it, _material, _dtdh, dim);
+    auto left       = _recon.forward_left(it, _material, _dtdh, dim);
+    auto right      = _recon.forward_right(it, _material, _dtdh, dim);
     pred(left, right, std::forward<Args>(args)...);
     return flux(left, right);
   }
@@ -110,13 +140,43 @@ struct FaceFlux {
                 _recon.backward_right(state_it, _material, _dtdh, dim));
   }
 
-  template <typename It, typename Pred, typename Dim, typename... Args>
+  /// Solves for the face flux between the state pointed to by the iterator and
+  /// the state state in the backward direction in the given dimension \p dim,
+  /// reconstructing the data before using the appropriate face flux. In
+  /// addition to reconstructing the data, the \p predicate is applied to the
+  /// left and right reconstructed inputs to the flux solver, before the flux is
+  /// sovled for. For example, given a predicate $$p()$$, the following is the
+  /// resultant flux:
+  ///
+  /// \code{cpp}
+  /// // recon() =  reconstruction operation
+  /// delta_l = recon(left input state from iterator)
+  /// delta_r = recon(right input state from iterator)
+  ///
+  /// l_flux_input, r_flux_input = p(delta_l, delta_r)
+  ///
+  /// flux = flux_solver(l_flux_input, r_flux_input)
+  /// \endcode
+  ///
+  /// The predicate must have the form ``void p(state_t& l, state_t& r) const``
+  /// where the inputs ``l, r`` are references to the state input vectors, 
+  /// which are modified by the predicate before being used to solve the flux.
+  ///
+  /// \param[in] it     An iterator which iterates over the state data.
+  /// \param[in] dim    The dimension to solve the flux in terms of.
+  /// \param[in] pred   The predicate to apply to the flux input.
+  /// \param[in] args   Additional arguments for the predicate.
+  /// \tparam    It     The type of the iterator over the state data.
+  /// \tparam    Dim    The type of the dimension to solve the flux for.
+  /// \tparam    Pred   The type of the predicate to apply to the inputs.
+  /// \tparam    Args   The type of additional arguments for the predicate.
+  template <typename It, typename Dim, typename Pred, typename... Args>
   fluidity_host_device auto
-  backward(It&& it, Pred&& pred, Dim dim, Args&&... args) const
+  backward(It&& it, Dim dim, Pred&& pred, Args&&... args) const
   {
     const auto flux = flux_method_t::get(_material, _dtdh, dim);
-    auto left  = _recon.backward_left(state_it, _material, _dtdh, dim);
-    auto right = _recon.backward_right(state_it, _material, _dtdh, dim);
+    auto left       = _recon.backward_left(it, _material, _dtdh, dim);
+    auto right      = _recon.backward_right(it, _material, _dtdh, dim);
     pred(left, right, std::forward<Args>(args)...);
     return flux(left, right);
   } 

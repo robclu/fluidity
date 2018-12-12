@@ -16,6 +16,7 @@
 #ifndef FLUIDITY_SOLVER_UNSPLIT_SOLVER_HPP
 #define FLUIDITY_SOLVER_UNSPLIT_SOLVER_HPP
 
+#include "flux_solver.hpp"
 #include "solver_utilities.hpp"
 
 namespace fluid  {
@@ -126,32 +127,33 @@ struct UnsplitSolver {
       using flux_sum_t = decltype(*flux);
       auto flux_sum    = flux_sum_t(0);
 
-      // Compute the flux contibution from each of the threads:
+      // Compute the flux contibution from each dimension:
       unrolled_for<num_dimensions>([&] (auto dim)
       {
-        // For each thread, compute the flux difference in the perpendicular
-        // directions, and store those in the shared flux memory:
+        // For each dimension, compute the flux difference in the dimensions
+        // perpendicular, and store those in the shared flux memory.
         unrolled_for<num_dimensions - 1>([&] (auto i)
         {
           constexpr auto pdim = (dim + i) % num_dimensions;
 
-          // Move the iterators forward in the dim dimension to load the
-          // perpendicular fluxes in the padded region:
+          // Move the iterators forward in the __dim__ (i.e solving) dimension,
+          // and then solve for the flux difference in that offset cell in the
+          // perpendicular dimension.
           *flux = perpflux_solver.flux_delta(patch.offset(width, dim), pdim);
 
           // Need to load 2 * width more fluxes (width fluxes at the start
           // because of the shift above, and width fluxes in the padded region
-          // at the start of the dim dimension):
+          // at the start of the dim dimension).
           if (thread_id(dim) < (width << 1))
           {
             *flux = perpflux_solver.flux_delta(patch.offset(-width, dim), pdim);
           }
 
-          // Need to sync here since we are now going to use the flux delta's on
+          // Need to sync here since we are now going to use the flux deltas on
           // either side (in the dim direction) of this cell.
           __syncthreads();
 
-          // Lastly, compute the flux delta in the dim direction:
+          // Lastly, compute the flux delta in the dim direction.
           flux_sum += 
             flux_solver.backward(patch, dim, [&] (auto& l, auto& r)
             {

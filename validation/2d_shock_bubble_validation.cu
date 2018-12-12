@@ -26,10 +26,10 @@ using real_t = double;
 int main(int argc, char** argv)
 {
   // TODO: Remove this once the configuration from file is complete ...
-  constexpr auto res             = real_t{0.001};
+  constexpr auto res             = real_t{0.005};
   constexpr auto size_x          = real_t{1.6};
   constexpr auto size_y          = real_t{1.0};
-  constexpr auto shock_start     = real_t{0.1};
+  constexpr auto shock_start     = real_t{0.2};
   constexpr auto bubble_centre_x = real_t{0.4};
   constexpr auto bubble_centre_y = real_t{0.5}; 
   constexpr auto bubble_radius   = real_t{0.2};
@@ -61,7 +61,7 @@ int main(int argc, char** argv)
   simulator->configure_resolution(res);
   simulator->configure_dimension(fluid::dim_x, 0.0, size_x);
   simulator->configure_dimension(fluid::dim_y, 0.0, size_y);
-  simulator->configure_sim_time(0.4);
+  simulator->configure_sim_time(0.1);
   simulator->configure_cfl(0.9);
 
   // Returns the value based on whether the pos is inside the bubble,
