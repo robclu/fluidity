@@ -293,26 +293,60 @@ struct BoundaryLoader {
     }
   }
 
+  /// Loads the corner padding data for a \p patch. This is a little tricky
+  /// because the behaviour is different if the corners of the patch are inside
+  /// the simulation domain, and hence the data needs to be set from the \p data
+  /// iterator.
+  ///
+  /// Alternatively, the patch corner may be outside of the simulation domain,
+  /// in which case it is a boundary condition, and needs to be set from the
+  /// other loaded patch data to which the boundary conditions have already
+  /// been applied. 
+  ///
+  /// Lastly, there is the case that the corner of the patch which needs to be
+  /// loaded is not actually a corner becase the size of the simulation domain
+  /// is not a multiple of the patch size in the given dimension. For example,
+  /// if the computational domain is 100 elements in the dimension, and the
+  /// block size is 16, thread 3 (the global boundary element) will need to have
+  /// the same loading behaviour as if it was thread 15.
+  /// 
+  ///
+  /// \note There is one case which is not handled here, and that is the case
+  /// that the last block in a dimension has the same number of elements as the
+  /// padding width, in which case the thread needs to load the corner data for
+  /// two corners.
+  ///
+  /// Handing all these cases is tricky.
+  ///
+  /// \param[in] data  An iterator to the global data.
+  /// \param[in] patch An iterator over the patch data to load corners for.
+  /// \tparam    D     The number of dimensions for the iterators.
+  /// \tparam    I1    The type of the data iterator.
+  /// \tparam    I2    The type of the patch iterator.
   template <std::size_t D, typename I1, typename I2, exec::gpu_enable_t<I1> = 0>
   static fluidity_host_device void load_corners(I1&& data, I2&& patch)
   {
-    auto set_outer = patch;
-    auto set_inner = data;
+    auto outer_it = patch;
+    auto inner_it = data;
 
     int in = 0, out = 0;
 
       auto print_vec = [] (auto v, int b)
-      {
-//        if ((thread_id(0) == 0 || thread_id(0) == block_size(0) - 1) &&
-//            (thread_id(1) == 0 || thread_id(1) == block_size(1) - 1))
-        if (true)
-        {
-          printf("TX, TY, BX, BY: { %03lu, %03lu } : {%03lu, %03lu }, { %03i, %03i } : { %03i }\n",
-            thread_id(0), thread_id(1), block_id(0), block_id(1), v[0], v[1], b);
-        }
-      };
+       {
+ //        if ((thread_id(0) == 0 || thread_id(0) == block_size(0) - 1) &&
+ //            (thread_id(1) == 0 || thread_id(1) == block_size(1) - 1))
+         if (true)
+         {
+           printf("TX, TY, BX, BY: { %03lu, %03lu } : {%03lu, %03lu }, { %03i, %03i } : { %03i }\n",
+             thread_id(0), thread_id(1), block_id(0), block_id(1), v[0], v[1], b);
+         }
+       };
 
     Array<int, D> a{0}, b{0};
+
+    using velocity_t  = std::decay_t<decltype(patch->velocity(0))>;
+    using vel_array_t = Array<velocity_t, D>;
+    vel_array_t velocities{0};
 
     unrolled_for<D>([&] (auto d)
     {
@@ -320,7 +354,7 @@ struct BoundaryLoader {
       auto tid = thread_id(dim) , ftid = flattened_id(dim);
       auto bs  = block_size(dim), gs   = data.size(dim);
 
-      auto sign        = tid < (padding-1) ? int{-1} : int{1};
+      auto sign        = tid < padding ? int{-1} : int{1};
       auto shift_inner = std::min(tid, bs - tid - 1);
       auto shift_outer = std::min(ftid, ftid < gs ? gs - ftid - 1 : gs + 100);
 
@@ -343,13 +377,14 @@ struct BoundaryLoader {
       }
 */
 
+/*
         if (block_id(dim) == grid_size(dim) / block_size(dim) - 1)
         {
           b[0] = in;
           b[1] = out;
           //print_vec(b, dim);
         }
-
+*/
       //if (inner)
       if (in + out)
       {
@@ -357,9 +392,13 @@ struct BoundaryLoader {
         int shift_amount = 2 * shift_amt * sign + sign;
         a[dim] = shift_amount;
 
-        set_inner.shift(shift_amount, dim);
-        set_outer.shift(shift_amount, dim);
+        inner_it.shift(shift_amount, dim);
+        outer_it.shift(shift_amount, dim);
 
+        if (std::abs(shift_amount) < 2 * padding + 1)
+        {
+          velocities[dim] = patch.offset(shift_amount, dim)->velocity(dim);
+        }
         //print_vec(a, dim);
       }
     });
@@ -367,14 +406,23 @@ struct BoundaryLoader {
     if (out + in == 2 && out > 0)
     {
       //print_vec(a, 0);
-      *set_outer = *patch;
-     print_vec(a, -10);
+      *outer_it = *patch;
+
+      // Need to set the velocity boundary conditions at the boundaries:
+
+      unrolled_for<D>([&] (auto d)
+      {
+        constexpr auto dim = std::size_t{d};
+        outer_it->set_velocity(velocities[dim], dim);
+      });
+
+      //print_vec(a, -10);
     }
     else if (in == 2)
 //    else if (inner)
     {
 //            print_vec(a, 1);
-      *set_outer = *set_inner;
+      *outer_it = *inner_it;
      //print_vec(a, 22);
     }
   }
