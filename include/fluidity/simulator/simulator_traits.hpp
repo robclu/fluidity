@@ -79,7 +79,7 @@ struct SimTraits {
   /// Defines the type of the face flux solver.
   using face_flux_t  = solver::FaceFlux<recon_t, flux_t, material_t>;
   /// Defines the default type of solver.
-  using def_solver_t = solver::SplitSolver<face_flux_t, loader_t, dim_t>;
+  using def_solver_t = solver::UnsplitSolver<face_flux_t, loader_t, dim_t>;
   /// Defines the type of the solver.
   using solver_t     = type_at_t<8, def_solver_t, Ts...>;
 

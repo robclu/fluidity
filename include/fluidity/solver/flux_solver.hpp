@@ -17,6 +17,7 @@
 #ifndef FLUIDITY_SOLVER_FLUX_SOLVER_HPP
 #define FLUIDITY_SOLVER_FLUX_SOLVER_HPP
 
+#include <fluidity/dimension/thread_index.hpp>
 #include <fluidity/utility/portability.hpp>
 #include <fluidity/utility/type_traits.hpp>
 
@@ -39,6 +40,19 @@ struct FaceFlux {
   /// \param[in] dtdh The time-space distrectization.
   fluidity_host_device FaceFlux(material_t mat, value_t dtdh) 
   : _material(mat), _dtdh(dtdh) {}
+
+  template <typename T, typename V>
+  auto fluidity_host_device print_vec(T& v, V d, V p) const 
+  {
+    if (flattened_block_id(0) == 0 && thread_id(1) == 0)
+    {
+      printf("TX, TY, D, P : { %03lu, %03lu } : {%03lu, %03lu }, { %4.4f, %4.4f, %4.4f, %4.4f }\n",
+      thread_id(0), thread_id(1), 
+      static_cast<std::size_t>(d), 
+      static_cast<std::size_t>(p),
+       v[0], v[1], v[2], v[3]);
+    }
+  }
 
   /// Returns the difference between the face fluxes, and thus returns:
   /// \begin{equation}

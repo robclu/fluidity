@@ -88,12 +88,12 @@ struct SplitSolver {
   template <typename It, typename Mat, typename T, exec::gpu_enable_t<It> = 0>
   void solve(It&& in, It&& out, Mat&& mat, T dtdh, setter_ref_t setter) const 
   {
-    detail::cuda::solve_impl(*this                 ,
-                             std::forward<It>(in)  ,
-                             std::forward<It>(out) ,
-                             std::forward<Mat>(mat),
-                             dtdh                  ,
-                             setter                );
+    detail::cuda::solve_impl_split(*this                 ,
+                                   std::forward<It>(in)  ,
+                                   std::forward<It>(out) ,
+                                   std::forward<Mat>(mat),
+                                   dtdh                  ,
+                                   setter                );
   }
 
   /// Returns the number of threads per block for the solver.

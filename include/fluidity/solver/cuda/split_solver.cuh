@@ -55,12 +55,12 @@ solve_dim(IT in, IT out, Mat mat, T dtdh, BoundarySetter setter, Dim dim)
 /// \tparam    Mat      The type of the material.
 /// \tparam    T        The type of the scaling factor.
 template <typename Solver, typename IT, typename Mat, typename T>
-void solve_impl(Solver&&               solver,
-                IT&&                   in    ,
-                IT&&                   out   ,
-                Mat&&                  mat   ,
-                T                      dtdh  ,
-                const BoundarySetter&  setter)
+void solve_impl_split(Solver&&               solver,
+                      IT&&                   in    ,
+                      IT&&                   out   ,
+                      Mat&&                  mat   ,
+                      T                      dtdh  ,
+                      const BoundarySetter&  setter)
 {
   using iter_t   = std::decay_t<IT>;
   using solver_t = std::decay_t<Solver>;

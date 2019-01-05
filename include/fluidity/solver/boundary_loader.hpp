@@ -175,6 +175,7 @@ struct BoundaryLoader {
   static fluidity_host_device void
   load_boundary(I1&& data, I2&& patch, Dim dim, BoundarySetter setter)
   {
+
     int global_idx = flattened_id(dim), local_idx = thread_id(dim);
     if (global_idx < padding)
     {
@@ -199,6 +200,182 @@ struct BoundaryLoader {
     {
       const auto shift = 2 * local_idx + 1;
       *patch.offset(shift, dim) = *data.offset(shift, dim);
+    }
+  }
+
+  /// This sets the boundary elements in a specific dimension for a \p patch,
+  /// where the \p patch is an iterator which can iterate over the given
+  /// dimension.
+  /// 
+  /// Loading is done in the following manner:
+  /// 
+  /// Memory block layout for a single dimension:
+  /// 
+  /// b = boundary element to set in the patch
+  /// s = valid global data to use to set the element
+  /// 
+  ///    ____________________________          ___________________________
+  ///    |           ______         |          |          ______         |
+  ///    |           |    |         |          |          |    |         |
+  ///    V           V    |         |          |          |    V         V
+  /// =======================================================================
+  /// | b-n | b-1 | b0 | s0 | s1 | sn | ... | s-n | s-1 | s0 | b0 | b1 | bn |
+  /// =======================================================================
+  ///          ^              |                      |              ^
+  ///          |______________|                      |______________|
+  ///          
+  /// With the above illustration, the technique used in the code should be
+  /// relatively simple to understand.
+  /// 
+  /// This implementation is only enabled when the iterator is a GPU iterator.
+  /// 
+  /// \param[in]  data     An iterator to global data.
+  /// \param[in]  patch    An iterator to the patch data.
+  /// \param[in]  dim      The dimension to set the boundary in.
+  /// \param[in]  setter   The object which is used to set the elements.
+  /// \tparam     I1       The type of the data iterator.
+  /// \tparam     I2       The type of the patch iterator.
+  /// \tparam     Dim      The type of the dimension.
+  template <typename I1 ,
+            typename I2 ,
+            typename OW ,
+            typename Dim,
+            exec::gpu_enable_t<I1> = 0>
+  static fluidity_host_device void load_boundary_unsplit(I1&&           data   ,
+                                                         I2&&           patch  ,
+                                                         OW&&           offwrap,
+                                                         Dim            dim    ,
+                                                         BoundarySetter setter)
+  {
+
+    int global_idx = flattened_id(dim), local_idx = thread_id(dim);
+    if (global_idx < padding)
+    {
+      constexpr auto bi     = BoundaryIndex::first;
+      const auto     shift  = -2 * global_idx - 1;
+
+      setter(*patch, *patch.offset(shift, dim), dim, bi);
+
+      offwrap.offset(shift, dim);
+      offwrap.set_as_global();
+    }
+    else if (local_idx < padding)
+    {
+      const auto shift = -2 * local_idx - 1;
+
+      *patch.offset(shift, dim) = *data.offset(shift, dim);
+
+      offwrap.offset(shift, dim);
+      offwrap.set_as_local();
+    }
+
+    global_idx = static_cast<int>(data.size(dim)) - global_idx - 1;
+    local_idx  = static_cast<int>(block_size(dim)) - local_idx - 1;
+
+    if (global_idx < padding)
+    {
+      constexpr auto bi    = BoundaryIndex::second;
+      const auto     shift = 2 * global_idx + 1;
+
+      setter(*patch, *patch.offset(shift, dim), dim, bi);
+
+      offwrap.offset(shift, dim);
+      offwrap.set_as_global();
+    }
+    else if (local_idx < padding)
+    {
+      const auto shift = 2 * local_idx + 1;
+
+      *patch.offset(shift, dim) = *data.offset(shift, dim);
+
+      offwrap.offset(shift, dim);
+      offwrap.set_as_local();
+    }
+  }
+
+  template <std::size_t D, typename I1, typename I2, exec::gpu_enable_t<I1> = 0>
+  static fluidity_host_device void load_corners(I1&& data, I2&& patch)
+  {
+    auto set_outer = patch;
+    auto set_inner = data;
+
+    int in = 0, out = 0;
+
+      auto print_vec = [] (auto v, int b)
+      {
+//        if ((thread_id(0) == 0 || thread_id(0) == block_size(0) - 1) &&
+//            (thread_id(1) == 0 || thread_id(1) == block_size(1) - 1))
+        if (true)
+        {
+          printf("TX, TY, BX, BY: { %03lu, %03lu } : {%03lu, %03lu }, { %03i, %03i } : { %03i }\n",
+            thread_id(0), thread_id(1), block_id(0), block_id(1), v[0], v[1], b);
+        }
+      };
+
+    Array<int, D> a{0}, b{0};
+
+    unrolled_for<D>([&] (auto d)
+    {
+      constexpr auto dim = std::size_t{d};
+      auto tid = thread_id(dim) , ftid = flattened_id(dim);
+      auto bs  = block_size(dim), gs   = data.size(dim);
+
+      auto sign        = tid < (padding-1) ? int{-1} : int{1};
+      auto shift_inner = std::min(tid, bs - tid - 1);
+      auto shift_outer = std::min(ftid, ftid < gs ? gs - ftid - 1 : gs + 100);
+
+      auto out_prev = out;
+      if (shift_outer < padding)
+      {
+        out++;
+        //print_vec(b, dim);
+      }
+      else if (shift_inner < padding)
+      {
+        in++;
+      }
+/*
+      if (shift_inner >= padding - 1 && !last)
+      {
+        //outer++;
+        inner = false;
+        //inner = false;
+      }
+*/
+
+        if (block_id(dim) == grid_size(dim) / block_size(dim) - 1)
+        {
+          b[0] = in;
+          b[1] = out;
+          //print_vec(b, dim);
+        }
+
+      //if (inner)
+      if (in + out)
+      {
+        auto shift_amt   = out_prev < out ? shift_outer : shift_inner;
+        int shift_amount = 2 * shift_amt * sign + sign;
+        a[dim] = shift_amount;
+
+        set_inner.shift(shift_amount, dim);
+        set_outer.shift(shift_amount, dim);
+
+        //print_vec(a, dim);
+      }
+    });
+    //if (outer && inner)
+    if (out + in == 2 && out > 0)
+    {
+      //print_vec(a, 0);
+      *set_outer = *patch;
+     print_vec(a, -10);
+    }
+    else if (in == 2)
+//    else if (inner)
+    {
+//            print_vec(a, 1);
+      *set_outer = *set_inner;
+     //print_vec(a, 22);
     }
   }
 

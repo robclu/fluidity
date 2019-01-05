@@ -36,12 +36,11 @@ namespace cuda   {
 /// \tparam    IT       The type of the mulri dimensional iterator.
 /// \tparam    Mat      The type of the material.
 /// \tparam    T        The type of the scaling factor.
-/// \tparam    Dim     s The type of the dimension.
-template <typename S, typename IT, typename Mat, typename T, typename Dim>
+template <typename S, typename IT, typename Mat, typename T>
 fluidity_global void
-solve(IT in, IT out, Mat mat, T dtdh, BoundarySetter setter, Dim dim)
+solve(IT in, IT out, Mat mat, T dtdh, BoundarySetter setter)
 {
-  S::invoke(in, out, mat, dtdh, setter, dim);
+  S::invoke(in, out, mat, dtdh, setter);
 }
 
 /// Updater function for updating the simulation using the GPU. This invokes 
@@ -56,18 +55,18 @@ solve(IT in, IT out, Mat mat, T dtdh, BoundarySetter setter, Dim dim)
 /// \tparam    Mat      The type of the material.
 /// \tparam    T        The type of the scaling factor.
 template <typename Solver, typename IT, typename Mat, typename T>
-void solve_impl(Solver&&               solver,
-                IT&&                   in    ,
-                IT&&                   out   ,
-                Mat&&                  mat   ,
-                T                      dtdh  ,
-                const BoundarySetter&  setter)
+void solve_impl_unsplit(Solver&&               solver,
+                        IT&&                   in    ,
+                        IT&&                   out   ,
+                        Mat&&                  mat   ,
+                        T                      dtdh  ,
+                        const BoundarySetter&  setter)
 {
   using iter_t   = std::decay_t<IT>;
   using solver_t = std::decay_t<Solver>;
   solve<solver_t><<<solver.block_sizes(), solver.thread_sizes()>>>
   (
-    in, out, mat, dtdh, setter, dim
+    in, out, mat, dtdh, setter
   );
   fluidity_check_cuda_result(cudaDeviceSynchronize());
 }

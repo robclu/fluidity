@@ -26,13 +26,16 @@ using real_t = double;
 int main(int argc, char** argv)
 {
   // TODO: Remove this once the configuration from file is complete ...
-  constexpr auto res             = real_t{0.005};
+  constexpr auto res             = real_t{0.01};
   constexpr auto size_x          = real_t{1.6};
   constexpr auto size_y          = real_t{1.0};
   constexpr auto shock_start     = real_t{0.2};
   constexpr auto bubble_centre_x = real_t{0.4};
   constexpr auto bubble_centre_y = real_t{0.5}; 
   constexpr auto bubble_radius   = real_t{0.2};
+
+  // Time to run the simulation until:
+  auto sim_time = real_t{0.4};
 
   fluid::sim::sim_option_manager_t sim_manager;
 /*
@@ -46,11 +49,13 @@ int main(int argc, char** argv)
   sim_manager.configure(fluid::setting::Settings::from_file(argv[1]));
 */
 
+
 // Creating a simulator with all the possible options bloats compile-time
 // significantly, so in debug mode we build the default, but in release mode the
 // version with all functionality is built.
 //#if !defined(NDEBUG)
-  auto simulator = sim_manager.create_default();
+auto simulator = sim_manager.create_default();
+
 //#else
 //  auto simulator = sim_manager.create();
 //#endif
@@ -61,8 +66,18 @@ int main(int argc, char** argv)
   simulator->configure_resolution(res);
   simulator->configure_dimension(fluid::dim_x, 0.0, size_x);
   simulator->configure_dimension(fluid::dim_y, 0.0, size_y);
-  simulator->configure_sim_time(0.1);
+  simulator->configure_sim_time(sim_time);
   simulator->configure_cfl(0.9);
+
+  // Command line arguments
+  if (argc >= 2)
+  {
+    simulator->configure_sim_time(atof(argv[1]));
+  }
+  if (argc >= 3)
+  {
+    simulator->configure_max_iterations(atoi(argv[2]));
+  }
 
   // Returns the value based on whether the pos is inside the bubble,
   // or before or after the shock wave.

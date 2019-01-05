@@ -30,10 +30,11 @@ namespace recon {
 /// \tparam Limter The type of the sloper limiter to use.
 template <typename Limiter>
 struct MHReconstructor : public Reconstructor<MHReconstructor<Limiter>> {
- private:
+ public:
   /// Defines the type of the slope limiter used by the reconstructor.
   using limiter_t = Limiter;
 
+ private:
   /// Defines the value of the reconstruction application to a right face.
   static constexpr auto right_face = int{1};
   /// Defiens the value of the reconstruction application to a left face.

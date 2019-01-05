@@ -43,6 +43,18 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
   /// Defines the type of this state.
   using self_t    = State;
 
+  /// Defines a valid enable type if the template type is not the value_t type.
+  /// \tparam TT The template paramter to check the type of.
+  template <typename TT>
+  using non_value_enable_t = std::enable_if_t<
+    !std::is_convertible<std::decay_t<TT>, value_t>::value, int>;
+  /// Defines a valid type if the template type is convertible to the valuet_t
+  /// type.
+  /// \tparam TT The template paramter to check the type of.
+  template <typename TT>
+  using value_enable_t = std::enable_if_t<
+    std::is_convertible<std::decay_t<TT>, value_t>::value, int>;
+
   /// Returns the format of the state.
   static constexpr FormType    format                = Form;
   /// Returns the number of additional components for the state.
@@ -140,12 +152,23 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
   /// 
   /// \param[in] container The container with the data to set the elements to.
   /// \tparam    Container The type of the container.
-  template <typename Container>
+  template <typename Container, non_value_enable_t<Container> = 0>
   fluidity_host_device State(Container&& container)
   {
     unrolled_for_bounded<elements>([&] (auto i)
     {
       this->operator[](i) = container[i];
+    });
+  }
+
+  /// Constructor to create a state with a default value for each element.
+  /// \param[in] value The value to initialize each element to.
+  template <typename Value, value_enable_t<Value> = 0>
+  fluidity_host_device State(Value&& value)
+  {
+    unrolled_for_bounded<elements>([&] (auto i)
+    {
+      this->operator[](i) = value;
     });
   }
 
