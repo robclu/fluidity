@@ -252,7 +252,7 @@ auto& DeviceTensor<T, N>::operator=(self_t&& other)
 template <typename T, std::size_t N>
 auto DeviceTensor<T, N>::as_host() const
 {
-  return HostTensor<T, N>(*this);
+  return host_t(*this);
 }
 
 template <typename T, std::size_t N> template <typename... DimSizes>

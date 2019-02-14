@@ -62,7 +62,8 @@ struct BasicReconstructor : public Reconstructor<BasicReconstructor<Limiter>> {
   fluidity_host_device constexpr auto
   input_fwrd_left(Iterator&& state_it, Material&&, T, Dim dim) const
   {
-    return *state_it;
+    auto new_state = *state_it;
+    return new_state;
   }
 
   /// Returns the left right state in the forward direction, where the forward
@@ -80,7 +81,8 @@ struct BasicReconstructor : public Reconstructor<BasicReconstructor<Limiter>> {
   fluidity_host_device constexpr auto
   input_fwrd_right(Iterator&& state_it, Material&&, T, Dim dim) const
   {
-    return *state_it.offset(forward_face, dim);
+    auto new_state = *state_it.offset(forward_face, dim);
+    return new_state;
   }
 
   /// Returns the left input state in the backward direction, where the backward
@@ -98,7 +100,8 @@ struct BasicReconstructor : public Reconstructor<BasicReconstructor<Limiter>> {
   fluidity_host_device constexpr auto
   input_back_left(Iterator&& state_it, Material&&, T, Dim dim) const
   {
-    return *state_it.offset(backward_face, dim);
+    auto new_state = *state_it.offset(backward_face, dim);
+    return new_state;
   }
 
   /// Returns the right state in the backward direction, where the backward
@@ -116,7 +119,8 @@ struct BasicReconstructor : public Reconstructor<BasicReconstructor<Limiter>> {
   fluidity_host_device constexpr auto
   input_back_right(Iterator&& state_it, Material&&, T, Dim dim) const
   {
-    return *state_it;
+    auto new_state = *state_it;
+    return new_state;
   }
 };
 

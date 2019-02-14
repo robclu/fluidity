@@ -150,8 +150,9 @@ struct FaceFlux {
   backward(Iterator&& state_it, Dim dim) const
   {
     const auto flux = flux_method_t::get(_material, _dtdh, dim);
-    return flux(_recon.backward_left(state_it, _material, _dtdh, dim) ,
-                _recon.backward_right(state_it, _material, _dtdh, dim));
+//    return _recon.backward_right(state_it, _material, _dtdh, dim);
+      return flux(_recon.backward_left(state_it, _material, _dtdh, dim) ,
+                  _recon.backward_right(state_it, _material, _dtdh, dim));
   }
 
   /// Solves for the face flux between the state pointed to by the iterator and

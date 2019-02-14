@@ -62,7 +62,6 @@ void solve_impl_unsplit(Solver&&               solver,
                         T                      dtdh  ,
                         const BoundarySetter&  setter)
 {
-  using iter_t   = std::decay_t<IT>;
   using solver_t = std::decay_t<Solver>;
   solve<solver_t><<<solver.block_sizes(), solver.thread_sizes()>>>
   (

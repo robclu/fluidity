@@ -26,13 +26,15 @@ using real_t = double;
 int main(int argc, char** argv)
 {
   // TODO: Remove this once the configuration from file is complete ...
-  constexpr auto res             = real_t{0.01};
-  constexpr auto size_x          = real_t{1.6};
+  constexpr auto res             = real_t{0.005};
+  //constexpr auto size_x          = real_t{1.6};
+  constexpr auto size_x          = real_t{1.0};
   constexpr auto size_y          = real_t{1.0};
   constexpr auto shock_start     = real_t{0.2};
   constexpr auto bubble_centre_x = real_t{0.4};
   constexpr auto bubble_centre_y = real_t{0.5}; 
   constexpr auto bubble_radius   = real_t{0.2};
+  constexpr auto membrane_y      = real_t{0.5};
 
   // Time to run the simulation until:
   auto sim_time = real_t{0.4};
@@ -60,7 +62,7 @@ auto simulator = sim_manager.create_default();
 //  auto simulator = sim_manager.create();
 //#endif
 /*
-  TODO: Remove all the configurations once the configuration from file is
+  TOD: Remove all the configurations once the configuration from file is
         complete ...
 */
   simulator->configure_resolution(res);
@@ -90,6 +92,52 @@ auto simulator = sim_manager.create_default();
     return inside ? in : pos[0] * size_x < shock_start ? pre : post;
   };
 
+
+
+
+  simulator->fill_data({
+    {
+      "rho", [&] (const auto& pos)
+      {
+        return pos[1] < membrane_y
+          ? pos[0] < 0.5
+            ? 1.1000 : 0.5065     // (top left) | (top right)
+          : pos[0] < 0.5          // -----------|-------------
+            ? 0.5065 : 1.1000;    // (bot left) | (bot right)
+      }
+    },
+    {
+      "p", [&] (const auto& pos)
+      {
+        return pos[1] < membrane_y
+          ? pos[0] < 0.5
+            ? 1.1000 : 0.3500     // (top left) | (top right)
+          : pos[0] < 0.5          // -----------|-------------
+            ? 0.3500 : 1.1000;    // (bot left) | (bot right)
+      }
+    },
+    {
+      "v_x", [&] (const auto& pos)
+      {
+        return pos[1] < membrane_y
+          ? pos[0] < 0.5
+            ? 0.8939 : 0.000      // (top left) | (top right)
+          : pos[0] < 0.5          // -----------|-------------
+            ? 0.8939 : 0.000;     // (bot left) | (bot right)
+      }
+    },
+    {
+      "v_y", [&] (const auto& pos)
+      {
+        return pos[1] < membrane_y
+          ? 0.8939 : 0.0000;
+//            ? 0.8939 : 0.8939     // (top left) | (top right)
+//          : pos[0] < 0.5          // -----------|-------------
+//            ? 0.000 : 0.000;      // (bot left) | (bot right)
+      }
+    }
+  });
+/*
   simulator->fill_data({
     {
       "rho", [&] (const auto& pos)
@@ -118,7 +166,7 @@ auto simulator = sim_manager.create_default();
       }
     }
   });
-
+*/
   simulator->simulate();
   simulator->write_results_separate_raw("2d_shock_bubble");
 }

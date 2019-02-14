@@ -203,6 +203,26 @@ struct BoundaryLoader {
     }
   }
 
+  template < typename I1, typename I2, typename Dim, exec::gpu_enable_t<I1> = 0>
+  static fluidity_host_device void
+  load_boundary_global(I1&& data, Dim dim, BoundarySetter setter)
+  {
+    // Set the near boundary:
+    int idx = flattened_id(dim);
+    if (idx < padding)
+    {
+      constexpr auto bi = BoundaryIndex::first;
+      setter(*data, *data.offset(-2 * idx - 1, dim), dim, bi);
+    }
+    // Set the far boundary:
+    idx = static_cast<int>(data.size(dim)) - idx - 1;
+    if (idx < padding)
+    {
+      constexpr auto bi = BoundaryIndex::second;
+      setter(*data, *data.offset(2 * idx + 1, dim), dim, bi);
+    }
+  }
+
   /// This sets the boundary elements in a specific dimension for a \p patch,
   /// where the \p patch is an iterator which can iterate over the given
   /// dimension.
@@ -425,6 +445,75 @@ struct BoundaryLoader {
       *outer_it = *inner_it;
      //print_vec(a, 22);
     }
+  }
+
+  template <typename IT, exec::gpu_enable_t<IT> = 0>
+  static fluidity_host_device void 
+  load_global_boundaries(IT&& data, const BoundarySetter& setter)
+  {
+    auto corner_it = data;
+    auto corner    = *data;
+    auto is_corner = 0;
+
+    constexpr auto dims = std::decay_t<IT>::dimensions;
+
+    unrolled_for<dims>([&] (auto dim)
+    {
+      auto idx = flattened_id(dim), elements = data.size(dim) - (padding << 1);
+
+      auto sign  = idx < (elements >> 1) ? int{-1} : int{1};
+      auto shift = 
+        std::min(idx, idx < elements ? elements - idx - 1 : elements << 2);
+
+      if (shift < padding)
+      {
+        int amount = 2 * shift * sign + sign;
+        auto bi    = sign < 0 ? BoundaryIndex::first : BoundaryIndex::second;
+        setter(*data, *data.offset(amount, dim), dim, bi);
+        corner.set_velocity(data.offset(amount, dim)->velocity(dim), dim);
+        corner_it.shift(amount, dim);
+        is_corner++;
+      }
+    });
+
+    // One of the global corners, and we need to set that data too.
+    if (is_corner == 2) { *corner_it = corner; }
+  }
+
+  template <typename I1, typename I2, exec::gpu_enable_t<I1> = 0>
+  static fluidity_host_device void load_patch_boundaries(I1&& data, I2&& patch)
+  {
+    auto patch_corner_it = patch;
+    auto data_corner_it  = data;
+    auto is_corner       = 0;
+
+    constexpr auto dims = std::decay_t<I1>::dimensions;
+
+    unrolled_for<dims>([&] (auto dim)
+    {
+      auto idx      = thread_id(dim);
+      auto elements = std::min(
+        block_size(dim), data.size(dim) - (padding << 1) - block_id(dim) * block_size(dim));
+
+      auto sign  = idx < (elements >> 1) ? int{-1} : int{1};
+      auto shift = 
+        std::min(idx, idx < elements ? elements - idx - 1 : elements << 2);
+
+      if (shift < padding)
+      {
+        int amount = 2 * shift * sign + sign;
+        // Set the non-corner data:
+        *patch.offset(amount, dim) = *data.offset(amount, dim);
+
+        // Move the corner data iterators:
+        data_corner_it.shift(amount, dim);
+        patch_corner_it.shift(amount, dim);
+        is_corner++;
+      }
+    });
+
+    // Set the data in the corner of the patch:
+    if (is_corner == 2) { *patch_corner_it = *data_corner_it; }
   }
 
   /// This sets the boundary elements in a specific dimension for a \p patch,

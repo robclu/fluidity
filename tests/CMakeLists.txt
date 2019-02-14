@@ -98,6 +98,16 @@ fluid_target_link_libraries(
 )
 
 fluid_add_executable(
+  levelset_tests
+  ${fluidity_SOURCE_DIR}/tests/levelset_tests.cu
+)
+fluid_target_link_libraries(
+  levelset_tests
+  ${GTEST_BOTH_LIBRARIES}
+  ${CUDA_LIBRARIES}
+)
+
+fluid_add_executable(
   reconstruction_tests
   ${fluidity_SOURCE_DIR}/tests/reconstruction_tests.cpp
 )

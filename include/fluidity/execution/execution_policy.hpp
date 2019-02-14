@@ -130,10 +130,10 @@ namespace detail {
 /// \param[in] it       The iterator for the multi dimensional space.
 /// \tparam    Iterator The type of the iterator. 
 template <typename Iterator>
-dim3 get_thread_sizes(Iterator&& it, tag_1d_t)
+dim3 get_thread_sizes(Iterator&& it, tag_1d_t, std::size_t pad = 0)
 {
-  return dim3(it.size(dim_x) < default_threads_1d 
-                 ? it.size(dim_x) : default_threads_1d);
+  const auto elements = it.size(dim_x) - pad;
+  return dim3(elements < default_threads_1d ? elements : default_threads_1d);
 }
 
 /// Returns the number of threads in each of the dimensions for a two
@@ -141,12 +141,14 @@ dim3 get_thread_sizes(Iterator&& it, tag_1d_t)
 /// \param[in] it       The iterator for the multi dimensional space.
 /// \tparam    Iterator The type of the iterator. 
 template <typename Iterator>
-dim3 get_thread_sizes(Iterator&& it, tag_2d_t)
+dim3 get_thread_sizes(Iterator&& it, tag_2d_t, std::size_t pad = 0)
 {
-  return dim3(it.size(dim_x) < default_threads_2d_x 
-                  ? it.size(dim_x) : default_threads_2d_x,
-                it.size(dim_y) < default_threads_2d_y
-                  ? it.size(dim_y) : default_threads_2d_y);
+  const auto elements_x = it.size(dim_x) - pad;
+  const auto elements_y = it.size(dim_y) - pad;
+  return dim3(elements_x < default_threads_2d_x 
+               ? elements_x : default_threads_2d_x,
+              elements_y < default_threads_2d_y
+               ? elements_y : default_threads_2d_y);
 }
 
 /// Returns the number of threads in each of the dimensions for a three
@@ -154,14 +156,17 @@ dim3 get_thread_sizes(Iterator&& it, tag_2d_t)
 /// \param[in] it       The iterator for the multi dimensional space.
 /// \tparam    Iterator The type of the iterator. 
 template <typename Iterator>
-dim3 get_thread_sizes(Iterator&& it, tag_3d_t)
+dim3 get_thread_sizes(Iterator&& it, tag_3d_t, std::size_t pad = 0)
 {
-  return dim3(it.size(dim_x) < default_threads_3d_x 
-                  ? it.size(dim_x) : default_threads_3d_x,
-                it.size(dim_y) < default_threads_3d_y
-                  ? it.size(dim_y) : default_threads_3d_y,
-                it.size(dim_z) < default_threads_3d_z
-                  ? it.size(dim_z) : default_threads_3d_z);
+  const auto elements_x = it.size(dim_x) - pad;
+  const auto elements_y = it.size(dim_y) - pad;
+  const auto elements_z = it.size(dim_z) - pad;
+  return dim3(elements_x < default_threads_3d_x 
+                ? elements_x : default_threads_3d_x,
+              elements_y < default_threads_3d_y
+                ? elements_y : default_threads_3d_y,
+              elements_z < default_threads_3d_z
+                ? elements_z : default_threads_3d_z);
 }
 
 /// Returns the number of blocks required based on the number of \p cells and
@@ -189,9 +194,12 @@ auto get_num_blocks(Cells cells, Threads threads)
 /// \param[in] thread_sizes The number of threads in each dimension.
 /// \tparam    Iterator     The type of the iterator. 
 template <typename Iterator>
-dim3 get_block_sizes(Iterator&& it, dim3 thread_sizes, tag_1d_t)
+dim3 get_block_sizes(Iterator&& it          ,
+                     dim3       thread_sizes,
+                     tag_1d_t               ,
+                     std::size_t pad = 0    )
 {
-  return dim3(get_num_blocks(it.size(dim_x), thread_sizes.x));
+  return dim3(get_num_blocks(it.size(dim_x) - pad, thread_sizes.x));
 }
 
 /// Returns the size of the block based on the size of the space defined by the
@@ -200,10 +208,13 @@ dim3 get_block_sizes(Iterator&& it, dim3 thread_sizes, tag_1d_t)
 /// \param[in] thread_sizes The number of threads in each dimension.
 /// \tparam    Iterator     The type of the iterator. 
 template <typename Iterator>
-dim3 get_block_sizes(Iterator&& it, dim3 thread_sizes, tag_2d_t)
+dim3 get_block_sizes(Iterator&& it          ,
+                     dim3       thread_sizes,
+                     tag_2d_t               ,
+                     std::size_t pad = 0    )
 {
-  return dim3(get_num_blocks(it.size(dim_x), thread_sizes.x),
-              get_num_blocks(it.size(dim_y), thread_sizes.y));
+  return dim3(get_num_blocks(it.size(dim_x) - pad, thread_sizes.x),
+              get_num_blocks(it.size(dim_y) - pad, thread_sizes.y));
 }
 
 /// Returns the size of the block based on the size of the space defined by the
@@ -212,11 +223,14 @@ dim3 get_block_sizes(Iterator&& it, dim3 thread_sizes, tag_2d_t)
 /// \param[in] thread_sizes The number of threads in each dimension.
 /// \tparam    Iterator     The type of the iterator. 
 template <typename Iterator>
-dim3 get_block_sizes(Iterator&& it, dim3 thread_sizes, tag_3d_t)
+dim3 get_block_sizes(Iterator&& it          ,
+                     dim3       thread_sizes,
+                     tag_3d_t               ,
+                     std::size_t pad = 0    )
 {
-  return dim3(get_num_blocks(it.size(dim_x), thread_sizes.x),
-              get_num_blocks(it.size(dim_y), thread_sizes.y),
-              get_num_blocks(it.size(dim_z), thread_sizes.z));
+  return dim3(get_num_blocks(it.size(dim_x) - pad, thread_sizes.x),
+              get_num_blocks(it.size(dim_y) - pad, thread_sizes.y),
+              get_num_blocks(it.size(dim_z) - pad, thread_sizes.z));
 }
 
 } // namespace detail
@@ -225,11 +239,12 @@ dim3 get_block_sizes(Iterator&& it, dim3 thread_sizes, tag_3d_t)
 /// \param[in] it       The iterator for the multi dimensional space.
 /// \tparam    Iterator The type of the iterator. 
 template <typename Iterator>
-dim3 get_thread_sizes(Iterator&& it)
+dim3 get_thread_sizes(Iterator&& it, std::size_t pad = 0)
 {
   using iter_t = std::decay_t<Iterator>;
   return detail::get_thread_sizes(std::forward<Iterator>(it)          ,
-                                  dim_dispatch_tag<iter_t::dimensions>);
+                                  dim_dispatch_tag<iter_t::dimensions>,
+                                  pad                                 );
 }
 
 /// Returns the size of the block based on the size of the space defined by the
@@ -238,12 +253,13 @@ dim3 get_thread_sizes(Iterator&& it)
 /// \param[in] thread_sizes The number of threads in each dimension.
 /// \tparam    Iterator     The type of the iterator. 
 template <typename Iterator>
-dim3 get_block_sizes(Iterator&& it, dim3 thread_sizes)
+dim3 get_block_sizes(Iterator&& it, dim3 thread_sizes, std::size_t pad = 0)
 {
   using iter_t = std::decay_t<Iterator>;
-  return detail::get_block_sizes(std::forward<Iterator>(it)           ,
-                                 thread_sizes                         ,
-                                 dim_dispatch_tag<iter_t::dimensions>);
+  return detail::get_block_sizes(std::forward<Iterator>(it)          ,
+                                 thread_sizes                        ,
+                                 dim_dispatch_tag<iter_t::dimensions>,
+                                 pad                                 );
 }
 
 #else

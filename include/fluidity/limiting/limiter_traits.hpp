@@ -106,7 +106,29 @@ struct LimiterTraits<VanLeer<Form>>
 
   /// Defines the width of the limiter (the number of elements to the side of a
   /// state which are required to perform the limiting).
-  static constexpr auto width = std::size_t{2};
+  static constexpr auto width = std::size_t{4};
+};
+
+/// Forward declaration of the VanLeer limiter.
+/// \tparam Form The form of the state to limit on.
+template <typename Form> struct VanLeerUnsplit;
+
+/// Specialization for limiter traits for the VanLeer limiter.
+/// \tparam Form The form of the state to limit on.
+template <typename Form>
+struct LimiterTraits<VanLeerUnsplit<Form>>
+{
+  /// Defines the type of the limiter.
+  using limiter_t = VanLeerUnsplit<Form>;
+  /// Defines the form used for the limiting.
+  using form_t    = prim_form_t;
+  
+  /// Defines the form of the state to limit on.
+  static constexpr auto form = form_t::form;
+
+  /// Defines the width of the limiter (the number of elements to the side of a
+  /// state which are required to perform the limiting).
+  static constexpr auto width = std::size_t{4};
 };
 
 /// Forward declaration of the Superbee limiter.
@@ -128,7 +150,30 @@ struct LimiterTraits<Superbee<Form>>
   
   /// Defines the width of the limiter (the number of elements to the side of a
   /// state which are required to perform the limiting).
-  static constexpr auto width = std::size_t{2};
+  static constexpr auto width = std::size_t{4};
+};
+
+
+/// Forward declaration of the Superbee unsplit limiter.
+/// \tparam Form The form of the state to limit on.
+template <typename Form> struct SuperbeeUnsplit;
+
+/// Specialization for limiter traits for the Superbee unsplit limiter.
+/// \tparam Form The form of the state to limit on.
+template <typename Form>
+struct LimiterTraits<SuperbeeUnsplit<Form>>
+{
+  /// Defines the type of the limiter.
+  using limiter_t = SuperbeeUnsplit<Form>;
+   /// Defines the form used for the limiting.
+  using form_t    = prim_form_t; 
+
+  /// Defines the form of the state to limit on.
+  static constexpr auto form = form_t::form;
+  
+  /// Defines the width of the limiter (the number of elements to the side of a
+  /// state which are required to perform the limiting).
+  static constexpr auto width = std::size_t{4};
 };
 
 }} // namespace fluid::limit

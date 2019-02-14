@@ -18,7 +18,9 @@
 
 #include "linear_limiter.hpp"
 #include "superbee_limiter.hpp"
+#include "superbee_limiter_unsplit.hpp"
 #include "van_leer_limiter.hpp"
+#include "van_leer_limiter_unsplit.hpp"
 #include "void_limiter.hpp"
 
 #endif // FLUIDITY_LIMITING_LIMTIERS_HPP

@@ -49,12 +49,12 @@ struct SimTraits {
   /// Defines the default limiting form.
   using def_form_t    = limit::cons_form_t;
   /// Defines the default limiter to use.
-  using def_limiter_t = limit::VanLeer<def_form_t>;
+  using def_limiter_t = limit::Superbee<def_form_t>;
   /// Defines the default reconstructor to use.
-  using def_recon_t   = recon::MHReconstructor<def_limiter_t>;
+  using def_recon_t   = recon::MHUReconstructor<def_limiter_t>;
   /// Defines the default flux method to use.
   using def_flux_t    = flux::Force;
-  /// Defines the default execution type for the simulation.
+  // Defines the default execution type for the simulation.
   using def_exec_t    = fluid::exec::gpu_type;
 
   /// Defines the type of the state data to store, always conservative.

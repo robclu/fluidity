@@ -31,7 +31,8 @@ cmaplevels  = False
 show_ticks  = True
 save        = False
 black       = False
-quiver       = False
+quiver      = False
+diff        = False
 output_name = ""
 origin      = 'lower'
 levels      = np.arange(0, 1)
@@ -39,6 +40,7 @@ xlabel      = ""
 ylabel      = ""
 title       = ""
 fontsize    = 36
+interp      = 'none'
 
 for i in range(1, argc):
   arg = sys.argv[i]
@@ -50,6 +52,7 @@ for i in range(1, argc):
   elif (arg == "--cmap"):
     cmap = True
     data = np.genfromtxt(sys.argv[i+1])
+    np.savetxt('cmap.txt', data, fmt='%0.8f', delimiter=' ', newline='\n')
   elif (arg == "--contour-levels"):
     copts = True
     cont_min  = float(sys.argv[i+1])
@@ -72,11 +75,22 @@ for i in range(1, argc):
     ylabel = sys.argv[i+1]
   elif (arg == "--title"):
     title = sys.argv[i+1]
+  elif (arg == "--interp"):
+    interp = 'bilinear'
   elif (arg == "--no-ticks"):
     show_ticks = False
+  elif (arg == '--diff-yx'):
+    data = data - np.flipud(np.fliplr(data))
+    np.savetxt('diff-yx.txt', data, fmt='%03.2f', delimiter=' ', newline='\n')
   elif (arg == '--save'):
     save        = True
     output_name = sys.argv[i+1]
+  elif (arg == "--diff"):
+    cmap     = True
+    diff     = True
+    colormap = plt.cm.gist_ncar
+    data     = np.genfromtxt(sys.argv[i+1]) - np.genfromtxt(sys.argv[i+2])
+
   else:
     continue
 
@@ -104,7 +118,10 @@ if cmap:
   if not cmaplevels:
     cmap_min = data.min()
     cmap_max = data.max()  
-  im      = ax.imshow(data, cmap=plt.cm.jet, origin=origin, vmin=cmap_min, vmax=cmap_max)
+  if not diff:
+    colormap = plt.cm.jet
+  
+  im = ax.imshow(data, cmap=colormap, origin=origin, vmin=cmap_min, vmax=cmap_max, interpolation=interp)
   col_bar = plt.colorbar(im, cax=cmap_ax, orientation="horizontal")
   plt.xlabel(r"\textbf{{{}}}".format(xlabel), fontsize=fontsize)
   
@@ -118,7 +135,9 @@ if contour:
   if black:
     cont = ax.contour(cont_data, levels, colors='k', origin=origin)
   else:
-    cont = ax.contour(cont_data, levels, cmap=plt.cm.gist_gray, origin=origin)
+    if not diff:
+      colormap = plt.cm.gist_gray
+    cont = ax.contour(cont_data, levels, cmap=colormap, origin=origin)
   #cont_bar = plt.colorbar(cont, cax=cont_ax)
 
 if quiver:

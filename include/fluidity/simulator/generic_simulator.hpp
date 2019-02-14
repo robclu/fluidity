@@ -72,6 +72,8 @@ class GenericSimulator final : public Simulator<Traits> {
  public:
   /// Defines the number of spacial dimensions in the simulation.
   static constexpr auto dimensions = state_t::dimensions;
+  /// Defines the amount of padding used for the simulation.
+  static constexpr auto padding    = solver_t::loader_t::padding;
 
   /// Creates the simulator.
   GenericSimulator() : _params{dimensions} {}
@@ -183,6 +185,8 @@ void GenericSimulator<Traits>::simulate()
   auto wavespeeds = _data.wavespeed_iterator();
   auto timer      = util::default_timer_t();
 
+  fluid::solver::load_boundaries(solver, in, _setter);
+
   while (_params.continue_simulation())
   {
     //_params.cfl = _params.iters < 5 ? 0.18 : cfl;
@@ -223,7 +227,7 @@ GenericSimulator<Traits>::configure_dimension(std::size_t dim  ,
                                               double      end  )
 {
   _params.domain.set_dimension(dim, start, end);
-  _data.resize_dim(dim, _params.domain.elements(dim));
+  _data.resize_dim(dim, _params.domain.elements(dim) + (padding << 1);
   return this;
 }
 

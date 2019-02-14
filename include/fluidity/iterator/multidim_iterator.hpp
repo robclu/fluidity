@@ -18,6 +18,7 @@
 #ifndef FLUIDITY_ITERATOR_MULTIDIM_ITERATOR_HPP
 #define FLUIDITY_ITERATOR_MULTIDIM_ITERATOR_HPP
 
+#include "iterator_traits.hpp"
 #include "strided_iterator.hpp"
 #include <fluidity/dimension/dimension_info.hpp>
 #include <fluidity/dimension/thread_index.hpp>
@@ -37,9 +38,7 @@ namespace fluid {
 /// \tparam T         The type of the data to iterate over.
 /// \tparam DimInfo   Information for the dimensions.
 /// \tparam Exec      The execution policy for the iterator.
-template <typename T,
-          typename DimensionInfo = DimInfo<2>,
-          typename Exec          = exec::default_type>
+template <typename T, typename DimensionInfo, typename Exec>
 struct MultidimIterator : public DimensionInfo {
   /// Defines the type of this iterator.
   using self_t          = MultidimIterator;

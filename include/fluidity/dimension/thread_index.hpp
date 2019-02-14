@@ -134,13 +134,13 @@ fluidity_host_only constexpr std::size_t flattened_id(Dim&& dim)
 /// \param[in]  it The iterator over the space to determine if in range.
 /// \tparam     It The type of the iterator.
 template <typename It>
-fluidity_device_only bool in_range(It&& it)
+fluidity_device_only bool in_range(It&& it, std::size_t padding = 0)
 {
   using iter_t = std::decay_t<It>;
   bool result  = true;
   unrolled_for<iter_t::dimensions>([&] (auto i)
   {
-    result *= flattened_id(i) < it.size(i);
+    result *= flattened_id(i) < it.size(i) - padding;
   });
   return result;
 }

@@ -18,5 +18,6 @@
 
 #include "basic_reconstructor.hpp"
 #include "muscl_reconstructor.hpp"
+#include "muscl_reconstructor_unsplit.hpp"
 
 #endif // FLUIDITY_RECONSTRUCTION_RECONSTRUCTORS_HPP

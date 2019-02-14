@@ -1,4 +1,4 @@
-//==--- fluidity/reconstruction/muscl_reconstructor.hpp- -----*- C++ -*- ---==//
+//==-- fluidity/reconstruction/muscl_reconstructor_unsplit.hpp -*- C++ -*- -==//
 //            
 //                                Fluidity
 // 
@@ -8,14 +8,15 @@
 //
 //==------------------------------------------------------------------------==//
 //
-/// \file  muscl_reconstructor.hpp
+/// \file  muscl_reconstructor_unsplit.hpp
 /// \brief This file defines an implementation of the MUSCL-Hanconk
-///        reconstruction technique.
+///        reconstruction technique, specifically for use with an unsplit
+///        solver. 
 //
 //==------------------------------------------------------------------------==//
 
-#ifndef FLUIDITY_RECONSTRUCTION_MUSCL_RECONSTRUCTOR_HPP
-#define FLUIDITY_RECONSTRUCTION_MUSCL_RECONSTRUCTOR_HPP
+#ifndef FLUIDITY_RECONSTRUCTION_MUSCL_RECONSTRUCTOR_UNSPLIT_HPP
+#define FLUIDITY_RECONSTRUCTION_MUSCL_RECONSTRUCTOR_UNSPLIT_HPP
 
 #include "reconstructor.hpp"
 
@@ -25,11 +26,13 @@
 namespace fluid {
 namespace recon {
 
-/// The MHReconstructor struct implements the reconstruction interface to allow
-/// the reconstruction of state data using the MUSCL-Hancock method.
+/// The MHUReconstructor struct implements the reconstruction interface to allow
+/// the reconstruction of state data using the MUSCL-Hancock method. This is
+/// specifically for use with an unsplit method, which requires that the
+/// evolution and limiting be performed on primitive variables.
 /// \tparam Limter The type of the sloper limiter to use.
 template <typename Limiter>
-struct MHReconstructor : public Reconstructor<MHReconstructor<Limiter>> {
+struct MHUReconstructor : public Reconstructor<MHUReconstructor<Limiter>> {
  public:
   /// Defines the type of the slope limiter used by the reconstructor.
   using limiter_t = Limiter;
@@ -55,7 +58,6 @@ struct MHReconstructor : public Reconstructor<MHReconstructor<Limiter>> {
   /// Defines an intance of a right face overload type.
   static constexpr auto right_face_select = right_face_t{};
 
-
   template <typename IT, typename Mat, typename Dim>
   fluidity_host_device static auto
   chi(IT&& state, Mat&& mat, Dim dim)
@@ -78,8 +80,8 @@ struct MHReconstructor : public Reconstructor<MHReconstructor<Limiter>> {
                         - state.offset(1 , dim)->velocity(dim);
 
     const auto flatten  = 
-      u_factor > 0.0 && 
-      (std::abs(p_next - p_prev) / std::min(p_next, p_prev)) > sigma;
+      (u_factor > 0.0) && 
+      ((std::abs(p_next - p_prev) / std::min(p_next, p_prev)) > sigma);
       
     return flatten
       ? eita(std::abs(p_next - p_prev) / std::abs(p_nnext - p_pprev))
@@ -100,10 +102,12 @@ struct MHReconstructor : public Reconstructor<MHReconstructor<Limiter>> {
   fluidity_host_device static auto
   evolve(IT&& state, Mat&& mat, T dtdh, Dim dim, right_face_t) 
   {
-    using state_t = std::decay_t<decltype(*state)>;
+    using state_t = std::decay_t<decltype(state->primitive(mat))>;
+    using cons_state_t = std::decay_t<decltype(*state)>;
     using value_t = std::decay_t<T>;
 
-    auto chi_v = std::numeric_limits<value_t>::max();
+//    auto chi_v = std::numeric_limits<value_t>::max();
+    auto chi_v = value_t{1.0};
     unrolled_for<state_t::dimensions>([&] (auto d)
     {
       int sign = math::signum(state.offset(1, d)->pressure(mat) -
@@ -115,18 +119,18 @@ struct MHReconstructor : public Reconstructor<MHReconstructor<Limiter>> {
 
     constexpr auto half    = value_t{0.5};
     const auto     limiter = limiter_t();
+    const auto     prim    = state->primitive(mat);
     const auto     delta   = chi_v * half * limiter.limit(state, mat, dim);
 
     // Boundary extrapolated value:
     // U_i^n \pm \frac{1}{2} \delta \eita i
-    const auto bev = state_t{*state + delta};
+    const auto bev = state_t{prim + delta};
 
     // Evolve BEV in time:
     return state_t{
-      bev + 
-      (half * dtdh) * 
-      (state_t{*state - delta}.flux(mat, dim) - bev.flux(mat, dim))
-    };
+      bev + (half * dtdh) * 
+      (state_t{prim - delta}.flux(mat, dim) - bev.flux(mat, dim))
+    }.conservative(mat);
   }
 
   /// Creates the evolution of the data, returning the appropriate reconstructed
@@ -143,10 +147,12 @@ struct MHReconstructor : public Reconstructor<MHReconstructor<Limiter>> {
   fluidity_host_device static auto
   evolve(IT&& state, Mat&& mat, T dtdh, Dim dim, left_face_t)
   {
-    using state_t = std::decay_t<decltype(*state)>;
-    using value_t = std::decay_t<T>;
+    using state_t       = std::decay_t<decltype(state->primitive(mat))>;
+    using cons_state_t = std::decay_t<decltype(*state)>;
+    using value_t       = std::decay_t<T>;
 
-    auto chi_v = std::numeric_limits<value_t>::max();
+    //auto chi_v = std::numeric_limits<value_t>::max();
+    auto chi_v = value_t{1.0};
     unrolled_for<state_t::dimensions>([&] (auto d)
     {
       int sign = math::signum(state.offset(1, d)->pressure(mat) -
@@ -158,17 +164,17 @@ struct MHReconstructor : public Reconstructor<MHReconstructor<Limiter>> {
 
     constexpr auto half    = value_t{0.5};
     const auto     limiter = limiter_t();
+    const auto     prim    = state->primitive(mat);
     const auto     delta   = chi_v * half * limiter.limit(state, mat, dim);
 
     // Boundary extrapolated value:
-    const auto bev = state_t{*state - delta};
-    
+    const auto bev   = state_t{prim - delta};
+
     // Evolve BEV in time:
     return state_t{
-      bev +
-      (half * dtdh) *
-      (bev.flux(mat, dim) - state_t{*state + delta}.flux(mat, dim))
-    };
+      bev + (half * dtdh) * 
+      (bev.flux(mat, dim) - state_t{prim + delta}.flux(mat, dim))
+    }.conservative(mat);
   }
 
  public:
