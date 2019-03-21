@@ -68,6 +68,7 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
                                                      + dimensions
                                                      + additional_components;
 
+ public:
   /// Use the storage class constructors.
   using storage_t::storage_t;
 
@@ -178,6 +179,49 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
   template <typename... Values>
   fluidity_host_device State(Values&&... values)
   : storage_t(std::forward<Values>(values)...) {}
+
+  //==--- Component setting ------------------------------------------------==//
+
+  /// Sets the data for the density component for the state.
+  /// \param[in] rho The density component to use to set the density.
+  void set_component(components::density_t rho)
+  {
+    set_density(rho.value);
+  }
+
+  /// Sets the data for the pressure component for the state.
+  /// \param[in] pressure The pressure component to use to set the pressure.
+  void set_component(components::pressure_t p)
+  {
+    if (format == FormType::primitive)
+      set_pressure(p.value);
+  }
+
+  /// Sets the data for the x-velocity component for the state.
+  /// \param[in] vx The velocity component to use to set the x velocity.
+  void set_component(components::v_x_t vx)
+  {
+    if (dimensions >= 1)
+      set_velocity(vx.value, std::size_t{0});
+  }
+
+  /// Sets the data for the y-velocity component for the state.
+  /// \param[in] vy The velocity component to use to set the y velocity.
+  void set_component(components::v_y_t vy)
+  {
+    if (dimensions >= 2)
+      set_velocity(vy.value, std::size_t{1});
+  }
+
+  /// Sets the data for the z-velocity component for the state.
+  /// \param[in] vz The velocity component to use to set the z velocity.
+  void set_component(components::v_z_t vz)
+  {
+    if (dimensions >= 3)
+      set_velocity(vz.value, std::size_t{2});
+  }
+
+  //==--- Data access ------------------------------------------------------==//
 
   /// Returns the density of the state.
   fluidity_host_device constexpr auto density() const

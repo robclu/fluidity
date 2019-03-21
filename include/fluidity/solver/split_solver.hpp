@@ -36,7 +36,6 @@ namespace solver {
 /// \tparam Dimensions The number of dimensions to solve over.
 template <typename FluxSolver, typename Loader, typename Dims = Num<1>>
 struct SplitSolver {
- private:
   /// Defines the type of the flux solver.
   using flux_solver_t = std::decay_t<FluxSolver>;
   /// Defines the type of the loader for the data.
@@ -50,6 +49,8 @@ struct SplitSolver {
   static constexpr auto num_dimensions  = std::size_t{Dims()};
   /// Defines the amount of padding in the data loader, on one side of a dim.
   static constexpr auto padding         = loader_t::padding;
+
+ private:
   /// Defines the amount of padding on both sides of a domain.
   static constexpr auto padding_both    = (padding << 1);
   /// Defines the dispatch tag for dimension overloading.

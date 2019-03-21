@@ -17,7 +17,10 @@
 #ifndef FLUIDITY_SIMULATOR_MULTIMATERIAL_TRAITS_HPP
 #define FLUIDITY_SIMULATOR_MULTIMATERIAL_TRAITS_HPP
 
+#include "multimaterial_simulation_data.hpp"
+#include <fluidity/container/tuple.hpp>
 #include <fluidity/levelset/levelset.hpp>
+#include <fluidity/material/material.hpp>
 #include <fluidity/setting/data_option.hpp>
 #include <fluidity/setting/dimension_option.hpp>
 #include <fluidity/setting/execution_option.hpp>
@@ -30,11 +33,53 @@
 #include <fluidity/setting/solve_option.hpp>
 #include <fluidity/setting/parameter/parameter_managers.hpp>
 #include <fluidity/solver/flux_solver.hpp>
+#include <fluidity/solver/material_loader.hpp>
 #include <fluidity/state/state.hpp>
 #include <fluidity/utility/type_traits.hpp>
 
 namespace fluid {
 namespace sim   {
+
+namespace detail {
+
+template <typename SimTraits, typename Materials, typename Levelset>
+struct MaterialTraits {
+  /// Defines the type of the container which stores the materials.
+  using container_t = Tuple<material::Material<Materials, Levelset>>;
+
+  /// Defines the number of materials.
+  static constexpr auto num_materials      = std::size_t{1};
+  /// Defines that this is not multi-material.
+  static constexpr auto is_multimaterial_v = false;
+};
+
+template <typename SimTraits, typename... Es, typename Levelset>
+struct MaterialTraits<SimTraits, Tuple<Es...>, Levelset> {
+  /// Defines the type of the levelset.
+  using levelset_t   = Levelset;
+  /// Defines the traits for the simulation.
+  using sim_traits_t = SimTraits;
+
+  /// Defines the type of a single material with a levelset.
+  /// \tparam E The equation of state for the material.
+  template <typename E>
+  using material_t = material::Material<E, levelset_t>;
+
+  /// Defines the multimaterial simulation data struct given the equation of
+  /// state.
+  /// \tparam E the equations of state for the material.
+  using mm_sim_data_t = Tuple<
+    MultimaterialSimData<
+      sim_traits_t, material_t<Es>, sim_traits_t::exec_t::device>...>;
+
+  /// Defines the number of materials.
+  static constexpr auto num_materials = sizeof...(Es);
+};
+
+} // namespace detail
+
+template <typename SimTraits, typename Es, typename Levelset>
+using material_traits_t = detail::MaterialTraits<SimTraits, Es, Levelset>;
 
 /// Defines traits for a simulator implementation which can simulate multiple
 /// materials in the domain.
@@ -48,7 +93,9 @@ struct MultimaterialSimTraits {
   /// Defines the default number of dimensions.
   using def_dims_t    = Num<1>;
   /// Defines the default material to use.
-  using def_mat_t     = material::IdealGas<def_data_t>;
+  //using def_mat_t     = material::IdealGas<def_data_t>;
+  using def_mat_t     = Tuple<material::IdealGas<def_data_t>,
+                              material::IdealGas<def_data_t>>;
   /// Defines the default limiting form.
   using def_form_t    = limit::cons_form_t;
   /// Defines the default limiter to use.
@@ -65,7 +112,7 @@ struct MultimaterialSimTraits {
   /// Defines the number of dimensions for the simulation.
   using dim_t      = type_at_t<1, def_dims_t, Ts...>;
   /// Defines the type of the material for the simulation.
-  using material_t = type_at_t<2, def_mat_t, Ts...>;
+  using materials_t = type_at_t<2, def_mat_t, Ts...>;
   /// Defines the form of limiting.
   using lform_t    = type_at_t<3, def_form_t, Ts...>;
   /// Defines the type of the limiter to use.
@@ -78,16 +125,33 @@ struct MultimaterialSimTraits {
   using exec_t     = type_at_t<7, def_exec_t, Ts...>;
 
   /// Defines the type of the level sets used.
-  using levelset_t = LevelSet<data_t, dim_t, exec_t>; 
+  using levelset_t = LevelSet<data_t, dim_t::value, exec_t::device>; 
+
+  /// Defines the materials for the simulation.
+  //using mat_traits_t = material_traits_t<materials_t, levelset_t>;
+
+  /// TODO: Change this to be per material, or change the solver to take the
+  ///       material is a template parameter.
 
   /// Defines the type of the data loader.
   using loader_t     = solver::BoundaryLoader<recon_t::width>;
   /// Defines the type of the face flux solver.
-  using face_flux_t  = solver::FaceFlux<recon_t, flux_t, material_t>;
+  using face_flux_t  = solver::FaceFlux<recon_t, flux_t, materials_t>;
   /// Defines the default type of solver.
   using def_solver_t = solver::SplitSolver<face_flux_t, loader_t, dim_t>;
   /// Defines the type of the solver.
   using solver_t     = type_at_t<8, def_solver_t, Ts...>;
+
+  /// Defines the type of the loader for the material ghost state data.
+  using mm_loader_t  = solver::MaterialLoader;
+
+  /// Defines the type of the multimaterial solver for a material Mat.
+  /// \tparam EOS The equation of state for the material for which the solver 
+  /// must solve.
+  template <typename Eos>
+  using mm_solver_t = 
+    solver::SplitSolver<
+      solver::FaceFlux<recon_t, flux_t, Eos>, loader_t, dim_t>;
 
   /// Defines the storage format for the state data.
   static constexpr auto state_layout = StorageFormat::row_major;

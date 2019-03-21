@@ -17,19 +17,21 @@
 #define FLUIDITY_SIMULATOR_MULTIMATERIAL_SIMULATOR_HPP
 
 #include "parameters.hpp"
-#include "simulation_data.hpp"
-#include "levelset_traits.hpp"
 #include "simulator.hpp"
+#include "simulation_data.hpp"
+#include "multimaterial_traits.hpp"
 #include "wavespeed_initialization.hpp"
 #include <fluidity/algorithm/fill.hpp>
 #include <fluidity/algorithm/max_element.hpp>
 #include <fluidity/dimension/dimension_info.hpp>
+#include <fluidity/setting/parameter/configurable.hpp>
 #include <fluidity/utility/timer.hpp>
 #include <fluidity/utility/type_traits.hpp>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <experimental/filesystem>
+
 
 namespace fluid {
 namespace sim   {
@@ -39,50 +41,74 @@ namespace fs = std::experimental::filesystem;
 /// The MultimaterialSimulator class implements the simulation interface to
 /// simulate the case where there are multiple materials in the domain.
 /// \tparam Traits The traits which define the simulation paramters.
-template <typename Traits>
-class MultimaterialSimulator final : public Simulator<Traits> {
+template <typename... Traits>
+class MultimaterialSimulator final : 
+  public Simulator,
+  public setting::Configurable<MultimaterialSimulator<Traits...>> {
  public:
-  /// Defines the type of the traits class.
-  using traits_t             = Traits;
+  /// Defines the type of this simulator.
+  using this_t               = MultimaterialSimulator;
   /// Defines the type of the base simulator class.
-  using base_t               = Simulator<traits_t>;
+  using base_t               = Simulator;
   /// Defines the type of the filler container .
   using fillinfo_container_t = typename base_t::fillinfo_container_t;
 
  private:
+  /// Defines the type of the traits for the simulation implementation.
+  using traits_t     = MultimaterialSimTraits<base_t, this_t, Traits...>;
+
   /// Defines the type of the state data to store, always conservative.
-  using state_t     = typename traits_t::state_t;
+  using state_t      = typename traits_t::state_t;
   /// Defines the data type used in the state vector.
-  using value_t     = typename state_t::value_t;
+  using value_t      = typename state_t::value_t;
   /// Defines the type of the material for the simulation.
-  using material_t  = typename traits_t::material_t;
+  using materials_t  = typename traits_t::materials_t;
+  /// Defines the type of the reconstruction method to use.
+  using recon_t      = typename traits_t::recon_t;
   /// Defines execution policy for the simulator.
-  using execution_t = typename traits_t::execution_t;
-  /// Defines the type of the solver used to update the simulation.
-  using solver_t    = typename traits_t::solver_t;
+  using exec_t       = typename traits_t::exec_t;
+  /// Defines the type of the solver.
+  using solver_t     = typename traits_t::solver_t;
   /// Defines the type of the levelset used to define materials.
-  using levelset_t  = typename traits_t::levelset_t;
+  using levelset_t   = typename traits_t::levelset_t;
+  /// Defines the type of the loader of the ghost material state data.
+  using mm_loader_t  = typename traits_t::mm_loader_t;
+
   /// Defines the type of the parameter container.
   using params_t    = Parameters<value_t>;
   /// Defines the type of the boundary setter.
   using setter_t    = solver::BoundarySetter;
+
   /// Defines the type of the data storage for the simulation.
-  using storage_t   = SimulationData<traits_t, execution_t::device>;
+  //using storage_t   = SimulationData<traits_t, exec_t::device>;
+
+  /// Defines the storage type for each of the materials.
+  //using storage_t   = multimaterial_data_t<traits_t>;
+
+  /// Defines the traits for the materials.
+  using mat_traits_t  = material_traits_t<traits_t, materials_t, levelset_t>;
+  /// Defines the type which holds the simulation data.
+  using mm_sim_data_t = typename mat_traits_t::mm_sim_data_t;
 
   /// Defines a constexpr instance of the execution polcity.
-  static constexpr auto execution_policy = execution_t{};
-
+  static constexpr auto execution_policy = exec_t{};
+  /// Defines the number of materials in the simulation.
+  static constexpr auto num_materials    = mat_traits_t::num_materials;
  public:
+  /// Defines the type of the option manager which is used to configure the
+  /// types to use for the simulation.
+  using option_manager_t = typename traits_t::option_manager_t;
+
   /// Defines the number of spacial dimensions in the simulation.
   static constexpr auto dimensions = state_t::dimensions;
   /// Defines the amount of padding used for the simulation.
   static constexpr auto padding    = solver_t::loader_t::padding;
 
   /// Creates the simulator.
-  LevelsetSimulator() : _params{dimensions} {}
+  MultimaterialSimulator() : _params{dimensions} {}
 
   /// Cleans up all resources acquired by the simulator.
-  ~LevelsetSimulator() {}
+  ~MultimaterialSimulator() {}
 
   /// Runs the simulation until completion.
   void simulate() override;
@@ -96,26 +122,25 @@ class MultimaterialSimulator final : public Simulator<Traits> {
 
   /// Configures the simulator to use the specified CFL number.
   /// \param[in] cfl The CFL number to use for the simulation.
-  base_t* configure_cfl(double cfl) override;
+  void configure_cfl(double cfl) override;
 
   /// Configures the simulator to set size and resolution of a dimension \p dim.
   /// \param[in] dim   The dimension to specify.
   /// \param[in] start The start value of the dimension.
   /// \param[in] end   The end value of the dimension.
-  base_t* 
-  configure_dimension(std::size_t dim, double start, double end) override;
+  void configure_dimension(std::size_t dim, double start, double end) override;
 
   /// Configures the simulator to simulate for a maximum number of iterations.
   /// \param[in] iters  The maximum number of iterations to simulate for.
-  base_t* configure_max_iterations(std::size_t iters) override;  
+  void configure_max_iterations(std::size_t iters) override;  
 
   /// Configures the simulator to use the \p resolution for the domain.
   /// \param[in] resolution The resolution to use for the domain.
-  base_t* configure_resolution(double resolution) override;
+  void configure_resolution(double resolution) override;
 
   /// Configures the simulator to simulate until a certain simulation time.
   /// \param[in] sim_time The time to run the simulation until.
-  base_t* configure_sim_time(double sim_time) override;
+  void configure_sim_time(double sim_time) override;
 
   /// Prints the results of the simulation to the standard output stream.
   void print_results() const override;
@@ -133,20 +158,149 @@ class MultimaterialSimulator final : public Simulator<Traits> {
   /// \param[in] path   The file path (including the prefix) to write to.
   void write_results_separate_raw(std::string path) const override;
 
+  /// Adds a material to the simulator, with a specific equation of state, an
+  /// initializer for the levelset, and the values of the state data inside the
+  /// material. The following in an example usage:
+  /// \code{cpp}
+  /// simulator->add_material(
+  ///   IdealGas<double>{1.4},
+  ///   [&] fluidity_host_device (auto it, auto& cell_ids)
+  ///   {
+  ///     *it = cell_ids[0] < 0.1 ? 0 : 1;
+  ///   },
+  ///   0.1_rho, 0.5_p, 0.25_v_x
+  /// );
+  /// \endcode
+  ///
+  /// The predicate for setting the levelset must take two arguments. The first
+  /// is the iterator to the levelset data which must be set, and the second is
+  /// a reference to the indices of the cell in each dimension.
+  template <typename Eos, typename LSPred, typename... Elements>
+  void add_material(Eos&& eos, LSPred&& pred, Elements&&... elements)
+  {
+    //auto es = make_tuple(std::forward<Elements>(elements)...);
+    //for_each(es, [] (auto& e)
+    //{
+    //  std::cout << e.name() << ": " << e.value << "\n";
+    //});
+
+    auto eos_type_set = false;
+    for_each(_mm_data, [&] (auto& mm_data)
+    {
+      using eos_t    = std::decay_t<Eos>;
+      using mm_eos_t = std::decay_t<decltype(mm_data.material().eos())>;
+
+      auto& material = mm_data.material();
+
+      if (std::is_same<eos_t, mm_eos_t>::value && !eos_type_set)
+      {
+        material.init_levelset(std::forward<LSPred>(pred));
+      
+        // Now set the state data for the material.
+        mm_data.set_state_data(std::forward<Elements>(elements)...);
+
+        eos_type_set = true;
+      }
+    });
+  }
+
+  /// Performs the simulation for the multimaterial simulator.
+  void simulate_mm()
+  {
+    //auto solver = solver_t{_data.input_iterator()};
+    //auto mat    = materials_t{};
+
+    // Initialize everything which doesn't depend on the material type.
+    _params.print_static_summary();
+    auto cfl   = _params.cfl;
+    auto timer = util::default_timer_t();
+
+    //_materials.initialize();
+
+    for_each(_mm_data, [&] (auto& mm_data)
+    {
+      mm_data.initialize();
+    });
+
+    while (_params.continue_simulation())
+    {
+      // Initialize the real and ghost cell data for all materials ...
+      //load_ghost_cells(_sim_data)
+
+      value_t max_ws = 0.0;
+      // Compute the max wavespeed to use for the time delta ...
+      for_each(_mm_data, [&] (auto& mm_data)
+      {
+        auto& mat = mm_data.material();
+
+        // Get input and output iterator for the material ...
+        auto in  = mm_data.input_iterator();
+        auto out = mm_data.output_iterator();
+        auto ws  = mm_data.wavespeed_iterator();
+
+        // Set the wavespeeds
+        set_wavespeeds(in, ws, mat.material());
+
+        auto max_speed = max_element(ws);
+        if (max_speed > max_ws)
+          max_ws = max_speed;
+      });
+      _params.update_time_delta(max_ws);
+
+      // Update each of the materials ...
+      for_each(_mm_data, [&] (auto& mm_data)
+      {
+        auto& mat    = mm_data.material();
+        auto  solver = mm_data.solver();
+        auto  in     = mm_data.input_iterator();
+        auto  out    = mm_data.output_iterator();
+
+        solver.solve(in, out, mat.material(), _params.dt_dh(), _setter);
+
+        mm_data.swap(out, in);
+      });
+
+      // Update each of the material levelsets ...
+      for_each(_mm_data, [&] (auto& mm_data)
+      {
+        //auto& levelset = mm_data.material().levelset();
+        //evolve_levelset(levelset);
+      });
+
+      // Reinitialize the levelsets ...
+      for_each(_mm_data, [&] (auto& mm_data)
+      {
+        //auto& mat = mm_sim_data.material().levelset();
+        // reinitialize_levelset(levelset);
+      });
+      _params.update_simulation_info();
+    }
+
+    printf("Simulation time : %8lu ms\n", timer.elapsed_time());
+    _params.print_final_summary();
+
+    // Finalise the data by taking the appropriate states which are inside an
+    // appropriate levelset and writing that state to a global array.
+    //_data.sync_device_to_host();
+  }
+
  private:
   /// Defines a constexpr instance of a tag which is std::true_type of the batch
   /// size must be fetched for 1 spacial dimension.
   static constexpr auto batch_size_tag = 
-    std::integral_constant<bool, traits_t::spacial_dims == 1>{};
+    std::integral_constant<bool, traits_t::dimensions == 1>{};
 
+  //storage_t   _data;      //!< Data for the simulation.
+  mm_sim_data_t _mm_data;        //!< Materials for the simulation.
+  params_t      _params;      //!< The parameters for the simulation.
+  setter_t      _setter;      //!< The boundary setter.
 
-  /// \note Update this to take a number of levelsets and assosciated materials
-  /// for the levelset.
-  
-  storage_t _data;        //!< Data for the simulation.
-  levelset_t _levelset;   //!< Defines the levelset for the simulation.
-  params_t  _params;      //!< The parameters for the simulation.
-  setter_t  _setter;      //!< The boundary setter.
+/*
+  void configure(const setting::Parameter* param)
+  {
+    std::cout << "Don't know how to set this param : " << param->type() << "\n";
+  }
+*/
 
   /// Returns the dimension information for the simulator.
   auto dimension_info() const;
@@ -177,14 +331,21 @@ class MultimaterialSimulator final : public Simulator<Traits> {
   void write_blob(Iter iter, std::string prefix, dimz_t) const;
 };
 
+/// Alias for the simulator.
+using mm_simulator_t = MultimaterialSimulator<>;
+
+/// Alias for the simulator option manager.
+using mm_sim_option_manager_t = typename mm_simulator_t::option_manager_t;
+
 //==--- Implementation -----------------------------------------------------==//
 //===== Public ----------------------------------------------------------=====//
 
-template <typename Traits>
-void GenericSimulator<Traits>::simulate()
+template <typename... Ts>
+void MultimaterialSimulator<Ts...>::simulate()
 {
+/*
   auto solver = solver_t{_data.input_iterator()};
-  auto mat    = material_t{};
+  auto mat    = materials_t{};
 
   _params.print_static_summary();
   _data.initialize();
@@ -192,8 +353,6 @@ void GenericSimulator<Traits>::simulate()
   auto cfl        = _params.cfl;
   auto wavespeeds = _data.wavespeed_iterator();
   auto timer      = util::default_timer_t();
-
-  fluid::solver::load_boundaries(solver, in, _setter);
 
   while (_params.continue_simulation())
   {
@@ -218,52 +377,52 @@ void GenericSimulator<Traits>::simulate()
 
   // Finalise the data, making sure it is all available on the host.
   _data.sync_device_to_host();
+*/
 }
 
-template <typename Traits>
-Simulator<Traits>*
-GenericSimulator<Traits>::configure_cfl(double cfl)
+// 
+
+
+template <typename... Ts>
+void MultimaterialSimulator<Ts...>::configure_cfl(double cfl)
 {
   _params.cfl = cfl;
-  return this;
 }
 
-template <typename Traits>
-Simulator<Traits>*
-GenericSimulator<Traits>::configure_dimension(std::size_t dim  ,
-                                              double      start,
-                                              double      end  )
+template <typename... Ts>
+void MultimaterialSimulator<Ts...>::configure_dimension(std::size_t dim  ,
+                                                        double      start,
+                                                        double      end  )
 {
   _params.domain.set_dimension(dim, start, end);
-  _data.resize_dim(dim, _params.domain.elements(dim) + (padding << 1);
-  return this;
+  for_each(_mm_data, [&] (auto& mat_data)
+  {
+    mat_data.resize_dim(dim, _params.domain.elements(dim));
+  });
 }
 
-template <typename Traits>
-Simulator<Traits>* GenericSimulator<Traits>::configure_resolution(double res)
+template <typename... Ts>
+void MultimaterialSimulator<Ts...>::configure_resolution(double res)
 {
   _params.domain.set_resolution(res);
-  return this;
 }
 
-template <typename Traits>
-Simulator<Traits>* GenericSimulator<Traits>::configure_sim_time(double sim_time)
+template <typename... Ts>
+void MultimaterialSimulator<Ts...>::configure_sim_time(double sim_time)
 {
   _params.sim_time = sim_time;
-  return this;
 }
 
-template <typename Traits>
-Simulator<Traits>*
-GenericSimulator<Traits>::configure_max_iterations(std::size_t iters)
+template <typename... Ts>
+void MultimaterialSimulator<Ts...>::configure_max_iterations(std::size_t iters)
 {
   _params.max_iters = iters;
-  return this;
 }
 
-template <typename Traits>
-void GenericSimulator<Traits>::fill_data(fillinfo_container_t&& fillers)
+template <typename... Ts>
+void MultimaterialSimulator<Ts...>::fill_data(fillinfo_container_t&& fillers)
 {
+/*
   using fill_state_t = typename traits_t::primitive_t;
   using index_t      = typename fill_state_t::index;
   auto& states       = _data.states();
@@ -280,6 +439,8 @@ void GenericSimulator<Traits>::fill_data(fillinfo_container_t&& fillers)
       );
     }
   }
+*/
+/*
   /// Go over each of the dimensions and fill the data:
   auto pos        = Array<float, 3>();
   auto dim_info   = dimension_info();
@@ -291,7 +452,8 @@ void GenericSimulator<Traits>::fill_data(fillinfo_container_t&& fillers)
     unrolled_for<dimensions>([&] (auto d)
     {
       constexpr auto dim = Dimension<d>{};
-      pos[d] = float(dim_info.flattened_index(i, dim)) / dim_info.size(dim);
+//      pos[d] = float(dim_info.flattened_index(i, dim)) / dim_info.size(dim);
+      pos[d] = float(flattened_index(dim_info, i, dim)) / dim_info.size(dim);
     });
 
     // Invoke each of the fillers on the each state data property:
@@ -303,22 +465,22 @@ void GenericSimulator<Traits>::fill_data(fillinfo_container_t&& fillers)
     }
     states[i] = fill_state.conservative(material);
   }
-
+*/
   // Make sure that the host and device data is
   // synced in the case that the data has GPU data.
-  _data.synchronize();
+  //_data.synchronize();
 }
 
-template <typename Traits>
-void GenericSimulator<Traits>::print_results() const
+template <typename... Ts>
+void MultimaterialSimulator<Ts...>::print_results() const
 {
   std::ostream stream(nullptr);
   stream.rdbuf(std::cout.rdbuf());
   stream_output_ascii(stream);
 }
 
-template <typename Traits>
-void GenericSimulator<Traits>::write_results(std::string prefix) const
+template <typename... Ts>
+void MultimaterialSimulator<Ts...>::write_results(std::string prefix) const
 {
   std::ofstream output_file;
   auto filename = prefix + ".dat";
@@ -327,85 +489,96 @@ void GenericSimulator<Traits>::write_results(std::string prefix) const
   output_file.close(); 
 }
 
-template <typename Traits> template <typename Iter, typename Streams>
-void GenericSimulator<Traits>::write_blob(Iter iter, Streams& streams, dimx_t) const
+template <typename... Ts> template <typename Iter, typename Streams>
+void MultimaterialSimulator<Ts...>::write_blob(Iter it, Streams& streams, dimx_t) const
 {
-  for (const auto x : range(iter.size(dim_x)))
+/*
+  for (const auto x : range(it.size(dim_x)))
   {
     unsigned i = 0;
-    auto state = iter.offset(x, dim_x)->primitive(material_t{});
+    auto state = it.offset(x, dim_x)->primitive(material_t{});
     for (auto& stream : streams)
     {
       stream << state[i++] << " ";
     }
   }
   for (auto& stream : streams) stream << "\n";
+*/
 }
 
-template <typename Traits> template <typename Iter>
-void GenericSimulator<Traits>::write_blob(Iter iter, std::string prefix, dimx_t) const
+template <typename... Ts> template <typename Iter>
+void MultimaterialSimulator<Ts...>::write_blob(Iter it, std::string prefix, dimx_t) const
 {
+/*
   using index_t = typename traits_t::primitive_t::index;
   std::vector<std::ofstream> streams;
   for (auto name : index_t::element_names())
   { 
     streams.emplace_back(prefix + "_" + name + "_" + std::to_string(_params.sim_time) + ".dat");
   }
-  write_blob(iter, streams, dim_x);
+  write_blob(it, streams, dim_x);
   for (auto& stream : streams) stream << "\n";
+*/
 }
 
-template <typename Traits> template <typename Iter>
-void GenericSimulator<Traits>::write_blob(Iter iter, std::string prefix, dimy_t) const
+template <typename... Ts> template <typename Iter>
+void MultimaterialSimulator<Ts...>::write_blob(Iter it, std::string prefix, dimy_t) const
 {
+/*
   using index_t = typename traits_t::primitive_t::index;
   std::vector<std::ofstream> streams;
   for (auto name : index_t::element_names())
   { 
     streams.emplace_back(prefix + "_" + name + "_" + std::to_string(_params.sim_time) + ".dat");
   }
-  for (const auto y : range(iter.size(dim_y)))
+  for (const auto y : range(it.size(dim_y)))
   {
-    write_blob(iter.offset(y, dim_y), streams, dim_x);
+    write_blob(it.offset(y, dim_y), streams, dim_x);
   }
   for (auto& stream : streams) { stream.close(); }
+*/
 }
 
-template <typename Traits> template <typename Iter>
-void GenericSimulator<Traits>::write_blob(Iter iter, std::string prefix, dimz_t) const
+template <typename... Ts> template <typename Iter>
+void MultimaterialSimulator<Ts...>::write_blob(Iter it, std::string prefix, dimz_t) const
 {
-  for (const auto z : range(iter.size(dim_z)))
+/*
+  for (const auto z : range(it.size(dim_z)))
   {
     auto new_prefix = prefix + "_" + std::to_string(z);
-    write_blob(iter.offset(z, dim_z), new_prefix, dim_y);
+    write_blob(it.offset(z, dim_z), new_prefix, dim_y);
   }
+*/
 }
 
-template <typename Traits>
-void
-GenericSimulator<Traits>::write_results_separate_raw(std::string prefix) const
+template <typename... Ts>
+void MultimaterialSimulator<Ts...>::write_results_separate_raw(std::string prefix) const
 {
+/*
   write_blob(_data.states().multi_iterator(),
              prefix                   ,
              Dimension<dimensions-1>());
+*/
 }
 
 //===== Private ---------------------------------------------------------=====//
 
-template <typename Traits>
-auto GenericSimulator<Traits>::dimension_info() const
+template <typename... Ts>
+auto MultimaterialSimulator<Ts...>::dimension_info() const
 {
   auto dim_info = DimInfo<dimensions>();
   unrolled_for<dimensions>([&] (auto i)
   {
-    dim_info[i] = _data.states().size(i);
+    dim_info[i] = get<0>(_mm_data).states().size(i);
+    //dim_info[i] = _data.states().size(i);
   });
   return dim_info;
 }
 
-template <typename Traits> template <typename Stream>
-void GenericSimulator<Traits>::stream_output_ascii(Stream&& stream) const
+template <typename... Ts> template <typename Stream>
+void MultimaterialSimulator<Ts...>::stream_output_ascii(Stream&& stream) const
 {
+/*
   using index_t = typename traits_t::primitive_t::index;
 
   // Offset to convert dimensions {0, 1, 2} into char values {x, y, z}
@@ -476,6 +649,7 @@ void GenericSimulator<Traits>::stream_output_ascii(Stream&& stream) const
       }
     });
   } while (offsets[dimensions - 1] != dim_info.size(dimensions - 1));
+*/
 }
 
 }} // namespace fluid::sim

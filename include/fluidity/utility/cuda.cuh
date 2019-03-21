@@ -29,7 +29,7 @@ namespace cuda  {
 /// \param      elements The number of elements to set.
 /// \tparam     Ptr      The type of the pointers.
 template <typename Ptr>
-fluidity_global void copy(const Ptr* in, const Ptr* out, std::size_t elements)
+fluidity_global void copy(const Ptr* in, Ptr* out, std::size_t elements)
 {
   const auto idx = flattened_id(dim_x);
   if (idx < elements)

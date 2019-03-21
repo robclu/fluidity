@@ -44,17 +44,52 @@ struct IsTuple<Tuple<Ts...>> {
   static constexpr bool value = true;
 };
 
+/// Struct to define the size of a tuple. This non-specialization is the general
+/// case where T is not a tuple and therefore has no size.
+/// \tparam T The tuple to determine the size of.
+template<typename T>
+struct TupleSize {
+  /// Returns that the tuple has no size (non-tuple specialization).
+  static constexpr auto value = std::size_t{0};
+};
+
+/// Specialization of the TupleSize struct for the case that the type is a
+/// Tuple.
+/// \tparam Ts The types for the tuple.
+template <typename... Ts>
+struct TupleSize<Tuple<Ts...>> {
+  /// Returns the size of the tuple.
+  static constexpr auto value = std::size_t{sizeof...(Ts)};
+};
+
 } // namespace detail
+
+//==--- Traits -------------------------------------------------------------==//
+
+/// Returns the size of the tuple.
+template <typename T>
+static constexpr auto tuple_size_v = detail::TupleSize<std::decay_t<T>>::value;
 
 /// Returns true if a decayed T is a tuple, and false otherwise.
 template <typename T>
 static constexpr bool is_tuple_v = detail::IsTuple<std::decay_t<T>>::value;
 
+/// Defines a valid type if the Es are a tuple.
+/// \tparam Es the type(s) to check if are a tuple.
+template <typename... Es>
+using tuple_enable_t = std::enable_if_t<is_tuple_v<Es...>>;
+  
+/// Defines a valid type if the Es aren't a tuple.
+template <typename... Es>
+using nontuple_enable_t = std::enable_if_t<!is_tuple_v<Es...>>;
+
+//==--- Tuple Implementation -----------------------------------------------==//
+
 /// Specialization for an empty Tuple.
 template <>
 struct Tuple<> {
   /// Alias for the storage type.
-  using storage_t = detail::BasicTuple<>;
+  using storage_t = BasicTuple<>;
   /// Defines the size of the Tuple.
   static constexpr size_t elements = storage_t::elements;
 
@@ -70,16 +105,10 @@ struct Tuple<> {
 template <typename... Ts> 
 struct Tuple {
  private:
-  /// Defines a valid type if the Es are a tuple.
-  /// \tparam Es the type(s) to check if are a tuple.
-  template <typename... Es>
-  tuple_enable_t    = std::enable_if_t<is_tuple_v<Es...>>;
-  /// Defines a valid type if the Es aren't a tuple.
-  template <typename... Es>
-  nontuple_enable_t = std::enable_if_t<!is_tuple_v<Es...>>;
+
  public:
   /// Alias for the storage type.
-  using storage_t = detail::BasicTuple<Ts...>;
+  using storage_t = BasicTuple<Ts...>;
 
   /// Defines the number of elements in the tuple.
   static constexpr size_t elements = storage_t::elements;
@@ -129,7 +158,7 @@ struct Tuple {
   /// which holds the elements.
   fluidity_host_device const storage_t& data() const
   { 
-    return _sorage;
+    return _storage;
   }
 
   /// Returns the underlying storage container, which holds the elements.
@@ -159,7 +188,7 @@ struct Tuple {
   template <std::size_t... I, typename T>
   fluidity_host_device constexpr explicit
   Tuple(std::index_sequence<I...> extractor, T&& other)
-  : _storage{detail::get_impl<I>(std::forward<storage_t>(other.data()))...} {}
+  : _storage{detail::get<I>(std::forward<storage_t>(other.data()))...} {}
 };
 
 namespace detail {
@@ -167,8 +196,8 @@ namespace detail {
 /// The TupleElement class get the type of the element at index Idx in a tuple.
 /// \tparam   Idx  The index of the element to get type type of.
 /// \tparam   T   The type of the tuple.
-template <std::size_t Idx, typename TupleType>
-struct TupleElement {
+template <std::size_t Idx, typename T>
+struct TupleElementType {
   /// Returns the type of the element at index Idx.
   using type = decltype(
     detail::type_extractor<Idx>(std::move(std::declval<T>().data())));
@@ -177,7 +206,7 @@ struct TupleElement {
 /// Returns the type of a tuple element for a tuple with no elements,
 /// \tparam  Idx The index of the element to get the type of.
 template <std::size_t Idx>
-struct TupleElement<Idx, Tuple<>> {
+struct TupleElementType<Idx, Tuple<>> {
   using type = void;
 };
 
@@ -187,7 +216,7 @@ struct TupleElement<Idx, Tuple<>> {
 /// \tparam I The index of the element to get the type of.
 /// \tparam T The type of the tuple to get the element type from.
 template <std::size_t I, typename T>
-using tuple_element_t = typename detail::TupleElement<Idx, T>::type;
+using tuple_element_t = typename detail::TupleElementType<I, T>::type;
 
 /// Defines a function to get a element from a Tuple. This overload is selected
 /// when the \p tuple is a const lvalue reference.
@@ -197,7 +226,7 @@ using tuple_element_t = typename detail::TupleElement<Idx, T>::type;
 template <size_t I, typename... Ts>
 fluidity_host_device constexpr inline const auto& get(const Tuple<Ts...>& tuple)
 {
-  return detail::get_impl<I>(tuple.data());
+  return detail::get<I>(tuple.data());
 }
 
 /// Defines a function to get a element from a Tuple. This overload is selected
@@ -208,7 +237,7 @@ fluidity_host_device constexpr inline const auto& get(const Tuple<Ts...>& tuple)
 template <size_t I, typename... Ts>
 fluidity_host_device constexpr inline auto& get(Tuple<Ts...>& tuple)
 {
-  return detail::get_impl<I>(tuple.data());
+  return detail::get<I>(tuple.data());
 }
 
 /// Defines a function to get a element from a Tuple. This overload is selected
@@ -217,9 +246,9 @@ fluidity_host_device constexpr inline auto& get(Tuple<Ts...>& tuple)
 /// \tparam    I     The index of the element to get from the Tuple.
 /// \tparam    Ts    The types of the Tuple elements.
 template <size_t I, typename... Ts>
-fluidity_host_device constexpr inline auto&& get(Tuple<Types...>&& tuple)
+fluidity_host_device constexpr inline auto&& get(Tuple<Ts...>&& tuple)
 {
-  return std::move(detail::get_impl<I>(std::move(tuple.data())));
+  return std::move(detail::get<I>(std::move(tuple.data())));
 }
 
 //==--- Functions ----------------------------------------------------------==//
@@ -261,7 +290,52 @@ fluidity_host_device constexpr inline auto&& get(Tuple<Types...>&& tuple)
 template <typename... Ts>
 fluidity_host_device constexpr inline auto make_tuple(Ts&&... values)
 {
-  return Tuple<Ts...>(std::forward<Ts>(valuess)...);
+  return Tuple<Ts...>(std::forward<Ts>(values)...);
+}
+
+namespace detail {
+
+/// Implementation of the unpack function which expands the tuple into the
+/// callable function \p fn. This is different to $for_each$ in that $for_each$
+/// will apply a function to each element, where this expands the entire tuple
+/// contents into the function.
+/// \param[in] fn The function to expand the tuple into.
+/// \param[in] t  The tuple to unpack.
+/// \tparam    F  The type of the function.
+/// \tparam    T  The type of the tuple.
+/// \tparam    I  The indices of the tuple elements.
+template<typename F, typename T, size_t... I>
+fluidity_host_device auto unpack_impl(F&& fn, T&& t, std::index_sequence<I...>)
+{
+  return fn(get<I>(std::forward<T>(t))...);
+}
+
+} // namespace detail
+
+/// Implementation of the unpack function which expands the tuple into the
+/// callable function \p fn. This is different to $for_each$ in that $for_each$
+/// will apply a function to each element, where this expands the entire tuple
+/// contents into the function. For example, this may be used as follows:
+/// \code{cpp}
+/// auto tuple  = make_tuple(...); // Some example tuple
+/// auto result = 
+///   unpack(tuple, [] (auto&&... args)
+///   {
+///     // Do something with tuple args...
+///   });
+/// \endcode
+///
+/// \param[in] fn    The function to expand the tuple into.
+/// \param[in] t     The tuple to unpack.
+/// \tparam    T     The tuple to
+/// \tparam    F     The type of the function.
+/// \tparam    Args  The indices of the tuple elements.
+template<typename T, typename F, typename... Args>
+fluidity_host_device auto unpack(T&& t, F&& fn)
+{
+  return apply_tuple_impl(std::forward<F>(fn),
+                          std::forward<T>(t),
+                          std::make_index_sequence<tuple_size_v<T>>());
 }
 
 } // namespace fluid

@@ -1,4 +1,4 @@
-//==--- fluidity/solver/split_solver.cuh ------------------- -*- C++ -*- ---==//
+//==--- fluidity/solver/cuda/split_solver.cuh -------------- -*- C++ -*- ---==//
 //            
 //                                Fluidity
 // 

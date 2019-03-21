@@ -56,7 +56,7 @@ namespace setting {
 /// 
 /// An example use case for creating a Simulator object, which is configurable
 /// (the flux method and material are compile time options) through the
-/// template parameters in the derived SimulatorImpl class, is the following
+/// template parameters in the derived MultimaterialSimulator class, is the following
 /// (additionally, for a full example, see the setting_test.cpp tests):
 ///
 /// \begin{code}
@@ -83,10 +83,10 @@ namespace setting {
 ///
 /// // Define the templated implementation:
 /// template <typename... Ts>
-/// struct SimulatorImpl : Simulator {
+/// struct MultimaterialSimulator : Simulator {
 ///   // Required to be able to build:
 ///   template <typename... Us>
-///   using make_type_t = SimulatorImpl<Us...>;
+///   using make_type_t = MultimaterialSimulator<Us...>;
 ///
 ///   // Define which options are at which positions, and the default values:
 ///   using flux_t     = type_at_t<0, Hllc, Ts...>;
@@ -94,13 +94,13 @@ namespace setting {
 ///
 ///   // Define the option manager, matching options to above positions:
 ///   using option_manager_t = 
-///     OptionManager<Simulator, SimulatorImpl<>, FluxOption, MaterialOption>;
+///     OptionManager<Simulator, MultimaterialSimulator<>, FluxOption, MaterialOption>;
 ///
 ///   virtual void run() override { ... }
 /// };
 ///
 /// // Aliases for the simulator:
-/// using simulator_t = SimulatorImpl<>;
+/// using simulator_t = MultimaterialSimulator<>;
 ///
 /// /// Alias for the option manager.
 /// using op_manager_t = typename simulator_t::option_manager_t;
@@ -264,6 +264,27 @@ struct OptionManager
       //base->configure(param);
     });
     return std::move(base);
+  }
+
+   /// Creates a unique pointer to a Base class type using a Derived type. This
+  /// uses the default types defines in the Derived class and can be used during
+  /// debugging to improve compile times.
+  auto create_simulator() const
+  {
+    /* namespace lg = logging;
+       lg::log(lg::logger_t, 
+               "Using default options for option manager, "
+               "and options set using .set(op_type, op_value) will not be "
+               "applied. Please use create_from_options<>() to use set "
+               "options. This method is a debug build optimisation.");
+    */
+    auto sim = std::make_unique<derived_t>();
+// /    base->configure(_param_manager);
+    for_each(_param_manager->get_params(), [&] (const auto& param)
+    {
+      //base->configure(param);
+    });
+    return std::move(sim);
   }
 
  private:

@@ -49,6 +49,9 @@ class LevelSet {
 
   storage_t _data; //!< Data for the level set.
  public:
+  /// Default constructor for the levelset.
+  LevelSet() = default;
+
   /// Constructor to initialize the level set data with a predicate and the
   /// sizes of the dimensions for the level set.
   template <typename    Pred           ,
@@ -67,6 +70,37 @@ class LevelSet {
       });
       pred(it, positions);
     });
+  }
+
+  /// Resizes the level set data.
+  template <typename... Sizes, size_enable_t<Sizes...> = 0>
+  void resize(Sizes&&... sizes)
+  {
+    _data.resize(std::forward<Sizes>(sizes)...);
+  }
+
+  /// Resizes a single dimension \p dim to have \p elements number of elements.
+  /// \param[in] dim      The dimension to resize.
+  /// \param[in] elements The number of elements to resize the dimension to.
+  void resize_dim(std::size_t dim, std::size_t elements)
+  {
+    _data.resize_dim(dim, elements);
+  }
+
+  /// Initializes the levelset data using the \p predicate.
+  template <typename Pred>
+  void initialize(Pred&& pred)
+  {
+    fill(_data.multi_iterator(), [&] fluidity_host_device (auto it)
+    {
+      auto positions = Array<float, num_dimensions>{};
+      unrolled_for<num_dimensions>([&] (auto dim)
+      {
+        positions[dim] = static_cast<float>(flattened_id(dim)) 
+                       / static_cast<float>(it.size(dim));
+      });
+      pred(it, positions);
+    });    
   }
 
   void print() const

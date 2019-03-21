@@ -29,7 +29,7 @@ template <std::size_t Index, typename Opt>
 struct TupleElement;
 
 /// This is a helper function which can be decltype'd to get the type of the
-/// element at an ndex in a tuple. It should never actually be called, other
+/// element at an index in a tuple. It should never actually be called, other
 /// than in a metaprogramming context.
 /// \param[in]  element   The element to get the type of.
 /// \tparam     Index     The index of the element in the tuple.
@@ -68,7 +68,7 @@ get(const TupleElement<I, T>& e)
 /// \tparam    I  The index of the element to get.
 /// \tparam    T  The type of the element to get.
 template <std::size_t I, typename T>
-fluidity_host_devcice constexpr inline auto&
+fluidity_host_device constexpr inline auto&
 get(TupleElement<I, T>& e)
 {
   return e.value;
@@ -90,9 +90,9 @@ struct TupleElement
   fluidity_host_device constexpr TupleElement() = default;
 
   /// Constructor to move an element into this one.
-  template <typename T>
-  fluidity_host_device constexpr TupleElement(T&& v)
-  : value(std::forward<T>(v)) {}
+  template <typename TT>
+  fluidity_host_device constexpr TupleElement(TT&& v)
+  : value(std::forward<TT>(v)) {}
 
   type_t value = type_t{0}; //!< The element for the tuple
 };
@@ -122,7 +122,7 @@ struct TupleStorage<std::index_sequence<I...>, Ts...> : TupleElement<I, Ts>... {
   /// Constructor which takes a list of elements to use to create the tuple.
   template <typename... Es>
   fluidity_host_device constexpr TupleStorage(const Es&... es)
-  : TupleElement<I, Ts>(std::forward<Ts>(es))... {}
+  : TupleElement<I, Ts>(es)... {}
 };
 
 } // namespace detail
