@@ -23,7 +23,8 @@
 #include <fluidity/execution/execution_policy.hpp>
 #include <fluidity/utility/portability.hpp>
 
-namespace fluid {
+namespace fluid    {
+namespace levelset {
 
 /// The LevelSet class 
 template <typename         T                              , 
@@ -103,6 +104,17 @@ class LevelSet {
     });    
   }
 
+  /// Returns a multi-dimensional iterator over the levelset data.
+  auto multi_iterator() const
+  {
+    return _data.multi_iterator();
+  }
+
+  auto multi_iterator()
+  {
+    return _data.multi_iterator();
+  }
+
   void print() const
   {
     auto data = _data.as_host();
@@ -136,6 +148,43 @@ class LevelSet {
   }
 };
 
-} // namespace fluid
+///==--- Functions ---------------------------------------------------------==//
+
+/// Returns true if dereferencing the \p levelset_it has a positive value (i.e
+/// the data value is inside the levelset).
+/// \param[in] levelset_it An iterator over levelset data.
+/// \tparam    LSIT        The type of the levelset iterator.
+template <typename LSIT>
+fluidity_host_device constexpr auto inside(LSIT&& levelset_it) -> bool
+{
+  using type_t = std::decay_t<decltype(*levelset_it)>;
+  return *levelset_it > type_t{0};
+}
+
+/// Returns true if dereferencing the \p levelset_it has a negative value (i.e
+/// the data value is outside the levelset).
+/// \param[in] levelset_it An iterator over levelset data.
+/// \tparam    LSIT        The type of the levelset iterator.
+template <typename LSIT>
+fluidity_host_device constexpr auto outside(LSIT&& levelset_it) -> bool
+{
+  using type_t = std::decay_t<decltype(*levelset_it)>;
+  return *levelset_it < type_t{0};
+}
+
+/// Returns true if dereferencing the \p levelset_it has a value of zero (i.e
+/// the data value is on the boundary), or (incase of floating point error) if
+/// it is neither inside nor outside.
+/// \param[in] levelset_it An iterator over levelset data.
+/// \tparam    LSIT        The type of the levelset iterator.
+template <typename LSIT>
+fluidity_host_device constexpr auto on_boundary(LSIT&& levelset_it) -> bool
+{
+  using type_t = std::decay_t<decltype(*levelset_it)>;
+  return (*levelset_it == type_t{0}) ||
+         (!inside(levelset_it) && !outside(levelset_it));
+}
+
+}} // namespace fluid::levelset
 
 #endif // FLUIDITY_LEVELSET_LEVELSET_HPP

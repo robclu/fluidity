@@ -128,7 +128,14 @@ class MultimaterialSimulator final :
   /// \param[in] dim   The dimension to specify.
   /// \param[in] start The start value of the dimension.
   /// \param[in] end   The end value of the dimension.
-  void configure_dimension(std::size_t dim, double start, double end) override;
+  void configure_dimension(std::size_t dim, double start, double end) override
+  {
+    _params.domain.set_dimension(dim, start, end);
+    for_each(_mm_data, [&] (auto& mm_data)
+    {
+      mm_data.resize_dim(dim, _params.domain.elements(dim));
+    });
+  }
 
   /// Configures the simulator to simulate for a maximum number of iterations.
   /// \param[in] iters  The maximum number of iterations to simulate for.
@@ -192,13 +199,17 @@ class MultimaterialSimulator final :
 
       auto& material = mm_data.material();
 
-      if (std::is_same<eos_t, mm_eos_t>::value && !eos_type_set)
+      // If the material equation of state type is the same as the one which has
+      // been given, and if we have not set a material of this type before and
+      // the levelset for the material has not yet been set, then the data can
+      // be initialized.
+      if (std::is_same<eos_t, mm_eos_t>::value && 
+          !eos_type_set && !material.is_initialized())
       {
         material.init_levelset(std::forward<LSPred>(pred));
       
         // Now set the state data for the material.
         mm_data.set_state_data(std::forward<Elements>(elements)...);
-
         eos_type_set = true;
       }
     });
@@ -303,7 +314,16 @@ class MultimaterialSimulator final :
 */
 
   /// Returns the dimension information for the simulator.
-  auto dimension_info() const;
+  auto dimension_info() const
+  {
+    auto dim_info = DimInfo<dimensions>();
+    unrolled_for<dimensions>([&] (auto i)
+    {
+      dim_info[i] = get<0>(_mm_data).states().size(i);
+      //dim_info[i] = _data.states().size(i);
+    });
+    return dim_info;
+  }
 
   /// Implementation of the outputting functionality. The \p stream parameter
   /// is used to determine if the output is written to a file or if it is
@@ -389,17 +409,7 @@ void MultimaterialSimulator<Ts...>::configure_cfl(double cfl)
   _params.cfl = cfl;
 }
 
-template <typename... Ts>
-void MultimaterialSimulator<Ts...>::configure_dimension(std::size_t dim  ,
-                                                        double      start,
-                                                        double      end  )
-{
-  _params.domain.set_dimension(dim, start, end);
-  for_each(_mm_data, [&] (auto& mat_data)
-  {
-    mat_data.resize_dim(dim, _params.domain.elements(dim));
-  });
-}
+
 
 template <typename... Ts>
 void MultimaterialSimulator<Ts...>::configure_resolution(double res)
@@ -563,17 +573,7 @@ void MultimaterialSimulator<Ts...>::write_results_separate_raw(std::string prefi
 
 //===== Private ---------------------------------------------------------=====//
 
-template <typename... Ts>
-auto MultimaterialSimulator<Ts...>::dimension_info() const
-{
-  auto dim_info = DimInfo<dimensions>();
-  unrolled_for<dimensions>([&] (auto i)
-  {
-    dim_info[i] = get<0>(_mm_data).states().size(i);
-    //dim_info[i] = _data.states().size(i);
-  });
-  return dim_info;
-}
+
 
 template <typename... Ts> template <typename Stream>
 void MultimaterialSimulator<Ts...>::stream_output_ascii(Stream&& stream) const

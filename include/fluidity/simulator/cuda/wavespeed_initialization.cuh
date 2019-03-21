@@ -1,4 +1,4 @@
-//==--- fluidity/simulator/wavespeed_initialization.cuh ---- -*- C++ -*- ---==//
+//==--- fluidity/simulator/cuda/wavespeed_initialization.cuh -*- C++ -*- ---==//
 //            
 //                                Fluidity
 // 
@@ -13,8 +13,9 @@
 //
 //==------------------------------------------------------------------------==//
 
-#ifndef FLUIDITY_SIMULATOR_WAVESPEED_INITIALIZATION_CUH
-#define FLUIDITY_SIMULATOR_WAVESPEED_INITIALIZATION_CUH
+#ifndef FLUIDITY_SIMULATOR_CUDA_WAVESPEED_INITIALIZATION_CUH
+#define FLUIDITY_SIMULATOR_CUDA_WAVESPEED_INITIALIZATION_CUH
+
 
 #include <fluidity/material/material.hpp>
 #include <fluidity/utility/debug.hpp>
@@ -39,7 +40,7 @@ using namespace fluid::material;
 /// \tparam    Mat     The type of the material.
 template <typename I1 ,
           typename I2 ,
-          typename Mat, non_mmaterial_enable_t<Mat> = 0>
+          typename Mat, non_mmaterial_enable_t<Mat> = 1>
 fluidity_global void set_wavespeeds_impl(I1 states, I2 wspeeds, Mat mat)
 {
 #if defined(__CUDACC__)
@@ -119,4 +120,5 @@ void set_wavespeeds_mm(I1&& states, I2&& wavespeeds, Mat&& mat)
 
 }}}} // namespace fluid::sim::detail::cuda
 
-#endif // FLUIDITY_SIMULATOR_WAVESPEED_INITIALIZATION_CUH
+
+#endif // FLUIDITY_SIMULATOR_CUDA_WAVESPEED_INITIALIZATION_CUH

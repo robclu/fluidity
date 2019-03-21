@@ -125,7 +125,7 @@ struct MultimaterialSimTraits {
   using exec_t     = type_at_t<7, def_exec_t, Ts...>;
 
   /// Defines the type of the level sets used.
-  using levelset_t = LevelSet<data_t, dim_t::value, exec_t::device>; 
+  using levelset_t = levelset::LevelSet<data_t, dim_t::value, exec_t::device>; 
 
   /// Defines the materials for the simulation.
   //using mat_traits_t = material_traits_t<materials_t, levelset_t>;

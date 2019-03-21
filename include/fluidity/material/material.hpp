@@ -80,7 +80,7 @@ class Material : public Eos {
   : _levelset(std::forward<levelset_t>(levelset)), _is_set{true} {}
 
   /// Returns a const reference to the levelset for the material.
-  const auto& levelset() const { return _levelset; }
+  //const auto& levelset() const { return _levelset; }
 
   /// Returns a reference to the levelset for the material.
   auto& levelset() { return _levelset; }

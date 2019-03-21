@@ -13,7 +13,6 @@
 //
 //==------------------------------------------------------------------------==//
 
-
 #ifndef FLUIDITY_STATE_STATE_TRAITS_HPP
 #define FLUIDITY_STATE_STATE_TRAITS_HPP
 

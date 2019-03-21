@@ -32,7 +32,7 @@ int main(int argc, char** argv)
   fluid::sim::mm_sim_option_manager_t sim_manager;
   auto simulator = sim_manager.create_simulator();
 
-  simulator->configure_resolution(0.005);
+  simulator->configure_resolution(0.05);
   simulator->configure_dimension(fluid::dim_x, 0.0, 1.0);
   simulator->configure_sim_time(0.2);
   simulator->configure_cfl(0.9);
@@ -51,35 +51,20 @@ int main(int argc, char** argv)
   //simulator->set_default_state(1.0_rho, 1.0_p, 0.75_v_x);
   simulator->add_material(
     fluid::material::IdealGas<real_t>{1.4},
-    [] fluidity_host_device (auto it, auto& positions)
+    [&] fluidity_host_device (auto it, auto& positions)
     {
-      *it = positions[0] < membrane ? real_t{0} : real_t{1};
+      *it = positions[0] - membrane;
     },
     0.125_rho, 0.1_p, 0.0_v_x 
   );
-
-/*
-  simulator->fill_data({
+  simulator->add_material(
+    fluid::material::IdealGas<real_t>{1.4},
+    [&] fluidity_host_device (auto it, auto& positions)
     {
-      "rho", [] (const auto& pos)
-      {
-        return pos[0] < membrane ? 1.0 : 0.125;
-      }
+      *it = membrane - positions[0];
     },
-    {
-      "p", [] (const auto& pos)
-      {
-        return pos[0] < membrane ? 1.0 : 0.1;
-      }
-    },
-    {
-      "v_x", [] (const auto& pos)
-      {
-        return pos[0] < membrane ? 0.75 : 0.0;
-      }
-    }
-  });
-*/
+    1.0_rho, 1.0_p, 0.75_v_x 
+  );
 //  simulator->simulate();
 //  simulator->write_results("1d_toro_case_1_results");
 }

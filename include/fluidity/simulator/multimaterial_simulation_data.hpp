@@ -20,7 +20,7 @@
 #include <fluidity/container/device_tensor.hpp>
 #include <fluidity/container/host_tensor.hpp>
 #include <fluidity/container/tuple.hpp>
-#include <fluidity/execution/execution_policy.hpp>
+#include <fluidity/state/state_initialization.hpp>
 
 namespace fluid {
 namespace sim   {
@@ -154,21 +154,25 @@ class MultimaterialSimData<Traits, Material, exec::DeviceKind::gpu> {
   void set_state_data(Components&&... components)
   {
     auto cs    = make_tuple(std::forward<Components>(components)...);
+
+    // The state is always primitive, since it's easier to set the data from a
+    // user's perspective.
     auto state = typename traits_t::primitive_t();
+
     for_each(cs, [&] (auto& component)
     {
       state.set_component(component);
     });
 
-    for (auto i : range(state_t::elements))
-    {
-      std::cout << i << " : " << state[i] << "\n";
-    }
+    state::set_states(
+      _states_in.multi_iterator()          ,
+      _material.levelset().multi_iterator(),
+      state                                ,
+      _material.eos()                      );
 
-    // Call initialization kernel ... 
-    //initialize_data(_states_in, state);
-
-    //sync_device_to_host();
+    // Make sure that the filled data is available on both the host and the
+    // device.
+    sync_device_to_host();
   }
 
   /// Ensures that the host data is synchronized with the device data.
