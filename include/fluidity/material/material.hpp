@@ -108,6 +108,54 @@ class Material : public Eos {
   bool       _is_set = false; //!< If the material has be set.
 };
 
+/// This is a wrapper class which can be used to pass the properties of a
+/// material to kernels so that data for the materials can be accessed easily in
+/// the kernels. 
+/// \tparam Eos     The equation of state for the material.
+/// \tparam LSIt    The type of the iterator over the material levelset data.
+/// \tparam StateIt The type of the iterator over the material state data.
+template <typename Eos, typename LSIt, typename StateIt>
+struct MaterialIteratorWrapper {
+  /// The type of the equation of state for the material.
+  using eos_t         = std::decay_t<Eos>;
+  /// The type of the levelset iterator being wrapped.
+  using levelset_it_t = std::decay_t<LSIt>;
+  /// The type of the state iterator being wrapped.
+  using state_it_t    = std::decay_t<StateIt>;
+  /// The type of the state data which is iterated over.
+  using state_t       = typename state_it_t::value_t;
+
+  Eos     eos;             //!< The equation of state. 
+  LSIt    ls_iterator;     //!< An iterator over the material levelset data.
+  StateIt state_iterator;  //!< An iterator over the material state data.
+
+  /// Constructor to create the iterator wrapper.
+ 
+  template <typename E, typename L, typename S>
+  MaterialIteratorWrapper(E&& e, L&& ls_it, S&& state_it)
+  : eos(std::forward<E>(e)),
+    ls_iterator(std::forward<L>(ls_it)),
+    state_iterator(std::forward<S>(state_it)) {}
+};
+
+/// Utility function to make a material iterator wrapper, which infers the types
+/// of the equation of state, the levelset iterator, and the state iterator.
+/// This returns a MaterialIteratorWrapper<T> for a material.
+/// \param[in] eos      The equation of state for the material.
+/// \param[in] ls_it    An iterator over the material levelset data.
+/// \param[in] state_it An iterator over the material state data.
+/// \tparam    Eos      The type of the equation of state.
+/// \tparam    LSIt     The type of the levelset iterator.
+/// \tparam    StateIt  The type of the state iterator.
+template <typename Eos, typename LSIt, typename StateIt>
+auto make_material_iterator_wrapper(Eos&& eos, LSIt&& ls_it, StateIt&& state_it)
+{
+  using wrapper_t = MaterialIteratorWrapper<Eos, LSIt, StateIt>;
+  return wrappper_t(std::forward<Eos>(eos), 
+                    std::forward<LSIt>(ls_it),
+                    std::forward<StateIt>(state_it));
+}
+
 } // namespace material
 } // namespace fluid
 

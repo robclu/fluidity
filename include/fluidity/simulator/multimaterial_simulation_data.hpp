@@ -41,33 +41,6 @@ class MultimaterialSimData<Traits, Material, exec::DeviceKind::cpu> {
 
 };
 
-/// A wrapper class for the material which wraps the equation of state and the
-/// iterators for the material.
-/// \tparam Eos     The equation of state for the material.
-/// \tparam LSIt    The type of the iterator over the levelset data.
-/// \tparam StateIt The type of the iterator over the state data.
-template <typename Eos, typename LSIt, typename StateIt>
-struct MaterialIteratorWrapper {
-  Eos     eos;      
-  LSIt    ls_iterator;
-  StateIt state_iterator;
-
-  template <typename E, typename L, typename S>
-  MaterialIteratorWrapper(E&& e, L&& ls_it, S&& state_it)
-  : eos(std::forward<E>(e)),
-    ls_iterator(std::forward<L>(ls_it)),
-    state_iterator(std::forward<S>(state_it)) {}
-};
-
-template <typename Eos, typename LSIt, typename StateIt>
-auto make_material_iterator_wrapper(Eos&& eos, LSIt&& ls_it, StateIt&& state_it)
-{
-  using wrapper_t = MaterialIteratorWrapper<Eos, LSIt, StateIt>;
-  return wrappper_t(std::forward<Eos>(eos), 
-                    std::forward<LSIt>(ls_it),
-                    std::forward<StateIt>(state_it));
-}
-
 /// Specialization of the SimulationData class when the execution policy is for
 /// GPUs.
 /// \tparam Traits The traits for the simulation.
@@ -128,13 +101,11 @@ class MultimaterialSimData<Traits, Material, exec::DeviceKind::gpu> {
   /// material.
   auto get_iterator_wrapper() const
   {
-    using eos_t      = decltype(_material.eos());
-    using ls_it_t    = decltype(_material.levelset().multi_iterator());
-    using state_it_t = decltype(_states_in.multi_iterator());
-    using wrapper_t  = MaterialIteratorWrapper<eos_t, ls_it_t, state_it_t>;
-    return wrappper_t(_material.eos()                      ,
-                      _material.levelset().multi_iterator(),
-                      _states_in.multi_iterator()          );
+    return
+      make_material_iterator_wrapper(
+        _material.eos()                      ,
+	_material.levelset().multi_iterator(),
+	_states_in.multi_iterator()          );
   }
 
   /// Returns the solver for the material.
