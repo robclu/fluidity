@@ -101,7 +101,7 @@ struct MultimaterialSimTraits {
   /// Defines the default limiter to use.
   using def_limiter_t = limit::Superbee<def_form_t>;
   /// Defines the default reconstructor to use.
-  using def_recon_t   = recon::MHUReconstructor<def_limiter_t>;
+  using def_recon_t   = recon::MHReconstructor<def_limiter_t>;
   /// Defines the default flux method to use.
   using def_flux_t    = flux::Force;
   // Defines the default execution type for the simulation.
@@ -148,7 +148,7 @@ struct MultimaterialSimTraits {
   /// Defines the type of the multimaterial solver for a material Mat.
   /// \tparam EOS The equation of state for the material for which the solver 
   /// must solve.
-  template <typename Eos>
+  template <typename Material, typename Eos = typename Material::eos_t>
   using mm_solver_t = 
     solver::SplitSolver<
       solver::FaceFlux<recon_t, flux_t, Eos>, loader_t, dim_t>;

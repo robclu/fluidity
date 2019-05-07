@@ -65,6 +65,10 @@ struct SplitSolver {
 #endif // FLUIDITY_CUDA_AVAILBLE
 
  public:
+  /// Default constructor. This leaves the thread and block sizes uninitialized,
+  /// so required a call to set_grid_sizes() before invoking the solver.
+  SplitSolver() = default;
+
   /// Creates the split solver, initializing the number of threads and blocks
   /// based on the dimensionality of the iterator.
   /// \param[in] it The iterator to use for solving.
@@ -73,6 +77,19 @@ struct SplitSolver {
   SplitSolver(It&& it)
   : _thread_sizes{get_thread_sizes(it)}, 
     _block_sizes{get_block_sizes(it, _thread_sizes)} {}
+
+  /// Sets the thread and blocks sizes for the solver. This uses the dimensions
+  /// from the iterator over the data to solve to create the thread and block
+  /// sizes.
+  /// \param[in] it The iterator to the data to solve.
+  /// \tparam    It The type of the iteraotr.
+  template <typename It>
+  void set_grid_sizes(It&& it)
+  {
+    _thread_sizes = get_thread_sizes(it);
+    _block_sizes  = get_block_sizes(it, _thread_sizes);
+  }
+
 
   /// Updater function for updating the simulation. This overload is only
   /// enabled when the input and output iterators are for GPU execution.

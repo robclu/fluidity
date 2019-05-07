@@ -62,12 +62,12 @@ using non_mmaterial_enable_t = std::enable_if_t<!is_mmaterial_v<T>, int>;
 /// \tparam Levelset  The type of the levelset which defines the region.  
 template <typename Eos, typename Levelset>
 class Material : public Eos {
+ public:
   /// Defines the type of the material implementation.
   using eos_t      = std::decay_t<Eos>;
   /// Defines the type of the levelset for the material.
   using levelset_t = std::decay_t<Levelset>;
 
- public:
   /// Inherit constructors from the equation of state so that the material can
   /// be created in the same way as the equation of state.
   using eos_t::eos_t;
@@ -80,7 +80,7 @@ class Material : public Eos {
   : _levelset(std::forward<levelset_t>(levelset)), _is_set{true} {}
 
   /// Returns a const reference to the levelset for the material.
-  //const auto& levelset() const { return _levelset; }
+  const auto& levelset() const { return _levelset; }
 
   /// Returns a reference to the levelset for the material.
   auto& levelset() { return _levelset; }
@@ -108,6 +108,9 @@ class Material : public Eos {
   bool       _is_set = false; //!< If the material has be set.
 };
 
+
+// TODO: Change the material iterator interface.
+
 /// This is a wrapper class which can be used to pass the properties of a
 /// material to kernels so that data for the materials can be accessed easily in
 /// the kernels. 
@@ -116,6 +119,10 @@ class Material : public Eos {
 /// \tparam StateIt The type of the iterator over the material state data.
 template <typename Eos, typename LSIt, typename StateIt>
 struct MaterialIteratorWrapper {
+ private:
+  /// Defines the type of the material iterator.
+  using self_t        = MaterialIteratorWrapper;
+ public:
   /// The type of the equation of state for the material.
   using eos_t         = std::decay_t<Eos>;
   /// The type of the levelset iterator being wrapped.
@@ -125,17 +132,51 @@ struct MaterialIteratorWrapper {
   /// The type of the state data which is iterated over.
   using state_t       = typename state_it_t::value_t;
 
-  Eos     eos;             //!< The equation of state. 
-  LSIt    ls_iterator;     //!< An iterator over the material levelset data.
-  StateIt state_iterator;  //!< An iterator over the material state data.
+  /// Defines the number of dimensions for the iterators.
+  static constexpr auto dimensions = levelset_it_t::dimensions;
 
-  /// Constructor to create the iterator wrapper.
- 
-  template <typename E, typename L, typename S>
-  MaterialIteratorWrapper(E&& e, L&& ls_it, S&& state_it)
-  : eos(std::forward<E>(e)),
-    ls_iterator(std::forward<L>(ls_it)),
-    state_iterator(std::forward<S>(state_it)) {}
+  Eos     eos;       //!< The equation of state. 
+  LSIt    ls_it;     //!< An iterator over the material levelset data.
+  StateIt state_it;  //!< An iterator over the material state data.
+
+  /// Constructor to create the material iterator, for a material with an
+  /// equation of state defined by \p eos. The iterator iterates over the
+  /// \p ls_iterator levelset iterator and the \p state_iterator state data.
+  /// \param[in] eq_of_state    The equation of state for the material.
+  /// \param[in] ls_iterator    The iterator over the material levelset data.
+  /// \param[in] state_iterator The iterator over the material state data.
+  /// \tparam    EOS            The type of the equation of state.
+  /// \tparam    LsIterator     The type of the levelset iterator.
+  /// \tparam    StateIterator  The type of the state iterator.
+  template <typename EOS, typename LsIterator, typename StateIterator>
+  MaterialIteratorWrapper(EOS&&           eq_of_state   ,
+                          LsIterator&&    ls_iterator   ,
+                          StateIterator&& state_iterator)
+  : eos(std::forward<EOS>(eq_of_state))                 ,
+    ls_it(std::forward<LsIterator>(ls_iterator))        ,
+    state_it(std::forward<StateIterator>(state_iterator)) {}
+
+  /// Shifts the iterators in the \p dim dimension by the \p amount.
+  /// \param[in] amount The amount to shift the iterators by.
+  /// \param[in] dim    The dimension to shift the iterators in.
+  /// \tparam    Dim    The type of the dimension specifier.
+  template <typename Dim>
+  fluidity_host_device void shift(int amount, Dim&& dim)
+  {
+    ls_it.shift(amount, dim);
+    state_it.shift(amount, dim);
+  }
+
+  /// Offsets the iterators in the \p dim dimension by the \p amount, returning
+  /// a new material iterator.
+  /// \param[in] amount The amount to offset the iterators by.
+  /// \param[in] dim    The dimension to offset the iterators in.
+  /// \tparam    Dim    The type of the dimension specifier.
+  template <typename Dim>
+  fluidity_host_device auto offset(int amount, Dim&& dim) const
+  {
+    return self_t{eos, ls_it.offset(amount, dim), state_it.offset(amount, dim)};
+  }
 };
 
 /// Utility function to make a material iterator wrapper, which infers the types
@@ -150,10 +191,11 @@ struct MaterialIteratorWrapper {
 template <typename Eos, typename LSIt, typename StateIt>
 auto make_material_iterator_wrapper(Eos&& eos, LSIt&& ls_it, StateIt&& state_it)
 {
-  using wrapper_t = MaterialIteratorWrapper<Eos, LSIt, StateIt>;
-  return wrappper_t(std::forward<Eos>(eos), 
-                    std::forward<LSIt>(ls_it),
-                    std::forward<StateIt>(state_it));
+  using wrapper_t = MaterialIteratorWrapper<
+    std::decay_t<Eos>, std::decay_t<LSIt>, std::decay_t<StateIt>>;
+  return wrapper_t(std::forward<Eos>(eos), 
+                   std::forward<LSIt>(ls_it),
+                   std::forward<StateIt>(state_it));
 }
 
 } // namespace material

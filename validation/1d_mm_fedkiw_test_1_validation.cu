@@ -1,16 +1,16 @@
-//==--- fluidity/tests/1d_mm_toro_case_1_validation.cu ----- -*- C++ -*- ---==//
+//==--- fluidity/tests/1d_mm_fedkiw_test_1_validation.cu --- -*- C++ -*- ---==//
 //            
 //                                Fluidity
 // 
-//                      Copyright (c) 2018 Rob Clucas.
+//                      Copyright (c) 2019 Rob Clucas.
 //
 //  This file is distributed under the MIT License. See LICENSE for details.
 //
 //==------------------------------------------------------------------------==//
 //
-/// \file  1d_mm_toro_case_1_validation.cu
-/// \brief This file defines a validation test against the 1d toro test case 1
-//         but using the multi-material simulator.
+/// \file  1d_mm_fedkiw_test_1_validation.cu
+/// \brief This file defines a validation test against the 1d test for the
+///        original GFM of Fedkiw.
 //
 //==------------------------------------------------------------------------==//
 
@@ -34,7 +34,7 @@ int main(int argc, char** argv)
 
   simulator->configure_resolution(0.01);
   simulator->configure_dimension(fluid::dim_x, 0.0, 1.0);
-  simulator->configure_sim_time(0.2);
+  simulator->configure_sim_time(0.0022);
   simulator->configure_cfl(0.9);
 
   // Command line arguments
@@ -47,27 +47,26 @@ int main(int argc, char** argv)
     simulator->configure_max_iterations(atoi(argv[2]));
   }
 
-  constexpr auto membrane = real_t{0.3};
-  //simulator->set_default_state(1.0_rho, 1.0_p, 0.75_v_x);
-  simulator->add_material(
-    fluid::material::IdealGas<real_t>{1.4},
-    [&] fluidity_host_device (auto it, auto& positions)
-    {
-      *it = membrane - positions[0];
-    },
-    0.125_rho, 0.1_p, 0.0_v_x 
-  );
+  constexpr auto membrane = real_t{0.5};
   simulator->add_material(
     fluid::material::IdealGas<real_t>{1.4},
     [&] fluidity_host_device (auto it, auto& positions)
     {
       *it = positions[0] - membrane;
     },
-    1.0_rho, 1.0_p, 0.75_v_x 
+    2.0_rho, 9.80_p, 0.0_v_x 
+  );
+  simulator->add_material(
+    fluid::material::IdealGas<real_t>{1.4},
+    [&] fluidity_host_device (auto it, auto& positions)
+    {
+      *it = membrane - positions[0];
+    },
+    1.0_rho, 2.45_p, 0.0_v_x 
   );
 
 
   simulator->simulate_mm();
   simulator->print_results();
-  simulator->write_results("1d_mm_toro_case_1_results");
+  simulator->write_results("1d_mm_fedkiw_test_1_results");
 }

@@ -39,6 +39,8 @@ class LevelSet {
   using value_t   = std::decay_t<T>;
   /// Defines the type of the storage.
   using storage_t = Storage;
+  /// Defines the type of the pointer used by the storage.
+  using pointer_t = typename storage_t::pointer_t;
 
   /// Enabling function to check that a size is specified for each dimension.
   /// \tparam Sizes The sizes for each dimension.
@@ -110,9 +112,10 @@ class LevelSet {
     return _data.multi_iterator();
   }
 
-  auto multi_iterator()
+  /// Resets the levelset data.
+  fluidity_host_device void reset_data(pointer_t new_data)
   {
-    return _data.multi_iterator();
+    _data.reset_data(new_data);
   }
 
   void print() const
@@ -124,7 +127,12 @@ class LevelSet {
     {
       for (int i : range(it.size(0)))
       {
-        std::cout << *it << " ";
+        std::cout
+          << std::setfill(' ') << std::setw(6) << std::left 
+          << i<< " "
+          << std::setfill(' ') << std::setw(8) << std::right
+          << std::setprecision(4) << *it
+          << "\n";
         it.shift(1, std::size_t{0});
       }
     }
@@ -150,18 +158,19 @@ class LevelSet {
 
 ///==--- Functions ---------------------------------------------------------==//
 
-/// Returns true if dereferencing the \p levelset_it has a positive value (i.e
-/// the data value is inside the levelset).
+/// Returns true if dereferencing the \p levelset_it has a negative value (i.e
+/// the data value is inside the levelset), or is equal to zero (i.e on the
+/// boundary). 
 /// \param[in] levelset_it An iterator over levelset data.
 /// \tparam    LSIT        The type of the levelset iterator.
 template <typename LSIT>
 fluidity_host_device constexpr auto inside(LSIT&& levelset_it) -> bool
 {
   using type_t = std::decay_t<decltype(*levelset_it)>;
-  return *levelset_it > type_t{0};
+  return *levelset_it <= type_t{0} || *levelset_it <= -type_t{0};
 }
 
-/// Returns true if dereferencing the \p levelset_it has a negative value (i.e
+/// Returns true if dereferencing the \p levelset_it has a positive value (i.e
 /// the data value is outside the levelset).
 /// \param[in] levelset_it An iterator over levelset data.
 /// \tparam    LSIT        The type of the levelset iterator.
@@ -169,20 +178,47 @@ template <typename LSIT>
 fluidity_host_device constexpr auto outside(LSIT&& levelset_it) -> bool
 {
   using type_t = std::decay_t<decltype(*levelset_it)>;
-  return *levelset_it < type_t{0};
+  return *levelset_it > type_t{0};
 }
 
 /// Returns true if dereferencing the \p levelset_it has a value of zero (i.e
-/// the data value is on the boundary), or (incase of floating point error) if
-/// it is neither inside nor outside.
+/// the data value is on the boundary).
 /// \param[in] levelset_it An iterator over levelset data.
 /// \tparam    LSIT        The type of the levelset iterator.
 template <typename LSIT>
 fluidity_host_device constexpr auto on_boundary(LSIT&& levelset_it) -> bool
 {
   using type_t = std::decay_t<decltype(*levelset_it)>;
-  return (*levelset_it == type_t{0}) ||
-         (!inside(levelset_it) && !outside(levelset_it));
+  return *levelset_it == type_t{0} || *levelset_it == -type_t{0};
+}
+
+/// Returns true if dereferencing the \p levelset_it has a value less than 0
+/// (i.e it's inside the levelset), but larger than the negative of the
+/// resolution, so the cell is an interfacial cell inside the levelset.
+/// \param[in] levelset_it An iterator over levelset data.
+/// \param[in] dh          The resolution for the levelset grid.
+/// \tparam    LSIT        The type of the levelset iterator.
+/// \tparam    T           The type of the resolution data.
+template <typename LSIT, typename T>
+fluidity_host_device constexpr auto
+inside_interfacial_cell(LSIT&& levelset_it, T dh) -> bool
+{
+  return (inside(levelset_it) || on_boundary(levelset_it)) && 
+         (*levelset_it >= -std::abs(dh));
+}
+
+/// Returns true if dereferencing the \p levelset_it has a value greater than 0
+/// (i.e it's outside the levelset), but less than the resolution, so the cell
+/// is an interfacial cell outside the levelset.
+/// \param[in] levelset_it An iterator over levelset data.
+/// \param[in] dh          The resolution for the levelset grid.
+/// \tparam    LSIT        The type of the levelset iterator.
+/// \tparam    T           The type of the resolution data.
+template <typename LSIT, typename T>
+fluidity_host_device constexpr auto
+outside_interfacial_cell(LSIT&& levelset_it, T dh) -> bool
+{
+  return outside(levelset_it) && (*levelset_it < std::abs(dh));
 }
 
 }} // namespace fluid::levelset

@@ -218,6 +218,66 @@ struct TupleElementType<Idx, Tuple<>> {
 template <std::size_t I, typename T>
 using tuple_element_t = typename detail::TupleElementType<I, T>::type;
 
+//==--- Access -------------------------------------------------------------==//
+
+/// Returns the front element in a \p tuple.
+/// \param[in] tuple The Tuple to get the element from.
+/// \tparam    Ts    The types of the Tuple elements.
+template <typename... Ts>
+fluidity_host_device constexpr inline const auto&
+get_front(const Tuple<Ts...>& tuple)
+{
+  return detail::get<0>(tuple.data());
+}
+
+/// Returns the front element in a \p tuple.
+/// \param[in] tuple The Tuple to get the element from.
+/// \tparam    Ts    The types of the Tuple elements.
+template <typename... Ts>
+fluidity_host_device constexpr inline auto& get_front(Tuple<Ts...>& tuple)
+{
+  return detail::get<0>(tuple.data());
+}
+
+/// Returns the front element in a \p tuple.
+/// \param[in] tuple The Tuple to get the element from.
+/// \tparam    Ts    The types of the Tuple elements.
+template <typename... Ts>
+fluidity_host_device constexpr inline const auto&&
+get_front(Tuple<Ts...>&& tuple)
+{
+  return detail::get<0>(tuple.data());
+}
+
+/// Returns the last element in a \p tuple.
+/// \param[in] tuple The Tuple to get the element from.
+/// \tparam    Ts    The types of the Tuple elements.
+template <typename... Ts>
+fluidity_host_device constexpr inline const auto&
+get_back(const Tuple<Ts...>& tuple)
+{
+  return detail::get<(sizeof...(Ts) - 1)>(tuple.data());
+}
+
+/// Returns the last element in a \p tuple.
+/// \param[in] tuple The Tuple to get the element from.
+/// \tparam    Ts    The types of the Tuple elements.
+template <typename... Ts>
+fluidity_host_device constexpr inline auto& get_back(Tuple<Ts...>& tuple)
+{
+  return detail::get<(sizeof...(Ts) - 1)>(tuple.data());
+}
+
+/// Returns the last element in a \p tuple.
+/// \param[in] tuple The Tuple to get the element from.
+/// \tparam    Ts    The types of the Tuple elements.
+template <typename... Ts>
+fluidity_host_device constexpr inline const auto&&
+get_back(Tuple<Ts...>&& tuple)
+{
+  return detail::get<(sizeof...(Ts) - 1)>(tuple.data());
+}
+
 /// Defines a function to get a element from a Tuple. This overload is selected
 /// when the \p tuple is a const lvalue reference.
 /// \param[in] tuple The Tuple to get the element from.
@@ -333,9 +393,9 @@ fluidity_host_device auto unpack_impl(F&& fn, T&& t, std::index_sequence<I...>)
 template<typename T, typename F, typename... Args>
 fluidity_host_device auto unpack(T&& t, F&& fn)
 {
-  return apply_tuple_impl(std::forward<F>(fn),
-                          std::forward<T>(t),
-                          std::make_index_sequence<tuple_size_v<T>>());
+  return detail::unpack_impl(std::forward<F>(fn),
+                             std::forward<T>(t),
+                             std::make_index_sequence<tuple_size_v<T>>());
 }
 
 } // namespace fluid

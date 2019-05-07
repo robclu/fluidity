@@ -17,9 +17,10 @@
 #ifndef FLUIDITY_EXECUTION_EXECUTION_POLICY_HPP
 #define FLUIDITY_EXECUTION_EXECUTION_POLICY_HPP
 
-#include <fluidity/utility/portability.hpp>
+#include <fluidity/container/tuple.hpp>
 #include <fluidity/dimension/dimension.hpp>
 #include <fluidity/dimension/dimension_info.hpp>
+#include <fluidity/utility/portability.hpp>
 #include <fluidity/utility/type_traits.hpp>
 
 namespace fluid {
@@ -52,37 +53,88 @@ static constexpr auto cpu_policy = cpu_type{};
 /// Defines an execution policy instance which uses a gpu.
 static constexpr auto gpu_policy = gpu_type{};
 
-/// Returns true if the template parameter type is a ``cpu_policy`` and
-/// specifies that the CPU should be used for execution.
-/// \tparam T The type to check if is a CPU execution policy.
-template <typename T>
-static constexpr auto is_cpu_policy_v = 
-  is_same_v<std::decay_t<T>, cpu_type>;
-
-/// Returns true if the template parameter type is a ``gpu_policy`` and
-/// specifies that the GPU should be used for execution.
-/// \tparam T The type to check if is a GPU execution policy.
-template <typename T>
-static constexpr auto is_gpu_policy_v = 
-  is_same_v<std::decay_t<T>, gpu_type>;
-
 /// Defines the type of the execution policy of the type T, if it has an
 /// execution policy.
 /// \tparam T The type to get the execution policy of.
 template <typename T>
 using exec_policy_t = typename std::decay_t<T>::exec_t;
 
+namespace detail {
+
+/// Defines a class which is used to determine if an execution policy is for the
+/// CPU.
+/// \tparam T The type to determine the execution policy for.
+template <typename T>
+struct IsCpuPolicy {
+  /// Defines if the type T has a CPU execution policy.
+  static constexpr auto value = is_same_v<exec_policy_t<T>, cpu_type>;
+};
+
+/// Specialization of the CPU policy checking class for the case that there is a
+/// list of types for which to determine the execution polic of.
+/// \tparam Ts The types to determine the execution policy for.
+template <typename... Ts>
+struct IsCpuPolicy<Tuple<Ts...>> {
+  /// Defines the type of the tuple.
+  using tuple_t = Tuple<Ts...>;
+
+  /// Returns true if the execution type of the first element type of the tuple
+  /// is for the cpu.
+  static constexpr auto value = 
+    is_same_v<exec_policy_t<tuple_element_t<0, tuple_t>>, cpu_type>;
+};
+
+/// Defines a class which is used to determine if an execution policy is for the
+/// GPU.
+/// \tparam T The type to determine the execution policy for.
+template <typename T>
+struct IsGpuPolicy {
+  /// Defines if the type T has a GPU execution policy.
+  static constexpr auto value = is_same_v<exec_policy_t<T>, gpu_type>;
+};
+
+template <typename... Ts>
+struct IsGpuPolicy<Tuple<Ts...>> {
+  /// Defines the type of the tuple.
+  using tuple_t = Tuple<Ts...>;
+
+  /// Returns true if the execution type of the first element type of the tuple
+  /// is for the gpu.
+  static constexpr auto value = 
+    is_same_v<exec_policy_t<tuple_element_t<0, tuple_t>>, gpu_type>;
+};
+
+} // namespace detail
+
+/// Returns true if the template parameter type has an execution policy which
+/// matches ``cpu_policy`` and specifies that the CPU should be used for
+/// execution. If the type T is a Tuple, then this uses the first element of the
+/// tuple to check the execution policy.
+/// \tparam T The type to check if is a CPU execution policy.
+template <typename T>
+static constexpr auto is_cpu_policy_v = 
+  detail::IsCpuPolicy<std::decay_t<T>>::value;
+
+/// Returns true if the template parameter type has an execution policy which
+/// matches ``gpu_policy`` and specifies that the GPU should be used for
+/// execution. If the type T is a Tuple, then this uses the first element of the
+/// tuple to check the execution policy.
+/// \tparam T The type to check if is a GPU execution policy.
+template <typename T>
+static constexpr auto is_gpu_policy_v = 
+  detail::IsGpuPolicy<std::decay_t<T>>::value;
+
 /// Defines a type which is valid if T has an execution policy and it's a CPU
 /// execution policy.
 /// \tparam T The type to get a CPU execution enabling type for.
 template <typename T>
-using cpu_enable_t = std::enable_if_t<is_cpu_policy_v<exec_policy_t<T>>, int>;
+using cpu_enable_t = std::enable_if_t<is_cpu_policy_v<T>, int>;
 
 /// Defines a type which is valid if T has an execution policy and it's a GPU
 /// execution policy.
 /// \tparam T The type to get a GPU execution enabling type for.
 template <typename T>
-using gpu_enable_t = std::enable_if_t<is_gpu_policy_v<exec_policy_t<T>>, int>;
+using gpu_enable_t = std::enable_if_t<is_gpu_policy_v<T>, int>;
 
 /// Defines the default number of threads per dimension for 1d.
 static constexpr std::size_t default_threads_1d = 512;

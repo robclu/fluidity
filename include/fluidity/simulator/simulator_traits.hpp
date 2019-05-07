@@ -43,7 +43,7 @@ struct SimTraits {
   /// Defines the default data type to use.
   using def_data_t    = double;
   /// Defines the default number of dimensions.
-  using def_dims_t    = Num<2>;
+  using def_dims_t    = Num<1>;
   /// Defines the default material to use.
   using def_mat_t     = material::IdealGas<def_data_t>;
   /// Defines the default limiting form.
@@ -51,7 +51,7 @@ struct SimTraits {
   /// Defines the default limiter to use.
   using def_limiter_t = limit::Superbee<def_form_t>;
   /// Defines the default reconstructor to use.
-  using def_recon_t   = recon::MHUReconstructor<def_limiter_t>;
+  using def_recon_t   = recon::MHReconstructor<def_limiter_t>;
   /// Defines the default flux method to use.
   using def_flux_t    = flux::Force;
   // Defines the default execution type for the simulation.
@@ -79,7 +79,7 @@ struct SimTraits {
   /// Defines the type of the face flux solver.
   using face_flux_t  = solver::FaceFlux<recon_t, flux_t, material_t>;
   /// Defines the default type of solver.
-  using def_solver_t = solver::UnsplitSolver<face_flux_t, loader_t, dim_t>;
+  using def_solver_t = solver::SplitSolver<face_flux_t, loader_t, dim_t>;
   /// Defines the type of the solver.
   using solver_t     = type_at_t<8, def_solver_t, Ts...>;
 

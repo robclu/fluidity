@@ -54,6 +54,11 @@ fluid_add_executable(
   1d_mm_toro_case_1 ${SOURCE_DIR}/1d_mm_toro_case_1_validation.cu)
 fluid_target_link_libraries(1d_mm_toro_case_1 ${CUDA_LIBRARIES})
 
+# Multimaterial TORO test case 1:
+fluid_add_executable(
+  1d_mm_fedkiw_test_1 ${SOURCE_DIR}/1d_mm_fedkiw_test_1_validation.cu)
+fluid_target_link_libraries(1d_mm_fedkiw_test_1 ${CUDA_LIBRARIES})
+
 # 2D Shock bubble test case:
 fluid_add_executable(
   2d_shock_bubble

@@ -16,6 +16,7 @@
 #ifndef FLUIDITY_STATE_STATE_HPP
 #define FLUIDITY_STATE_STATE_HPP
 
+#include "state_components.hpp"
 #include "state_impl.hpp"
 #include <fluidity/container/number.hpp>
 #include <string>

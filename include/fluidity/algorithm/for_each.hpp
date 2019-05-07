@@ -67,7 +67,8 @@ void for_each(const std::tuple<Ts...>& tup, Functor&& functor, Args&&... args)
 /// \tparam    Ts       The types in the tuple.
 /// \tparam    Args     The types of the arguments.
 template <typename Functor, typename... Ts, typename... Args>
-void for_each(Tuple<Ts...>& tup, Functor&& functor, Args&&... args)
+fluidity_host_device void
+for_each(Tuple<Ts...>& tup, Functor&& functor, Args&&... args)
 {
   constexpr auto elements = sizeof...(Ts);
   unrolled_for<elements>([&] (auto i)
@@ -85,7 +86,8 @@ void for_each(Tuple<Ts...>& tup, Functor&& functor, Args&&... args)
 /// \tparam    Ts       The types in the tuple.
 /// \tparam    Args     The types of the arguments.
 template <typename Functor, typename... Ts, typename... Args>
-void for_each(const Tuple<Ts...>& tup, Functor&& functor, Args&&... args)
+fluidity_host_device void
+for_each(const Tuple<Ts...>& tup, Functor&& functor, Args&&... args)
 {
   constexpr auto elements = sizeof...(Ts);
   unrolled_for<elements>([&] (auto i)

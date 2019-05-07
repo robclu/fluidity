@@ -47,11 +47,7 @@ struct UnsplitSolver {
   using limiter_t     = typename recon_t::limiter_t;
 
   /// Define the type of the flux solver for the perpendicular fluxes.
-  using perp_flux_solver_t = 
-    FaceFlux<
-      recon::BasicReconstructor<limiter_t> ,
-      typename flux_solver_t::flux_method_t,
-      typename flux_solver_t::material_t   >;
+
 
   /// Defines the number of dimensions to solve over.
   static constexpr auto num_dimensions = std::size_t{Dims()};
@@ -152,6 +148,12 @@ struct UnsplitSolver {
         }
         return r;
       };
+
+    using perp_flux_solver_t = 
+      FaceFlux<
+        recon::BasicReconstructor<limiter_t> ,
+        typename flux_solver_t::flux_method_t,
+        std::decay_t<decltype(mat)>          >;
 
     if (in_range(in, padding << 1))
     {

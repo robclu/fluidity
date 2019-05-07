@@ -24,22 +24,22 @@
 namespace fluid  {
 namespace solver {
 
-template <typename ReconMethod, typename FluxMethod, typename Material>
+template <typename ReconMethod, typename FluxMethod, typename Eos>
 struct FaceFlux {
   /// Defines the tyoe of the reconstructor for the solver.
   using reconstructor_t = std::decay_t<ReconMethod>;
   /// Defines the type of the flux evaluator for the solver.
   using flux_method_t   = std::decay_t<FluxMethod>;
-  /// Defines the type of the material.
-  using material_t      = std::decay_t<Material>;
+  /// Defines the type of the equation of state.
+  using eos_t           = std::decay_t<Eos>;
   /// Defines the type of the data.
-  using value_t         = typename material_t::value_t;
+  using value_t         = typename eos_t::value_t;
 
   /// Constructor which initializes the flux mehtod computer.
-  /// \param[in] mat  The material in which the face exists.
+  /// \param[in] eos  The equation of state for the material.
   /// \param[in] dtdh The time-space distrectization.
-  fluidity_host_device FaceFlux(material_t mat, value_t dtdh) 
-  : _material(mat), _dtdh(dtdh) {}
+  fluidity_host_device FaceFlux(eos_t eos, value_t dtdh) 
+  : _eos(eos), _dtdh(dtdh) {}
 
   template <typename T, typename V>
   auto fluidity_host_device print_vec(T& v, V d, V p) const 
@@ -92,9 +92,9 @@ struct FaceFlux {
   template <typename Iterator, typename Dim>
   fluidity_host_device auto forward(Iterator&& state_it, Dim dim) const
   {
-    const auto flux = flux_method_t::get(_material, _dtdh, dim);
-    return flux(_recon.forward_left(state_it, _material, _dtdh, dim),
-                _recon.forward_right(state_it, _material, _dtdh, dim));
+    const auto flux = flux_method_t::get(_eos, _dtdh, dim);
+    return flux(_recon.forward_left(state_it, _eos, _dtdh, dim),
+                _recon.forward_right(state_it, _eos, _dtdh, dim));
   }
 
   /// Solves for the face flux between the state pointed to by the iterator and
@@ -131,9 +131,9 @@ struct FaceFlux {
   fluidity_host_device auto
   forward(It&& it, Dim dim, Pred&& pred, Args&&... args) const
   {
-    const auto flux = flux_method_t::get(_material, _dtdh, dim);
-    auto left       = _recon.forward_left(it, _material, _dtdh, dim);
-    auto right      = _recon.forward_right(it, _material, _dtdh, dim);
+    const auto flux = flux_method_t::get(_eos, _dtdh, dim);
+    auto left       = _recon.forward_left(it, _eos, _dtdh, dim);
+    auto right      = _recon.forward_right(it, _eos, _dtdh, dim);
     pred(left, right, std::forward<Args>(args)...);
     return flux(left, right);
   }
@@ -149,10 +149,9 @@ struct FaceFlux {
   fluidity_host_device auto
   backward(Iterator&& state_it, Dim dim) const
   {
-    const auto flux = flux_method_t::get(_material, _dtdh, dim);
-//    return _recon.backward_right(state_it, _material, _dtdh, dim);
-      return flux(_recon.backward_left(state_it, _material, _dtdh, dim) ,
-                  _recon.backward_right(state_it, _material, _dtdh, dim));
+      const auto flux = flux_method_t::get(_eos, _dtdh, dim);
+      return flux(_recon.backward_left(state_it, _eos, _dtdh, dim) ,
+                  _recon.backward_right(state_it, _eos, _dtdh, dim));
   }
 
   /// Solves for the face flux between the state pointed to by the iterator and
@@ -189,17 +188,17 @@ struct FaceFlux {
   fluidity_host_device auto
   backward(It&& it, Dim dim, Pred&& pred, Args&&... args) const
   {
-    const auto flux = flux_method_t::get(_material, _dtdh, dim);
-    auto left       = _recon.backward_left(it, _material, _dtdh, dim);
-    auto right      = _recon.backward_right(it, _material, _dtdh, dim);
+    const auto flux = flux_method_t::get(_eos, _dtdh, dim);
+    auto left       = _recon.backward_left(it, _eos, _dtdh, dim);
+    auto right      = _recon.backward_right(it, _eos, _dtdh, dim);
     pred(left, right, std::forward<Args>(args)...);
     return flux(left, right);
   } 
 
  private:
-  reconstructor_t _recon;    //!< The reconstructor for the data.
-  material_t      _material; //!< The material to copute the flux for.
-  value_t         _dtdh;     //!< The scaling factor for the computation.
+  reconstructor_t _recon;   //!< The reconstructor for the data.
+  eos_t           _eos;     //!< The equation of state for the material.
+  value_t         _dtdh;    //!< The scaling factor for the computation.
 };
 
 }} // namespace fluid::solver

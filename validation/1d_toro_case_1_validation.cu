@@ -28,10 +28,25 @@ int main(int argc, char** argv)
   fluid::sim::sim_option_manager_t sim_manager;
   auto simulator = sim_manager.create_default();
 
+  //simulator->configure_resolution(0.005);
+  //simulator->configure_dimension(fluid::dim_x, 0.0, 1.0);
+  //simulator->configure_sim_time(0.2);
+  //simulator->configure_cfl(0.9);
+
   simulator->configure_resolution(0.005);
   simulator->configure_dimension(fluid::dim_x, 0.0, 1.0);
   simulator->configure_sim_time(0.2);
   simulator->configure_cfl(0.9);
+
+  // Command line arguments
+  if (argc >= 2)
+  {
+    simulator->configure_sim_time(atof(argv[1]));
+  }
+  if (argc >= 3)
+  {
+    simulator->configure_max_iterations(atoi(argv[2]));
+  }
 
   constexpr auto membrane = real_t{0.3};
   simulator->fill_data({
@@ -56,5 +71,6 @@ int main(int argc, char** argv)
   });
 
   simulator->simulate();
+  simulator->print_results();
   simulator->write_results("1d_toro_case_1_results");
 }
