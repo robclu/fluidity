@@ -32,7 +32,7 @@ class Reconstructor
 {
   /// Defines the type of the reconstructor implementation.
   using impl_t   = ReconImpl;
-  /// Defines the type of the traits for the limiter.
+  /// Defines the type of the traits for the reconstructor.
   using traits_t = ReconstructorTraits<impl_t>;
 
   /// Returns a pointer to the implementation.

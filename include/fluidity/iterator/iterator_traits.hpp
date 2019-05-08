@@ -66,7 +66,8 @@ struct IsMultidimensional<MultidimIterator<T, DimInfo, Exec>>
 /// false.
 /// \tparam T The type to determine if is a multi dimensional iterator.
 template <typename T>
-static constexpr auto is_multidim_iter_v = detail::IsMultidimensional<T>::value;
+static constexpr auto is_multidim_iter_v 
+  = detail::IsMultidimensional<std::decay_t<T>>::value;
 
 /// Defines a valid type used for enabling of multidimensional specializations.
 /// \tparam T The type to check multidimensional functionality for to base the
@@ -80,6 +81,24 @@ using multiit_enable_t = std::enable_if_t<is_multidim_iter_v<T>, int>;
 ///           enabling on.
 template <typename T>
 using nonmultiit_enable_t = std::enable_if_t<!is_multidim_iter_v<T>, int>;
+
+/// Defines a valid type used for enabling specializations for a 1 dimensional
+/// iterator.
+/// \tparam T The type to check for 1d enabling.
+template <typename T>
+using enable_1d_it_t = std::enable_if_t<std::deacy_t<T>::dimensions == 1, int>;
+
+/// Defines a valid type used for enabling specializations for a 2 dimensional
+/// iterator.
+/// \tparam T The type to check for 2d enabling.
+template <typename T>
+using enable_2d_it_t = std::enable_if_t<std::deacy_t<T>::dimensions == 2, int>;
+
+/// Defines a valid type used for enabling specializations for a 3 dimensional
+/// iterator.
+/// \tparam T The type to check for 3d enabling.
+template <typename T>
+using enable_3d_it_t = std::enable_if_t<std::deacy_t<T>::dimensions == 3, int>;
 
 } // namespace fluid
 

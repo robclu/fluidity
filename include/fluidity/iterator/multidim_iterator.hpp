@@ -390,6 +390,61 @@ fluidity_device_only constexpr auto make_multidim_iterator(T* ptr, DimInfo info)
   return iter_t{ptr, info};
 }
 
+//==--- [Multidim creation from iterator] ----------------------------------==//
+
+/// Makes a multidimensional iterator over a multidimensional shared memory
+/// space, where the space size is defined using the default sizes defined in
+/// the execution module, but adds Padding amount of data to each size of each
+/// dimension. This overload is for the case that the \p it iterator has a
+/// single dimension.
+/// \param[in] it       The iterator to compute the number of dimensions from.
+/// \tparam    It       The type of the iterator.
+/// \tparam    Padding  The amount of padding to apply to each side of each
+///                     dimension.
+template <typename It, std::size_t Padding = 0, enable_1d_it_t<It> = 0>
+fluidity_device_only constexpr auto make_multidim_iterator(const It& it)
+{
+  using data_t      = std::decay_t<decltype(*it)>;
+  using dim_into_t  = DimInfoCt<threads_per_block_1d_x>;
+  return make_multidim_iterator<data_t, dim_info_t, Padding>;
+}
+
+/// Makes a multidimensional iterator over a multidimensional shared memory
+/// space, where the space size is defined using the default sizes defined in
+/// the execution module, but adds Padding amount of data to each size of each
+/// dimension. This overload is for the case that the \p it iterator has two
+/// dimensions.
+/// \param[in] it       The iterator to compute the number of dimensions from.
+/// \tparam    It       The type of the iterator.
+/// \tparam    Padding  The amount of padding to apply to each side of each
+///                     dimension.
+template <typename It, std::size_t Padding = 0, enable_2d_it_t<It> = 0>
+fluidity_device_only constexpr auto make_multidim_iterator(const It& it)
+{
+  using data_t     = std::decay_t<decltype(*it)>;
+  using dim_into_t = DimInfoCt<threads_per_block_2d_x, threads_per_block_2d_y>;
+  return make_multidim_iterator<data_t, dim_info_t, Padding>
+}
+
+/// Makes a multidimensional iterator over a multidimensional shared memory
+/// space, where the space size is defined using the default sizes defined in
+/// the execution module, but adds Padding amount of data to each size of each
+/// dimension. This overload is for the case that the \p it iterator has three
+/// dimensions.
+/// \param[in] it       The iterator to compute the number of dimensions from.
+/// \tparam    It       The type of the iterator.
+/// \tparam    Padding  The amount of padding to apply to each side of each
+///                     dimension.
+template <typename It, std::size_t Padding = 0, enable_3d_it_t<It> = 0>
+fluidity_device_only constexpr auto make_multidim_iterator(const It& it)
+{
+  using data_t     = std::decay_t<decltype(*it)>;
+  using dim_into_t = DimInfoCt<threads_per_block_3d_x,
+                               threads_per_block_3d_y,
+                               threads_per_block_3d_z>;
+  return make_multidim_iterator<data_t, dim_info_t, Padding>
+}
+
 #else
 
 /// Makes a multidimensional iterator over a multidimensional space, where the
