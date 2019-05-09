@@ -17,6 +17,9 @@
 #ifndef FLUIDITY_SCHEME_SCHEME_HPP
 #define FLUIDITY_SCHEME_SCHEME_HPP
 
+#include <fluidity/iterator/iterator_traits.hpp>
+#include "stencil.hpp"
+
 namespace fluid  {
 namespace scheme {
 
@@ -48,21 +51,32 @@ class Scheme {
   }
 
   /// Overload of the function call operator to invoke the scheme on the data
-  /// for the specified \p dim dimension.
-  /// \param[in] it     The iterable data to apply the stencil to.
-  /// \param[in] h      The delta for the stencil.
-  /// \param[in] dim    The dimension to compute the difference in.
-  /// \tparam    It     The type of the iterator.
-  /// \tparam    T      The type of the delta.
-  /// \tparam    Dim    The type of the dimension specifier.
-  template <typename It, typename T, typename Dim, typename... Args>
-  fluidity_host_device auto operator()(It&& it, T h, Dim dim, Args&&...) const
+  /// and return the value to use to update the scheme. This computes the
+  /// results for all dimensions.
+  /// \param[in] it       The iterable data to apply the stencil to.
+  /// \param[in] v        The data which defines the speed of the scheme.
+  /// \param[in] h        The delta for the stencil.
+  /// \param[in] stencil  The stencil to use to compute the derivatives.
+  /// \param[in] args     Additional arguments for the stencil.
+  /// \tparam    It       The type of the iterator.
+  /// \tparam    V        The type of the speed data.
+  /// \tparam    T        The type of the delta.
+  /// \tparam    S        The type of the stencil.
+  /// \tparam    Args     The types of the stencil arguments.
+  template <typename It, typename V, typename T, typename S, typename... Args>
+  fluidity_host_device auto
+  operator()(It&& it, V&& v,T h, S stencil, Args&&...) const
   {
     static_assert(is_multidim_iter_v<It>, 
                   "Iterator must be a multidimensional iterator!");
+    static_assert(is_multidim_iter_v<V>,
+                  "Speed data must be a multidimensional iterator!");
+    static_assert(is_stencil_v<S>,
+                  "Stencil must conform to stencil interface!");
     return impl()->invoke(std::forward<It>(it)       ,
+                          std::forward<V>(v)         ,
                           h                          ,
-                          dim                        ,
+                          std::forward<S>(stencil)   ,
                           std::forward<Args>(args)...);
   }
 };

@@ -60,7 +60,7 @@ namespace time   {
 /// \tparam     It      The type of the input and output iterators.
 /// \tparam     T       The type of the timestep.
 /// \tparam     F       The type of the function.
-/// \tparam     Args    The types of the arguments,
+/// \tparam     Args    The types of the arguments.
 template <typename     It  ,
           typename     T   ,
           typename     F   ,
@@ -102,9 +102,6 @@ void runge_kutta_3(It&& in_it, It&& out_it, T dt, F&& f, Args&&... args)
 ///
 /// This overload is enabled when the iterators have a gpu execution policy.
 ///
-/// This requires that the type of the \p f function conforms to the Stencil
-/// interface.
-///
 /// \param[in]  in_it   The input iterator over the data to update.
 /// \param[out] out_it  The output iterator to write the data to.
 /// \param[in]  dt      The time delta for the evolution.
@@ -113,7 +110,7 @@ void runge_kutta_3(It&& in_it, It&& out_it, T dt, F&& f, Args&&... args)
 /// \tparam     It      The type of the input and output iterators.
 /// \tparam     T       The type of the timestep.
 /// \tparam     F       The type of the function.
-/// \tparam     Args    The types of the arguments,
+/// \tparam     Args    The types of the arguments.
 template <typename     It  ,
           typename     T   ,
           typename     F   ,
