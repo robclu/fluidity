@@ -59,7 +59,7 @@ runge_kutta_3(Iterator in_it, Iterator out_it, T dt, F f, Args... args)
   // average to compute phi^{n+ 1/2}. Again we need to sync for the next
   // evolution.
   *shared_it_in = 0.75 * phi_n 
-                + 0.25 * (*shared_it_out - dt(shared_it_out, args...));
+                + 0.25 * (*shared_it_out - dt * f(shared_it_out, args...));
   __syncthreads();
 
   // Compute evolution to t^{n + 3/2}:
