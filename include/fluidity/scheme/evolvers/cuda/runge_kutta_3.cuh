@@ -82,7 +82,7 @@ runge_kutta_3(Iterator in_it, Iterator out_it, T dt, F f, Args... args)
 /// \tparam     F       The type of the function.
 /// \tparam     Args    The types of the arguments,
 template <typename It, typename T, typename F, typename... Args>
-void runge_kutta_3(It&& in_it, It&& out_it, Tdt, F&& f, Args&&... args)
+void runge_kutta_3(It&& in_it, It&& out_it, T dt, F&& f, Args&&... args)
 {
   auto threads = exec::get_thread_sizes(in_it);
   auto blocks  = exec::get_block_sizes(in_it, threads);

@@ -1,8 +1,8 @@
-//==--- fluidity/scheme/upwind.hpp ------------------------- -*- C++ -*- ---==//
+//==--- fluidity/scheme/schemes/upwind.hpp ----------------- -*- C++ -*- ---==//
 //            
 //                                Fluidity
 // 
-//                      Copyright (c) 2018 Rob Clucas.
+//                      Copyright (c) 2019 Rob Clucas.
 //
 //  This file is distributed under the MIT License. See LICENSE for details.
 //
@@ -13,16 +13,29 @@
 //
 //==------------------------------------------------------------------------==//
 
-#ifndef FLUIDITY_SCHEME_UPWIND_HPP
-#define FLUIDITY_SCHEME_UPWIND_HPP
+#ifndef FLUIDITY_SCHEME_SCHEMES_UPWIND_HPP
+#define FLUIDITY_SCHEME_SCHEMES_UPWIND_HPP
 
-#include "scheme.hpp"
+#include "../interfaces/scheme.hpp"
 
 namespace fluid  {
 namespace scheme {
 
+/// The Upwind struct computes the Godunov upwind update for data.
+/// \tparam Stencil The stencil to use for the scheme.
+template <typename Stencil>
+struct Upwind : public Scheme<Upwind<Stencil>> {
+ private:
+  /// Defines the type of the stencil for the upwind sheme.
+  using stencil_t = std::decay_t<Stencil>;
 
-struct Upwind : public Scheme<Upwind> {
+ public:
+  /// Returns the width of the scheme.
+  fluidity_host_device constexpr auto width() const
+  {
+    return stencil_t().width();
+  }
+
   /// Implementation of the upwind scheme, which is defined as the following:
   /// 
   /// $ H(\phi, v) = max(v, 0) \nabla^-(\phi) + min(v, 0) \nabla^+(\phi) $
@@ -37,16 +50,13 @@ struct Upwind : public Scheme<Upwind> {
   /// \param[in] it       The iterable data to apply the stencil to.
   /// \param[in] v        The data which defines the speed of the scheme.
   /// \param[in] h        The delta for the stencil.
-  /// \param[in] stencil  The stencil to use to compute the derivatives.
   /// \param[in] args     Additional arguments for the stencil.
   /// \tparam    It       The type of the iterator.
   /// \tparam    V        The type of the speed data.
   /// \tparam    T        The type of the delta.
-  /// \tparam    S        The type of the stencil.
   /// \tparam    Args     The types of the stencil arguments.
-  template <typename It, typename V, typename T, typename S, typename... Args>
-  fluidity_host_device auto
-  invoke(It&& it, V&& v, T h, S&& stencil, Args&&... args) const
+  template <typename It, typename T, typename V, typename... Args>
+  fluidity_host_device auto invoke(It&& it, T h, V&& v, Args&&... args) const
   {
     // Note: This implemenation can be done using min and max, rather than the
     //       branch. However, although the branch is costly (but becoming less
@@ -55,13 +65,11 @@ struct Upwind : public Scheme<Upwind> {
     //       the branch.
     using value_t = std::decay_t<decltype(*v)>;
     return *v * (*v <= value_t{0}
-              ? grad_backward(std::forward<It>(it)      ,
-                              h                         ,
-                              std::forward<S>(stencil)  ,
-                              std::forwrd<Args>(args)...)
+              ? grad_backward(std::forward<It>(it)       ,
+                              h                          ,
+                              std::forward<Args>(args)...)
               : grad_forward(std::forward<It>(it)       ,
                              h                          ,
-                             std::forward<S>(stencil)   ,
                              std::forward<Args>(args)...));
   }
 
@@ -76,27 +84,29 @@ struct Upwind : public Scheme<Upwind> {
   ///
   /// \param[in] it       The iterable data to apply the stencil to.
   /// \param[in] h        The delta for the stencil.
-  /// \param[in] stencil  The stencil to use to compute the derivatives.
   /// \param[in] args     Additional arguments for the stencil.
   /// \tparam    It       The type of the iterator.
   /// \tparam    T        The type of the delta.
-  /// \tparam    S        The type of the stencil.
   /// \tparam    Args     The types of the stencil arguments.
-  template <typename It, typename T, typename S, typename... Args>
-  fluidity_host_device auto
-  grad_forward(It&& it, T h, S&& stencil, Args&&... args) const
+  template <typename It, typename T, typename... Args>
+  fluidity_host_device auto grad_forward(It&& it, T h, Args&&... args) const
   {
-    using stencil_ret_t = decltype(stencil.forward_deriv(it, h, args...));
-    using value_t       = std::decay_t<stencil_ret_t>;
-    using it_t          = std::decay_t<it>;
-    constexpr auto zero = value_t{0};
-    auto result         = zero;
+    using it_t          = std::decay_t<It>;
+    using value_t       = std::decay_t<T>;
+    using stencil_ret_t = 
+      decltype(stencil_t{}.forward_deriv(it, h, std::size_t{0}, args...));
 
+    constexpr auto zero = value_t{0};
+    const auto stencil  = stencil_t{};
+
+    auto result = zero;
     unrolled_for<it_t::dimensions>([&] (auto dim)
     {
-      const auto back  = std::max(stencil.backward_deriv(it, h, args...), zero);
-      const auto fwrd  = std::min(stencil.forward_deriv(it, h, args...), zero);
-      result          += back * back + fwrd * fwrd;
+      const auto back  = 
+        std::max(stencil.backward_deriv(it, h, dim, args...), zero);
+      const auto fwrd  =
+        std::min(stencil.forward_deriv(it, h, dim, args...), zero);
+      result += back * back + fwrd * fwrd;
     });
     return std::sqrt(result);
   }
@@ -111,27 +121,29 @@ struct Upwind : public Scheme<Upwind> {
   ///
   /// \param[in] it       The iterable data to apply the stencil to.
   /// \param[in] h        The delta for the stencil.
-  /// \param[in] stencil  The stencil to use to compute the derivatives.
   /// \param[in] args     Additional arguments for the stencil.
   /// \tparam    It       The type of the iterator.
   /// \tparam    T        The type of the delta.
-  /// \tparam    S        The type of the stencil.
   /// \tparam    Args     The types of the stencil arguments.
-  template <typename It, typename T, typename Stencil, typename... Args>
-  fluidity_host_device auto
-  grad_backward(It&& it, T h, Stencil&& stencil, Args&&... args) const
+  template <typename It, typename T, typename... Args>
+  fluidity_host_device auto grad_backward(It&& it, T h, Args&&... args) const
   {
-    using stencil_ret_t = decltype(stencil.forward_deriv(it, h, args...));
-    using value_t       = std::decay_t<stencil_ret_t>;
-    using it_t          = std::decay_t<it>;
+    using it_t          = std::decay_t<It>;
+    using value_t       = std::decay_t<T>;
+    using stencil_ret_t = 
+      decltype(stencil_t{}.forward_deriv(it, h, std::size_t{0}, args...));
+    
     constexpr auto zero = value_t{0};
-    auto result         = zero;
+    const auto stencil  = stencil_t{};
 
+    auto result = zero;
     unrolled_for<it_t::dimensions>([&] (auto dim)
     {
-      const auto back  = std::min(stencil.backward_deriv(it, h, args...), zero);
-      const auto fwrd  = std::max(stencil.forward_deriv(it, h, args...), zero);
-      result          += back * back + fwrd * fwrd;
+      const auto back  = 
+        std::min(stencil.backward_deriv(it, h, dim, args...), zero);
+      const auto fwrd  =
+        std::max(stencil.forward_deriv(it, h, dim, args...), zero);
+      result += back * back + fwrd * fwrd;
     });
     return std::sqrt(result);
   }
@@ -139,5 +151,4 @@ struct Upwind : public Scheme<Upwind> {
 
 }} // namespace fluid::scheme
 
-#endif // FLUIDITY_SCHEME_UPWIND_HPP
-#define FLUIDITY_LEVELSET_FIRST_ORDER_EVOLUTION_HPP
+#endif // FLUIDITY_SCHEME_SCHEMES_UPWIND_HPP

@@ -97,11 +97,11 @@ class MultimaterialSimData<Traits, Material, exec::DeviceKind::gpu> {
     auto material_solver = solver_t();
     auto input_it        = input_iterator();
     material_solver.set_grid_sizes(input_it);
-    material_solver.solve(std::move(input_it)        ,
-                          output_iterator(),
-                          _material.eos()  ,
-                          dtdh             ,
-                          boundary_setter  );
+    material_solver.solve(std::move(input_it)         ,
+                          std::move(output_iterator()),
+                          _material.eos()             ,
+                          dtdh                        ,
+                          boundary_setter             );
   }
 
   /// Returns a MaterialIteratorWrapper which holds the equation of state for
@@ -190,10 +190,10 @@ class MultimaterialSimData<Traits, Material, exec::DeviceKind::gpu> {
   /// iteration.
   void swap_material_levelset_in_out_data()
   {
-    auto in  = _material.levelset().multi_iterator();
-    auto out = _material_out.levelset().multi_iterator();
-    _material.levelset().reset_data(&(*out));
-    _material_out.levelset().reset_data(&(*in));
+    auto in  = &(*_material.levelset().multi_iterator());
+    auto out = &(*_material_out.levelset().multi_iterator());
+    _material.levelset().reset_data(out);
+    _material_out.levelset().reset_data(in);
   }
 
   /// Ensures that the host data is synchronized with the device data by copying

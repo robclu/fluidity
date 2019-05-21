@@ -99,7 +99,7 @@ class MultimaterialSimulator final :
   /// Defines the type of the ghost fluid loader.
   using ghost_loader_t     = ghost::SimpleGFM<3>;
   /// Defines the type of the levelset solver.
-  using levelset_evolver_t = levelset::FirstOrderUpwind;
+  using levelset_evolver_t = typename traits_t::ls_evolver_t;
 
   /// Defines a constexpr instance of the execution polcity.
   static constexpr auto execution_policy = exec_t{};
@@ -262,6 +262,12 @@ class MultimaterialSimulator final :
       //==-- [R] Loading the ghost cells -----------------------------------==//
       print_subprocess("Loading ghost cells");
       ghost::load_ghost_cells(ghost_loader_t(), _mm_data, dh);
+
+      // [D] print the data for the materials to check correct initialization.
+      for_each(_mm_data, [&] (auto& mm_data)
+      {
+        print_mm_data(mm_data.states(), mm_data.material().eos());
+      });
 
       //==-- [R] Update the timestep for the iteration ---------------------==//
       update_time_delta();
@@ -532,7 +538,13 @@ class MultimaterialSimulator final :
     {
       auto ls_it_in  = mm_data.material().levelset().multi_iterator();
       auto ls_it_out = mm_data.material_out().levelset().multi_iterator();
-      evolve_levelset(ls_evolver, ls_it_in, ls_it_out, v_iter, _params.dt());
+
+      fluid::scheme::evolve(levelset_evolver_t(),
+                            ls_it_in            ,
+                            ls_it_out           ,
+                            _params.dt()        ,
+                            _params.dh()        ,
+                            v_iter              );
 
       mm_data.swap_material_levelset_in_out_data();
     });

@@ -82,6 +82,15 @@ struct Parameters {
     return _dt;
   }
 
+  /// Returns the spacial resolution for the simulation, in dimension \p dim.
+  /// \param[in] dim The dimension to get the resolution for.
+  /// \tparam    Dim The type of the dimension specifier.
+  template <typename Dim = std::size_t>
+  fluidity_host_device value_t dh(Dim&& dim = std::size_t{0}) const
+  {
+    return domain.resolution();
+  }
+
   /// Returns the value of the timestep divided by the resolution, which is
   /// commonly referred to as ($\lambda$) in the literature.
   fluidity_host_device value_t dt_dh() const

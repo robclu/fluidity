@@ -357,6 +357,8 @@ fluidity_device_only auto make_multidim_iterator()
   constexpr std::size_t buffer_size =
     DimInfo().template total_size<PadInfo>();
 
+  printf("Size of buffer: %3lu\n", buffer_size);
+
   __shared__ T buffer[buffer_size];
   return iter_t{buffer};
 }
@@ -369,7 +371,7 @@ fluidity_device_only auto make_multidim_iterator()
 /// \tparam    T       The type of the data to iterate over.
 /// \tparam    DimInfo The information which defines the multi dimensional
 ///                    space.
-template <typename T, typename DimInfo>
+template <typename T, typename DimInfo, nonmultiit_enable_t<T> = 0>
 fluidity_device_only constexpr auto make_multidim_iterator(T* ptr)
 {
   using iter_t = MultidimIterator<T, DimInfo, exec::gpu_type>;
@@ -383,7 +385,7 @@ fluidity_device_only constexpr auto make_multidim_iterator(T* ptr)
 /// \param[in] ptr     A pointer to the start of data to iterate over.      
 /// \tparam    T       The type of the data to iterate over.
 /// \tparam    DimInfo The information which defines the multi dimensional space.
-template <typename T, typename DimInfo>
+template <typename T, typename DimInfo, nonmultiit_enable_t<T> = 0>
 fluidity_device_only constexpr auto make_multidim_iterator(T* ptr, DimInfo info)
 {
   using iter_t = MultidimIterator<T, DimInfo, exec::gpu_type>;
@@ -405,8 +407,8 @@ template <typename It, std::size_t Padding = 0, enable_1d_it_t<It> = 0>
 fluidity_device_only constexpr auto make_multidim_iterator(const It& it)
 {
   using data_t      = std::decay_t<decltype(*it)>;
-  using dim_into_t  = DimInfoCt<threads_per_block_1d_x>;
-  return make_multidim_iterator<data_t, dim_info_t, Padding>;
+  using dim_info_t  = DimInfoCt<threads_per_block_1d_x>;
+  return make_multidim_iterator<data_t, dim_info_t, Padding>();
 }
 
 /// Makes a multidimensional iterator over a multidimensional shared memory
@@ -422,8 +424,8 @@ template <typename It, std::size_t Padding = 0, enable_2d_it_t<It> = 0>
 fluidity_device_only constexpr auto make_multidim_iterator(const It& it)
 {
   using data_t     = std::decay_t<decltype(*it)>;
-  using dim_into_t = DimInfoCt<threads_per_block_2d_x, threads_per_block_2d_y>;
-  return make_multidim_iterator<data_t, dim_info_t, Padding>
+  using dim_info_t = DimInfoCt<threads_per_block_2d_x, threads_per_block_2d_y>;
+  return make_multidim_iterator<data_t, dim_info_t, Padding>();
 }
 
 /// Makes a multidimensional iterator over a multidimensional shared memory
@@ -439,10 +441,10 @@ template <typename It, std::size_t Padding = 0, enable_3d_it_t<It> = 0>
 fluidity_device_only constexpr auto make_multidim_iterator(const It& it)
 {
   using data_t     = std::decay_t<decltype(*it)>;
-  using dim_into_t = DimInfoCt<threads_per_block_3d_x,
+  using dim_info_t = DimInfoCt<threads_per_block_3d_x,
                                threads_per_block_3d_y,
                                threads_per_block_3d_z>;
-  return make_multidim_iterator<data_t, dim_info_t, Padding>
+  return make_multidim_iterator<data_t, dim_info_t, Padding>();
 }
 
 #else

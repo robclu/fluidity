@@ -86,19 +86,19 @@ using nonmultiit_enable_t = std::enable_if_t<!is_multidim_iter_v<T>, int>;
 /// iterator.
 /// \tparam T The type to check for 1d enabling.
 template <typename T>
-using enable_1d_it_t = std::enable_if_t<std::deacy_t<T>::dimensions == 1, int>;
+using enable_1d_it_t = std::enable_if_t<std::decay_t<T>::dimensions == 1, int>;
 
 /// Defines a valid type used for enabling specializations for a 2 dimensional
 /// iterator.
 /// \tparam T The type to check for 2d enabling.
 template <typename T>
-using enable_2d_it_t = std::enable_if_t<std::deacy_t<T>::dimensions == 2, int>;
+using enable_2d_it_t = std::enable_if_t<std::decay_t<T>::dimensions == 2, int>;
 
 /// Defines a valid type used for enabling specializations for a 3 dimensional
 /// iterator.
 /// \tparam T The type to check for 3d enabling.
 template <typename T>
-using enable_3d_it_t = std::enable_if_t<std::deacy_t<T>::dimensions == 3, int>;
+using enable_3d_it_t = std::enable_if_t<std::decay_t<T>::dimensions == 3, int>;
 
 } // namespace fluid
 

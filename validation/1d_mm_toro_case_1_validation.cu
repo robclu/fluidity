@@ -22,6 +22,17 @@
 
 using namespace fluid;
 
+namespace fluid {
+
+constexpr unsigned hash(char const* input)
+{
+  return *input 
+    ? static_cast<unsigned int>(*input) + 33 * hash(input + 1)
+    : 5381;
+}
+
+} // namespace fluid
+
 // Defines the type of data to use.
 using real_t = double;
 
@@ -38,6 +49,7 @@ int main(int argc, char** argv)
   simulator->configure_cfl(0.9);
 
   // Command line arguments
+/*
   if (argc >= 2)
   {
     simulator->configure_sim_time(atof(argv[1]));
@@ -45,6 +57,30 @@ int main(int argc, char** argv)
   if (argc >= 3)
   {
     simulator->configure_max_iterations(atoi(argv[2]));
+  }
+*/
+  if (argc >= 2)
+  {
+    auto arg_index = 1;
+    while (arg_index + 1 <= argc)
+    {
+      switch (hash(argv[arg_index]))
+      {
+        case hash("res"):
+          simulator->configure_resolution(atof(argv[++arg_index]));
+          simulator->configure_dimension(fluid::dim_x, 0.0, 1.0);
+          break;
+        case hash("sim_time"):
+          simulator->configure_sim_time(atof(argv[++arg_index]));
+          break;
+        case hash("iters"):
+          simulator->configure_max_iterations(atoi(argv[++arg_index]));
+          break;
+        default:
+          arg_index++;
+      }
+      arg_index++;
+    }
   }
 
   constexpr auto membrane = real_t{0.3};

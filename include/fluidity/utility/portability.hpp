@@ -26,11 +26,17 @@
   #define fluidity_device_only __device__
   #define fluidity_host_device __host__ __device__ 
   #define fluidity_global      __global__
+
+  /// Macro for thread synchronization for the device.
+  #define fluidity_syncthreads() __syncthreads()
 #else
   #define fluidity_host_only
   #define fluidity_device_only
   #define fluidity_host_device
   #define fluidity_global
+
+  /// Macro for thread synchronization for the host.
+  #define fluidity_syncthreads() 
 #endif
 
 #endif // FLUIDITY_UTILITY_PORTABILITY_HPP

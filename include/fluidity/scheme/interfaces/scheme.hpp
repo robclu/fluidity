@@ -1,4 +1,4 @@
-//==--- fluidity/scheme/scheme.hpp ------------------------- -*- C++ -*- ---==//
+//==--- fluidity/scheme/interfaces/scheme.hpp -------------- -*- C++ -*- ---==//
 //            
 //                                Fluidity
 // 
@@ -14,8 +14,8 @@
 //
 //==------------------------------------------------------------------------==//
 
-#ifndef FLUIDITY_SCHEME_SCHEME_HPP
-#define FLUIDITY_SCHEME_SCHEME_HPP
+#ifndef FLUIDITY_SCHEME_INTERFACES_SCHEME_HPP
+#define FLUIDITY_SCHEME_INTERFACES_SCHEME_HPP
 
 #include <fluidity/iterator/iterator_traits.hpp>
 #include "stencil.hpp"
@@ -29,7 +29,7 @@ namespace scheme {
 template <typename SchemeImpl>
 class Scheme {
   /// Defines the type of the stencil implementation.
-  using impl_t = SchemeImpl;
+  using impl_t = std::decay_t<SchemeImpl>;
 
   /// Returns a pointer to the implementation.
   fluidity_host_device impl_t* impl()
@@ -45,7 +45,7 @@ class Scheme {
 
  public:
   /// Returns the width of the scheme.
-  constexpr auto width() const
+  fluidity_host_device constexpr auto width() const -> std::size_t
   {
     return impl()->width();
   }
@@ -54,29 +54,24 @@ class Scheme {
   /// and return the value to use to update the scheme. This computes the
   /// results for all dimensions.
   /// \param[in] it       The iterable data to apply the stencil to.
-  /// \param[in] v        The data which defines the speed of the scheme.
   /// \param[in] h        The delta for the stencil.
-  /// \param[in] stencil  The stencil to use to compute the derivatives.
+  /// \param[in] v        The data which defines the speed of the scheme.
   /// \param[in] args     Additional arguments for the stencil.
   /// \tparam    It       The type of the iterator.
-  /// \tparam    V        The type of the speed data.
   /// \tparam    T        The type of the delta.
-  /// \tparam    S        The type of the stencil.
+  /// \tparam    V        The type of the speed data.
   /// \tparam    Args     The types of the stencil arguments.
-  template <typename It, typename V, typename T, typename S, typename... Args>
+  template <typename It, typename T, typename V, typename... Args>
   fluidity_host_device auto
-  operator()(It&& it, V&& v,T h, S stencil, Args&&...) const
+  operator()(It&& it, T h, V&& v, Args&&... args) const
   {
     static_assert(is_multidim_iter_v<It>, 
                   "Iterator must be a multidimensional iterator!");
     static_assert(is_multidim_iter_v<V>,
                   "Speed data must be a multidimensional iterator!");
-    static_assert(is_stencil_v<S>,
-                  "Stencil must conform to stencil interface!");
     return impl()->invoke(std::forward<It>(it)       ,
-                          std::forward<V>(v)         ,
                           h                          ,
-                          std::forward<S>(stencil)   ,
+                          std::forward<V>(v)         ,
                           std::forward<Args>(args)...);
   }
 };
@@ -92,4 +87,4 @@ static constexpr auto is_scheme_v =
 }} // namespace fluid::scheme
 
 
-#endif // FLUIDITY_SCHEME_SCHEME_HPP
+#endif // FLUIDITY_SCHEME_INTERFACES_SCHEME_HPP

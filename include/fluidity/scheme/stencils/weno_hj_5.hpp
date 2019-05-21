@@ -1,4 +1,4 @@
-//==--- fluidity/scheme/stencil.hpp ------------------------ -*- C++ -*- ---==//
+//==--- fluidity/scheme/stencils/weno_hj_5.hpp ------------- -*- C++ -*- ---==//
 //            
 //                                Fluidity
 // 
@@ -8,19 +8,20 @@
 //
 //==------------------------------------------------------------------------==//
 //
-/// \file  stencil.hpp
-/// \brief This file defines an interface for a stencil for solving.
+/// \file  weno_hj_5.hpp
+/// \brief This file defines an implementation of the HJ WENO 5 method.
 //
 //==------------------------------------------------------------------------==//
 
-#ifndef FLUIDITY_SCHEME_SPACE_HJ_WENO_5_HPP
-#define FLUIDITY_SCHEME_SPACE_HJ_WENO_5 _HPP
+#ifndef FLUIDITY_SCHEME_STENCILS_HJ_WENO_5_HPP
+#define FLUIDITY_SCHEME_STENCILS_HJ_WENO_5_HPP
 
-#include "../stencil.hpp"
+#include "../interfaces/stencil.hpp"
+#include <algorithm>
 
-namespace fluid  {
-namespace scheme {
-namespace space  {
+namespace fluid   {
+namespace scheme  {
+namespace stencil {
 
 /// This provides an implementation of a WENO scheme which is 5th order for
 /// Hamilton-Jacobi equations and 4th order for conservation laws. It
@@ -36,7 +37,7 @@ struct HJWeno5 : public Stencil<HJWeno5> {
 
  public:
   /// Returns the width of the stencil.
-  constexpr auto width() const { return max_offset; }
+  fluidity_host_device constexpr auto width() const { return max_offset; }
 
   /// Implementation of the forward difference for the WENO scheme.
   /// \param[in] it     The iterable data to apply the stencil to.
@@ -67,7 +68,7 @@ struct HJWeno5 : public Stencil<HJWeno5> {
   fluidity_host_device auto forward_deriv_impl(It&& it, T h, Dim dim) const
   {
     const auto d1 = it.offset(int{2}, dim).forward_diff(dim) / h;
-    const auto d2 = it.offset(int{1}, dim).forward_diff(dim) / h
+    const auto d2 = it.offset(int{1}, dim).forward_diff(dim) / h;
     const auto d3 = it.forward_diff(dim) / h;
     const auto d4 = it.backward_diff(dim) / h;
     const auto d5 = it.offset(int{-1}, dim).backward_diff(dim) / h;
@@ -86,8 +87,8 @@ struct HJWeno5 : public Stencil<HJWeno5> {
   template <typename T>
   fluidity_host_device auto diff(T&& d1, T&& d2, T&& d3, T&& d4, T&& d5) const
   {
-    const auto phi_1 = 2.0 * d1 - 7.0 * d2 + 11.0 d3;
-    const auto phi_2 = -d2      + 5.0 * d3 + 2.0 * d;
+    const auto phi_1 = 2.0 * d1 - 7.0 * d2 + 11.0 * d3;
+    const auto phi_2 = -d2      + 5.0 * d3 + 2.0 * d4;
     const auto phi_3 = 2.0 * d3 + 5.0 * d4 - d5;
 
     // Compute the coefficients:
@@ -96,12 +97,14 @@ struct HJWeno5 : public Stencil<HJWeno5> {
     auto alpha_2 = 13.0 / 12.0 * std::pow(d2 - 2 * d3 + d4 , 2)
                  + std::pow(d2 - d4, 2) / 4.0;
     auto alpha_3 = 13.0 / 12.0 * std::pow(d3 - 2.0 * d4 + d5, 2)
-                 + std::pow(3.0 * d3 - 4.0 * d4 + d5);
+                 + std::pow(3.0 * d3 - 4.0 * d4 + d5, 2);
 
     // Compute the error term:
-    using mx     = std::max;
     const auto e = 10.0e-6
-                 * mx(mx(mx(mx(d1*d1, d2*d2), d3 * d3), d4 * d4), d5 * d5)
+                 * std::max(
+                     std::max(
+                       std::max(
+                         std::max(d1*d1, d2*d2), d3 * d3), d4 * d4), d5 * d5)
                  + 10.0e-99;
 
     // Update the coefficients:
@@ -116,6 +119,6 @@ struct HJWeno5 : public Stencil<HJWeno5> {
   }
 };
 
-}}} /// namespace fluid::scheme::space
+}}} /// namespace fluid::scheme::stencil
 
-#endif // FLUIDITY_SCHEME_SPACE_HJ_WENO_5 _HPP
+#endif // FLUIDITY_SCHEME_STENCIL_HJ_WENO_5 _HPP

@@ -1,4 +1,4 @@
-//==--- fluidity/scheme/stencil.hpp ------------------------ -*- C++ -*- ---==//
+//==--- fluidity/scheme/interfaces/stencil.hpp ------------- -*- C++ -*- ---==//
 //            
 //                                Fluidity
 // 
@@ -13,10 +13,10 @@
 //
 //==------------------------------------------------------------------------==//
 
-#ifndef FLUIDITY_SCHEME_STENCIL_HPP
-#define FLUIDITY_SCHEME_STENCIL_HPP
+#ifndef FLUIDITY_SCHEME_INTERFACES_STENCIL_HPP
+#define FLUIDITY_SCHEME_INTERFACES_STENCIL_HPP
 
-#include <fluidity/utility/postability.hpp>
+#include <fluidity/utility/portability.hpp>
 #include <type_traits>
 
 namespace fluid  {
@@ -92,4 +92,4 @@ static constexpr auto is_stencil_v =
 
 }} // namespace fluid::solver
 
-#endif // FLUIDITY_SOLVER_STENCIL_HPP
+#endif // FLUIDITY_SOLVER_INTERFACES_STENCIL_HPP
