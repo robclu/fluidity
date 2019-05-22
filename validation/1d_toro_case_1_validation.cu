@@ -33,7 +33,7 @@ int main(int argc, char** argv)
   //simulator->configure_sim_time(0.2);
   //simulator->configure_cfl(0.9);
 
-  simulator->configure_resolution(0.005);
+  simulator->configure_resolution(0.0075);
   simulator->configure_dimension(fluid::dim_x, 0.0, 1.0);
   simulator->configure_sim_time(0.2);
   simulator->configure_cfl(0.9);

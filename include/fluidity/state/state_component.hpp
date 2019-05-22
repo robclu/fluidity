@@ -43,6 +43,12 @@ struct StateComponent {
     const char n[sizeof...(Chars) + 1]  = { Chars..., '\0' };
     return std::string(n);
   }
+
+  /// Overload of unary operator - to allow negation.
+  constexpr StateComponent<Chars...> operator-() const
+  {
+    return StateComponent<Chars...>(-value);
+  }
 };
 
 /// Utility function which can be used with declval to easily define new state
@@ -58,6 +64,8 @@ constexpr StateComponent<C...> operator "" _component()
 {
   return StateComponent<C...>();
 }
+
+/// Overload of the negatiion 
 
 }} // namespace fluid::state 
 

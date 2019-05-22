@@ -106,6 +106,12 @@ class LevelSet {
     });    
   }
 
+  /// Returns the storage for the levelset for the host.
+  auto host_storage() const
+  {
+    return std::move(_data.as_host());
+  }
+
   /// Returns a multi-dimensional iterator over the levelset data.
   auto multi_iterator() const
   {

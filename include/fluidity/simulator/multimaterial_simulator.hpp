@@ -905,6 +905,14 @@ void MultimaterialSimulator<Ts...>::stream_output_ascii(Stream&&       stream,
     stream << comment << "Column " << column++ << ": " 
            << char{coord_value}    << " coordinate\n";
   });
+
+  unrolled_for<dimensions>([&] (auto dim)
+  {
+    constexpr auto coord_value = dim + coord_char_offset;
+    stream << comment << "Column " << column++ << ": "
+           << char{coord_value}    << " ls coordinate\n";
+  });
+
   for (const auto& element_name : index_t::element_names())
   {
     stream << comment << "Column " << column++ << ": " << element_name << "\n";
@@ -914,11 +922,14 @@ void MultimaterialSimulator<Ts...>::stream_output_ascii(Stream&&       stream,
 
   auto append_element = [&stream] (auto element)
   {
-    stream << std::setw(12)  << std::left           << std::fixed
+    stream << std::setw(12)  << std::left            << std::fixed
            << std::showpoint << std::setprecision(8) << element << " ";
   };
 
+
   auto state_iterator = data.states().multi_iterator();
+  auto levelset       = data.material().levelset().host_storage();
+  auto ls_iterator    = levelset.multi_iterator();
   auto eos            = data.material().eos();
   auto state          = state_iterator->primitive(eos);
   auto dim_info       = dimension_info();
@@ -941,6 +952,10 @@ void MultimaterialSimulator<Ts...>::stream_output_ascii(Stream&&       stream,
         auto coord = (offsets[dim] + 0.5) * _params.domain.resolution();
         append_element(coord);
       }
+      for (const auto dim : range(dimensions))
+      {
+        append_element(*ls_iterator.offset(offset_x, dim_x));
+      }
       for (const auto& element : state)
       {
         append_element(element);
@@ -957,6 +972,7 @@ void MultimaterialSimulator<Ts...>::stream_output_ascii(Stream&&       stream,
       {
         offsets[next_dim]++;
         state_iterator.shift(1, next_dim);
+        ls_iterator.shift(1, next_dim);
       }
     });
   } while (offsets[dimensions - 1] != dim_info.size(dimensions - 1));
