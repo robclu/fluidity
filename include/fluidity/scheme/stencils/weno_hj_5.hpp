@@ -75,6 +75,36 @@ struct HJWeno5 : public Stencil<HJWeno5> {
     return diff(d1, d2, d3, d4, d5);
   }
 
+  /// Implementation of the calculation of the quadratic coefficients iin the
+  /// backward direction.
+  /// \param[in] it     The iterable data to apply the stencil to.
+  /// \param[in] dh     The delta for the stencil.
+  /// \param[in] dim    The dimension to compute the coefficients for.
+  /// \tparam    It     The type of the iterator.
+  /// \tparam    T      The type of the delta.
+  /// \tparam    Dim    The type of the dimension specifier.
+  template <typename It, typename T, typename Dim>
+  fluidity_host_device auto quadratic_back_impl(It&& it, T dh, Dim dim) const
+  {
+    static_assert(false, "Not yet implemented");
+    return Quadratic{0, 0, 0};
+  }
+
+  /// Implementation of the calculation of the quadratic coefficients iin the
+  /// forward direction.
+  /// \param[in] it     The iterable data to apply the stencil to.
+  /// \param[in] dh     The delta for the stencil.
+  /// \param[in] dim    The dimension to compute the coefficients for.
+  /// \tparam    It     The type of the iterator.
+  /// \tparam    T      The type of the delta.
+  /// \tparam    Dim    The type of the dimension specifier.
+  template <typename It, typename T, typename Dim>
+  fluidity_host_device auto quadratic_fwrd_impl(It&& it, T dh, Dim dim) const
+  {
+    static_assert(false, "Not yet implemented");
+    return Quadratic{0, 0, 0};
+  }
+
  private:
   /// A generic implementation of the difference operator using the finite
   /// differences, returning the difference $D_{dim}^{\pm}\phi$ where the $\pm$
