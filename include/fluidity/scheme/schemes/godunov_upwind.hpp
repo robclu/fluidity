@@ -17,6 +17,9 @@
 #ifndef FLUIDITY_SCHEME_SCHEMES_GODUNOV_UPWIND_HPP
 #define FLUIDITY_SCHEME_SCHEMES_GODUNOV_UPWIND_HPP
 
+#include "../interfaces/solvable.hpp"
+#include <fluidity/math/quadratic.hpp>
+
 namespace fluid  {
 namespace scheme {
 
@@ -85,7 +88,7 @@ struct GodunovUpwind : public Solvable<GodunovUpwind<Stencil>> {
   template <typename It, typename T>
   fluidity_host_device auto solve(It&& it, T dh) const
   {
-    return get_quadratic(it, dh).solve();
+    return get_quadratic(it, dh).solve().larger;
   }
 
   /// Returns the value of the \p it which would solve the Godunov upwind
@@ -108,7 +111,7 @@ struct GodunovUpwind : public Solvable<GodunovUpwind<Stencil>> {
 
     // Apply the functor to make any changes to the quadratic before solving:
     f(quad, std::forward<Args>(args)...);
-    return quad.solve();
+    return quad.solve().larger;
   }
 
   /// Computes the forward gradient term for the upwinding, which is:
@@ -192,24 +195,25 @@ struct GodunovUpwind : public Solvable<GodunovUpwind<Stencil>> {
   /// \param[in] dh The delta for the stencil.
   /// \tparam    It The type of the iterator.
   /// \tparam    T  The type of the delta.
-  fluidity_host_device auto get_quadratic(It&& it, T dh) const
+  template <typename I, typename T>
+  fluidity_host_device auto get_quadratic(I&& it, T dh) const
   {
-    using it_t           = std::decay_t<It>;
+    using it_t           = std::decay_t<I>;
     const auto stencil   = stencil_t();
-    const auto quad_zero = Quadratic<T>{T(0), T(0), T(0)};
+    const auto quad_zero = math::Quadratic<T>{T(0), T(0), T(0)};
     auto       quad      = quad_zero;
 
     // Update the quadratic:
     unrolled_for<it_t::dimensions>([&] (auto dim)
     {
-      if (std::max(stencil.backward_deriv(it, dh, dim) > T(0))
+      if (stencil.backward_deriv(it, dh, dim) > T(0))
       {
-        quad += stencil.quadratic_backward(it, dh, dim);
+        quad += stencil.quadratic_back(it, dh, dim);
       }
 
-      if (std::min(stencil.forward_deriv(it, dh, dim) < T(0))
+      if (stencil.forward_deriv(it, dh, dim) < T(0))
       {
-        quad += stencil.quadratic_forward(it, dh, dim);
+        quad += stencil.quadratic_fwrd(it, dh, dim);
       }
     });
     return quad;

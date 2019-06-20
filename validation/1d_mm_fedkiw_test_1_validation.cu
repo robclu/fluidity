@@ -46,7 +46,7 @@ int main(int argc, char** argv)
 
   simulator->configure_resolution(0.004);
   simulator->configure_dimension(fluid::dim_x, 0.0, 4.0);
-  simulator->configure_sim_time(0.022);
+  simulator->configure_sim_time(0.0022);
   simulator->configure_cfl(0.9);
 
   // Command line arguments
@@ -92,7 +92,7 @@ int main(int argc, char** argv)
     {
       *it = positions[0] - membrane;
     },
-    2000.0_rho, 9.80000_p, 0.0_v_x 
+    2000.0_rho, 980000.0_p, 0.0_v_x 
   );
   simulator->add_material(
     fluid::material::IdealGas<real_t>{1.4},
@@ -100,7 +100,7 @@ int main(int argc, char** argv)
     {
       *it = membrane - positions[0];
     },
-    1000.0_rho, 2.45000_p, 0.0_v_x 
+    1000.0_rho, 245000.0_p, 0.0_v_x 
   );
 
 

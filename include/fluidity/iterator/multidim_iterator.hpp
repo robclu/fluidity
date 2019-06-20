@@ -19,11 +19,15 @@
 #define FLUIDITY_ITERATOR_MULTIDIM_ITERATOR_HPP
 
 #include "iterator_traits.hpp"
+#include "multidim_iterator_fwd.hpp"
 #include "strided_iterator.hpp"
 #include <fluidity/dimension/dimension_info.hpp>
 #include <fluidity/dimension/thread_index.hpp>
+#include <fluidity/traits/iterator_traits.hpp>
 #include <fluidity/utility/debug.hpp>
 #include <fluidity/utility/type_traits.hpp>
+
+/// TODO: Change all iterator references to traits::
 
 namespace fluid {
 
@@ -335,7 +339,7 @@ struct MultidimIterator : public DimensionInfo {
 template <typename T, typename DimInfo, std::size_t Padding = 0>
 fluidity_device_only auto make_multidim_iterator()
 {
-  using iter_t = MultidimIterator<T, DimInfo, exec::gpu_type>;
+  using iter_t = MultidimIterator<T, DimInfo, exec::gpu_t>;
   constexpr std::size_t buffer_size =
     DimInfo().template total_size<Padding>();
 
@@ -353,7 +357,7 @@ fluidity_device_only auto make_multidim_iterator()
 template <typename T, typename DimInfo, typename PadInfo>
 fluidity_device_only auto make_multidim_iterator()
 {
-  using iter_t = MultidimIterator<T, DimInfo, exec::gpu_type>;
+  using iter_t = MultidimIterator<T, DimInfo, exec::gpu_t>;
   constexpr std::size_t buffer_size =
     DimInfo().template total_size<PadInfo>();
 
@@ -374,7 +378,7 @@ fluidity_device_only auto make_multidim_iterator()
 template <typename T, typename DimInfo, nonmultiit_enable_t<T> = 0>
 fluidity_device_only constexpr auto make_multidim_iterator(T* ptr)
 {
-  using iter_t = MultidimIterator<T, DimInfo, exec::gpu_type>;
+  using iter_t = MultidimIterator<T, DimInfo, exec::gpu_t>;
   return iter_t{ptr};
 }
 
@@ -388,9 +392,50 @@ fluidity_device_only constexpr auto make_multidim_iterator(T* ptr)
 template <typename T, typename DimInfo, nonmultiit_enable_t<T> = 0>
 fluidity_device_only constexpr auto make_multidim_iterator(T* ptr, DimInfo info)
 {
-  using iter_t = MultidimIterator<T, DimInfo, exec::gpu_type>;
+  using iter_t = MultidimIterator<T, DimInfo, exec::gpu_t>;
   return iter_t{ptr, info};
 }
+
+//==--- [Multidim creation defaults] ---------------------------------------==//
+
+/// \param[in] it       The iterator to compute the number of dimensions from.
+/// \tparam    It       The type of the iterator.
+/// \tparam    Padding  The amount of padding to apply to each side of each
+///                     dimension.
+template <typename T>
+fluidity_device_only constexpr auto make_multidim_iterator(Num<1>)
+{
+  using data_t      = std::decay_t<T>;
+  using dim_info_t  = DimInfoCt<threads_per_block_1d_x>;
+  return make_multidim_iterator<data_t, dim_info_t>();
+}
+
+/// \param[in] it       The iterator to compute the number of dimensions from.
+/// \tparam    It       The type of the iterator.
+/// \tparam    Padding  The amount of padding to apply to each side of each
+///                     dimension.
+template <typename T>
+fluidity_device_only constexpr auto make_multidim_iterator(Num<2>)
+{
+  using data_t     = std::decay_t<T>;
+  using dim_info_t = DimInfoCt<threads_per_block_2d_x, threads_per_block_2d_y>;
+  return make_multidim_iterator<data_t, dim_info_t>();
+}
+
+/// \param[in] it       The iterator to compute the number of dimensions from.
+/// \tparam    It       The type of the iterator.
+/// \tparam    Padding  The amount of padding to apply to each side of each
+///                     dimension.
+template <typename T>
+fluidity_device_only constexpr auto make_multidim_iterator(Num<3>)
+{
+  using data_t      = std::decay_t<T>;
+  using dim_info_t = DimInfoCt<threads_per_block_3d_x,
+                               threads_per_block_3d_y,
+                               threads_per_block_3d_z>;
+  return make_multidim_iterator<data_t, dim_info_t>();
+}
+
 
 //==--- [Multidim creation from iterator] ----------------------------------==//
 

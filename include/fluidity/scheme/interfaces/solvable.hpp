@@ -29,7 +29,7 @@ namespace scheme {
 /// the given equation. The equation to be solved is defined by the
 /// implementation.
 /// \tparam SolvableImpl The implementation of the solvable interface.
-template <typename Solvablempl>
+template <typename SolvableImpl>
 class Solvable {
   /// Defines the type of the solvable implementation.
   using impl_t = SolvableImpl;

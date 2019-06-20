@@ -18,6 +18,7 @@
 #define FLUIDITY_SCHEME_STENCILS_TWO_POINT_ORDER_ONE_HPP
 
 #include "../interfaces/stencil.hpp"
+#include <fluidity/math/quadratic.hpp>
 #include <algorithm>
 
 namespace fluid   {
@@ -76,7 +77,7 @@ struct TwoPointOrder1 : public Stencil<TwoPointOrder1> {
     const auto alpha = T(1) / (dh*dh);
     const auto back  = *it.offset(-1, dim);
     const auto beta  = alpha * back;
-    return Quadratic{alpha, T(-2) * beta, back * beta};
+    return math::Quadratic<T>{alpha, T(-2) * beta, back * beta};
   }
 
   /// Implementation of the calculation of the quadratic coefficients iin the
@@ -93,7 +94,7 @@ struct TwoPointOrder1 : public Stencil<TwoPointOrder1> {
     const auto alpha = T(1) / (dh*dh);
     const auto fwrd  = *it.offset(1, dim);
     const auto beta  = alpha * fwrd;
-    return Quadratic{alpha, T(-2) * beta, fwrd * beta};
+    return math::Quadratic<T>{alpha, T(-2) * beta, fwrd * beta};
   }
 };
 

@@ -35,7 +35,7 @@ namespace math  {
 template <typename T>
 struct Quadratic {
   /// Defines the type of the data for the quadratic.
-  using value_t = std::decay_t<T>:
+  using value_t = std::decay_t<T>;
   /// Defines the type of this quadratic.
   using self_t  = Quadratic<T>;
 
@@ -63,18 +63,22 @@ struct Quadratic {
   /// Overload of the addition operator to add two quadratics together.
   /// \param[in] other The other quadratic to add with this one.
   /// \tparam    U     The data type for the other quadratic.
+  template <typename U>
   fluidity_host_device self_t& operator+=(const Quadratic<U>& other)
   {
     a += other.a; b += other.b; c += other.b;
+    return *this;
   }
 
   /// Overload of the subtraction operator to subtract one quadratic from this
   /// quadratic.
   /// \param[in] other The other quadratic to subtract from this one.
   /// \tparam    U     The data type for the other quadratic.
-  fluidity_host_device void operator-=(const Quadratic<U>& other)
+  template <typename U>
+  fluidity_host_device self_t& operator-=(const Quadratic<U>& other)
   {
     a -= other.a; b -= other.b; c -= other.b;
+    return *this;
   }
 };
 
@@ -88,7 +92,7 @@ struct Quadratic {
 /// \tparam     R     The data type for the right quadratic.
 template <typename L, typename R>
 fluidity_host_device auto
-operator+(const Quadratic<L>& left, const Quadratic<R>& right)
+operator+(const Quadratic<L>& l, const Quadratic<R>& r)
 {
   return Quadratic<L>{l.a + r.a, l.b + r.b, l.c + r.c};
 }
@@ -101,7 +105,7 @@ operator+(const Quadratic<L>& left, const Quadratic<R>& right)
 /// \tparam     R     The data type for the right quadratic.
 template <typename L, typename R>
 fluidity_host_device auto
-operator-(const Quadratic<L>& left, const Quadratic<R>& right)
+operator-(const Quadratic<L>& l, const Quadratic<R>& r)
 {
   return Quadratic<L>{l.a - r.a, l.b - r.b, l.c - r.c};
 }

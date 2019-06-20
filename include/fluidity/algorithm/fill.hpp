@@ -18,8 +18,8 @@
 
 #include "fill.cuh"
 #include "if_constexpr.hpp"
-#include <fluidity/execution/execution_policy.hpp>
-#include <fluidity/iterator/iterator_traits.hpp>
+#include <fluidity/traits/iterator_traits.hpp>
+#include <fluidity/traits/device_traits.hpp>
 #include <fluidity/utility/type_traits.hpp>
 #include <utility>
 
@@ -71,10 +71,10 @@ struct FillImpl<true> {
 /// \tparam    Iterator The type of the iterator.
 /// \tparam    P        The type of the predicate.
 /// \tparam    Args     The type of arguments for a callable predicate.
-template <typename    Iterator            ,
-          typename    T                   ,
-          typename... Args                ,
-          exec::cpu_enable_t<Iterator> = 0>
+template <typename    Iterator              ,
+          typename    T                     ,
+          typename... Args                  ,
+          traits::cpu_enable_t<Iterator> = 0>
 void fill(Iterator begin, Iterator end, T value, Args&&... args)
 {
   constexpr bool is_predicate = 
@@ -99,7 +99,7 @@ void fill(Iterator begin, Iterator end, T value, Args&&... args)
 /// \tparam    Iterator The type of the iterator.
 /// \tparam    P        The type of the predicate.
 /// \tparam    Args     The type of arguments for a callable predicate.
-template <typename Iterator, typename T, exec::gpu_enable_t<Iterator> = 0>
+template <typename Iterator, typename T, traits::gpu_enable_t<Iterator> = 0>
 void fill(Iterator begin, Iterator end, T value)
 {
   detail::cuda::fill(begin, end, value);
@@ -129,10 +129,10 @@ void fill(Iterator begin, Iterator end, T value)
 /// \tparam    Iterator The type of the iterator.
 /// \tparam    Pred     The type of the predicate.
 /// \tparam    Args     The type of arguments for a callable predicate.
-template <typename Iterator               ,
-          typename Pred                   ,
-          multiit_enable_t<Iterator> = 0  ,
-          exec::gpu_enable_t<Iterator> = 0>
+template <typename Iterator                 ,
+          typename Pred                     ,
+          multiit_enable_t<Iterator> = 0    ,
+          traits::gpu_enable_t<Iterator> = 0>
 void fill(Iterator&& it, Pred&& pred)
 {
   detail::cuda::fill(std::forward<Iterator>(it), std::forward<Pred>(pred));

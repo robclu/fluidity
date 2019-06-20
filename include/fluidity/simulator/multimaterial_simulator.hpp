@@ -263,12 +263,6 @@ class MultimaterialSimulator final :
       print_subprocess("Loading ghost cells");
       ghost::load_ghost_cells(ghost_loader_t(), _mm_data, dh);
 
-      // [D] print the data for the materials to check correct initialization.
-      for_each(_mm_data, [&] (auto& mm_data)
-      {
-        print_mm_data(mm_data.states(), mm_data.material().eos());
-      });
-
       //==-- [R] Update the timestep for the iteration ---------------------==//
       update_time_delta();
 

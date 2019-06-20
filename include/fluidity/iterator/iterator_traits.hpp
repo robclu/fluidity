@@ -16,22 +16,10 @@
 #ifndef FLUIDITY_ITERATOR_ITERATOR_TRAITS_HPP
 #define FLUIDITY_ITERATOR_ITERATOR_TRAITS_HPP
 
-#include <fluidity/dimension/dimension.hpp>
-#include <fluidity/execution/execution_policy.hpp>
+#include "multidim_iterator_fwd.hpp"
 #include <type_traits>
 
-
 namespace fluid {
-
-/// Forward declaration of a class for multi-dimensional iteration, which allows
-/// traits for the iterator to be defined.
-/// \tparam T         The type of the data to iterate over.
-/// \tparam DimInfo   Information for the dimensions.
-/// \tparam Exec      The execution policy for the iterator.
-template <typename T,
-          typename DimensionInfo = DimInfo<2>,
-          typename Exec          = exec::default_type>
-struct MultidimIterator;
 
 /// Defines the underlying value type for the iterator.
 /// \tparam Iterator The iterator get the value type for.

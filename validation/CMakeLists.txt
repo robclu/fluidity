@@ -63,6 +63,11 @@ fluid_add_executable(
   1d_mm_toro_case_4 ${SOURCE_DIR}/1d_mm_toro_case_4_validation.cu)
 fluid_target_link_libraries(1d_mm_toro_case_4 ${CUDA_LIBRARIES})
 
+# Multimaterial GFM shock tube air-helium test:
+fluid_add_executable(
+  1d_mm_shock_tube_air_helium ${SOURCE_DIR}/1d_mm_shock_tube_air_helium.cu)
+fluid_target_link_libraries(1d_mm_shock_tube_air_helium ${CUDA_LIBRARIES})
+
 # Multimaterial FEDKIW test case 1:
 fluid_add_executable(
   1d_mm_fedkiw_test_1 ${SOURCE_DIR}/1d_mm_fedkiw_test_1_validation.cu)
@@ -105,6 +110,15 @@ fluid_add_executable(
   ${SOURCE_DIR}/2d_liska_case_15_validation.cu
 )
 fluid_target_link_libraries(2d_liska_case_15 ${CUDA_LIBRARIES})
+
+#==--- [Eikonal tests] ------------------------------------------------------==#
+
+# 2D Eikonal test with speed function: f = 1.
+fluid_add_executable(
+  2d_eikonal_f_1
+  ${SOURCE_DIR}/2d_eikonal_f_1.cu
+)
+fluid_target_link_libraries(2d_eikonal_f_1 ${CUDA_LIBRARIES})
 
 #==--- Finish Up ------------------------------------------------------------==#
 

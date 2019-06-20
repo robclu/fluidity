@@ -57,6 +57,13 @@ fluidity_device_only inline std::size_t grid_size()
   return grid_size(dim_x) * grid_size(dim_y) * grid_size(dim_z);
 }
 
+/// Returns the value of the flattened thread index
+fluidity_device_only inline std::size_t flattened_thread_id() {
+  return threadIdx.x + 
+         threadIdx.y * blockDim.x +
+         threadIdx.z * blockDim.x * blockDim.y;
+}
+
 /// Returns the value of the flattened thread index in a given dimension. The
 /// dimension must be one of dim_x, dim_y, dim_z, or else a compile time error
 /// will be generated. This returns the global flattened index.

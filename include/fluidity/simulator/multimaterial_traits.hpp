@@ -21,8 +21,8 @@
 #include <fluidity/container/tuple.hpp>
 #include <fluidity/levelset/levelset.hpp>
 #include <fluidity/material/material.hpp>
+#include <fluidity/scheme/evaluators/levelset_hamiltonian.hpp>
 #include <fluidity/scheme/evolvers/basic_evolver.hpp>
-#include <fluidity/scheme/schemes/upwind.hpp>
 #include <fluidity/scheme/stencils/weno_hj_5.hpp>
 #include <fluidity/scheme/updaters/runge_kutta_3.hpp>
 #include <fluidity/scheme/evolve.hpp>
@@ -86,6 +86,7 @@ struct MaterialTraits<SimTraits, Tuple<Es...>, Levelset> {
 template <typename SimTraits, typename Es, typename Levelset>
 using material_traits_t = detail::MaterialTraits<SimTraits, Es, Levelset>;
 
+
 /// Defines traits for a simulator implementation which can simulate multiple
 /// materials in the domain.
 /// \tparam SimBase The type of the base simulator class which can be created.
@@ -113,13 +114,13 @@ struct MultimaterialSimTraits {
   using def_exec_t    = fluid::exec::gpu_type;
 
   /// Defines the stencil used for the levelset evolution.
-  using ls_stencil_t = fluid::scheme::stencil::HJWeno5;
+  using ls_stencil_t = scheme::stencil::HJWeno5;
   /// Defines the scheme used for the levelset evolution.
-  using ls_scheme_t  = fluid::scheme::Upwind<ls_stencil_t>;
+  using ls_eval_t    = scheme::evaluator::LevelsetHamiltonian<ls_stencil_t>;
   /// Defines the type of the updater for the levelset evolution.
-  using ls_updater_t = fluid::scheme::updater::RungeKutta3<ls_scheme_t>;
+  using ls_updater_t = scheme::updater::RungeKutta3<ls_eval_t>;
   /// Defines the type of the evolver for the levelset evolution.
-  using ls_evolver_t = fluid::scheme::evolver::BasicEvolver<ls_updater_t>; 
+  using ls_evolver_t = scheme::evolver::BasicEvolver<ls_updater_t>; 
 
   /// Defines the type of the state data to store, always conservative.
   using data_t     = type_at_t<0, def_data_t, Ts...>;

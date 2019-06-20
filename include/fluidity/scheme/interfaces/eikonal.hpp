@@ -110,15 +110,12 @@ class Eikonal {
             typename    F   ,
             typename... Args, nonmultiit_enable_t<F> = 0>
   fluidity_host_device void
-  solve(It&& it_in, It&& it_out, FIt&& f_it, Args&&... args) const
+  solve(It&& it_in, It&& it_out, F& f, Args&&... args) const
   {
     static_assert(is_multidim_iter_v<It>, 
       "Input & output iterators must be a multidimensional iterators!");
     static_assert(!is_multidim_iter_v<F>, 
       "Constant speed data cannot be a multidimensional iterator!");
-    static_assert(
-      std::is_same<std::decay_t<decltype(*it)>, std::decay_t<F>>::value,
-      "Constant speed value type must match iterator data type!");
 
     return impl()->solve_impl(std::forward<It>(it_in)    ,
                               std::forward<It>(it_out)   ,
@@ -154,7 +151,6 @@ class Eikonal {
 template <typename T>
 static constexpr auto is_eikonal_v = 
   std::is_base_of<Eikonal<std::decay_t<T>>, std::decay_t<T>>::value;
-
 
 }} // namespace fluid::scheme
 

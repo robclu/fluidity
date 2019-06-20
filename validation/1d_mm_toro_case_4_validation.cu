@@ -78,7 +78,7 @@ int main(int argc, char** argv)
     fluid::material::IdealGas<real_t>{1.4},
     [&] fluidity_host_device (auto it, auto& positions)
     {
-      *it = membrane - positions[0];
+      *it = positions[0] - membrane;
     },
     5.99924_rho, 460.894_p, 19.5975_v_x 
   );
@@ -86,7 +86,7 @@ int main(int argc, char** argv)
     fluid::material::IdealGas<real_t>{1.4},
     [&] fluidity_host_device (auto it, auto& positions)
     {
-      *it = positions[0] - membrane;
+      *it = membrane - positions[0];
     },
     5.99242_rho, 46.095_p, -6.19633_v_x 
   );
