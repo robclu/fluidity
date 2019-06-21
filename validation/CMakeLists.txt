@@ -113,12 +113,19 @@ fluid_target_link_libraries(2d_liska_case_15 ${CUDA_LIBRARIES})
 
 #==--- [Eikonal tests] ------------------------------------------------------==#
 
-# 2D Eikonal test with speed function: f = 1.
+# 2D Eikonal test with speed function: f = 1 and a sphere (circle)
 fluid_add_executable(
-  2d_eikonal_f_1
-  ${SOURCE_DIR}/2d_eikonal_f_1.cu
+  2d_eikonal_f_1_sphere
+  ${SOURCE_DIR}/2d_eikonal_f_1_sphere.cu
 )
-fluid_target_link_libraries(2d_eikonal_f_1 ${CUDA_LIBRARIES})
+fluid_target_link_libraries(2d_eikonal_f_1_sphere ${CUDA_LIBRARIES})
+
+# 2D Eikonal test with speed function: f = 1 and a box (square)
+fluid_add_executable(
+  2d_eikonal_f_1_box
+  ${SOURCE_DIR}/2d_eikonal_f_1_box.cu
+)
+fluid_target_link_libraries(2d_eikonal_f_1_box ${CUDA_LIBRARIES})
 
 #==--- Finish Up ------------------------------------------------------------==#
 

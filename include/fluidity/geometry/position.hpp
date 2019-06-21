@@ -21,32 +21,10 @@
 namespace fluid    {
 namespace geometry {
 
-/// The Pos class represents a position in 3D space.
+/// Defines an alias for a position type, which is just a 3D array.
 /// \tparam T The type of the position data.
 template <typename T>
-class Pos : public Array<T, 3> {
-  /// Defines the type of the base storage type.
-  using base_t = Array<T, 3>;
-
- public:
-  /// Inherit all constructors.
-  using base_t::base_t;
-
-  /// Returns the x-coord of the postition.
-  fluidity_host_device constexpr auto x() const -> T {
-    return base_t::operator[](0);
-  }
-
-  /// Returns the y-coord of the postition.
-  fluidity_host_device constexpr auto y() const -> T {
-    return base_t::operator[](1);
-  }
-
-  /// Returns the x-coord of the postition.
-  fluidity_host_device constexpr auto z() const -> T {
-    return base_t::operator[](2);
-  }
-};
+using Pos = Array<T, 3>;
 
 }} // namespace fluid::geometry
 

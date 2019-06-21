@@ -65,7 +65,7 @@ class Array {
   static constexpr auto elements   = Elements;
 
   /// The default constructor uses the default initialization.
-  constexpr Array() = default;
+  fluidity_host_device constexpr Array() = default;
 
   /// Initializes each of the elements in the array to have the value \p value.
   /// \param[in] value The value to set the array elements to.
@@ -83,19 +83,19 @@ class Array {
 
   /// Copies the contents of the \p other array into a new array.
   /// \param[in] other The other array to copy from.
-  constexpr Array(const self_t& other) = default;
+  fluidity_host_device constexpr Array(const self_t& other) = default;
 
   /// Moves the \p other array into this one.
   /// \param[in] other The other array to move from.
-  constexpr Array(self_t&& other) = default;
+  fluidity_host_device constexpr Array(self_t&& other) = default;
 
   /// Copies the contents of the \p other array into a new array.
   /// \param[in] other The other array to copy from.
-  constexpr self_t& operator=(const self_t&) = default;
+  fluidity_host_device constexpr self_t& operator=(const self_t&) = default;
 
   /// Moves the \p other array into this one.
   /// \param[in] other The other array to move from.
-  constexpr self_t& operator=(self_t&&) = default;
+  fluidity_host_device constexpr self_t& operator=(self_t&&) = default;
 
   /// Overload of access operator to access an element. __Note:__
   /// this does not check that the value of \p i is in range.
@@ -244,7 +244,7 @@ class Array {
 /// \tparam    S      The size of the array.
 template <typename T, typename U, std::size_t S, conv_enable_t<T, U> = 0>
 fluidity_host_device constexpr auto operator*(T scalar, const Array<U, S>& a)
-{
+    -> Array<U, S> {
   auto result = a;
   unrolled_for_bounded<S>([&] (auto i)
   {
@@ -253,16 +253,17 @@ fluidity_host_device constexpr auto operator*(T scalar, const Array<U, S>& a)
   return result;
 } 
 
-/// Overload of devision operator to perform elementwise multiplication of
-/// a scalar constant to an array.
-/// \param[in] scalar The scalar to multiply to each element of the array.
-/// \param[in] a      The array to multiply with the scalar.
+/// Overload of devision operator to perform elementwise division of a scalar
+/// constant by an array. This returs an array with each value being equal to
+/// the scalar divided by the conrresponding element in the array.
+/// \param[in] scalar The scalar to be divided by each element.
+/// \param[in] a      The array to divide with the scalar.
 /// \tparam    T      The type of the scalar data.
 /// \tparam    U      The type of the data in the array.
 /// \tparam    S      The size of the array.
 template <typename T, typename U, std::size_t S, conv_enable_t<T, U> = 0>
 fluidity_host_device constexpr auto operator/(T scalar, const Array<U, S>& a)
-{
+    -> Array<U, S> {
   auto result = a;
   unrolled_for_bounded<S>([&] (auto i)
   {
@@ -271,38 +272,88 @@ fluidity_host_device constexpr auto operator/(T scalar, const Array<U, S>& a)
   return result;
 }
 
+/// Overload of devision operator to perform elementwise division of an array by
+/// a scalar constant. This returs an array with each value being equal to
+/// the conrresponding element in the input array divided by the scalar.
+/// \param[in] a      The array to be divided by the scalar.
+/// \param[in] scalar The scalar to divide to each element by.
+/// \tparam    T      The type of the scalar data.
+/// \tparam    U      The type of the data in the array.
+/// \tparam    S      The size of the array.
+template <typename T, typename U, std::size_t S, conv_enable_t<T, U> = 0>
+fluidity_host_device constexpr auto operator/(const Array<U, S>& a, T scalar)
+    -> Array<U, S> {
+  auto result = a;
+  unrolled_for_bounded<S>([&] (auto i)
+  {
+    result[i] = result[i] / scalar;
+  });
+  return result;
+}
+
 /// Overload of addition operator to perform elementwise addition of a scalar
 /// constant to an array.
-/// \param[in] scalar The scalar to multiply to each element of the array.
-/// \param[in] a      The array to multiply with the scalar.
+/// \param[in] scalar The scalar to add to each element of the array.
+/// \param[in] a      The array to add with the scalar.
 /// \tparam    T      The type of the scalar data.
 /// \tparam    U      The type of the data in the array.
 /// \tparam    S      The size of the array.
 template <typename T, typename U, std::size_t S, conv_enable_t<T, U> = 0>
 fluidity_host_device constexpr auto operator+(T scalar, const Array<U, S>& a)
-{
+    -> Array<U, S> {
   auto result = a;
   unrolled_for_bounded<S>([&] (auto i)
   {
     result[i] += scalar;
   });
   return result;
+}
+
+/// Overload of addition operator to perform elementwise addition of a scalar
+/// constant to an array.
+/// \param[in] a      The array to add with the scalar.
+/// \param[in] scalar The scalar to add to each element of the array.
+/// \tparam    T      The type of the scalar data.
+/// \tparam    U      The type of the data in the array.
+/// \tparam    S      The size of the array.
+template <typename T, typename U, std::size_t S, conv_enable_t<T, U> = 0>
+fluidity_host_device constexpr auto operator+(const Array<U, S>& a, T scalar)
+    -> Array<U, S> {
+  return scalar + a;
 } 
 
 /// Overload of subtraction operator to perform elementwise subtraction of a
 /// constant and an array.
-/// \param[in] scalar The scalar to multiply to each element of the array.
-/// \param[in] a      The array to multiply with the scalar.
+/// \param[in] scalar The scalar to subtract with each element of the array.
+/// \param[in] a      The array to subtract from the scalar.
 /// \tparam    T      The type of the scalar data.
 /// \tparam    U      The type of the data in the array.
 /// \tparam    S      The size of the array.
 template <typename T, typename U, std::size_t S, conv_enable_t<T, U> = 0>
 fluidity_host_device constexpr auto operator-(T scalar, const Array<U, S>& a)
-{
+    -> Array<U, S> {
   auto result = a;
   unrolled_for_bounded<S>([&] (auto i)
   {
     result[i] = scalar - result[i];
+  });
+  return result;
+}
+
+/// Overload of subtraction operator to perform elementwise subtraction of an
+/// array and a constant.
+/// \param[in] a      The array to subtract by the scalar.
+/// \param[in] scalar The scalar to subtract from each element of the array.
+/// \tparam    T      The type of the scalar data.
+/// \tparam    U      The type of the data in the array.
+/// \tparam    S      The size of the array.
+template <typename T, typename U, std::size_t S, conv_enable_t<T, U> = 0>
+fluidity_host_device constexpr auto operator-(const Array<U, S>& a, T scalar)
+    -> Array<U, S> {
+  auto result = a;
+  unrolled_for_bounded<S>([&] (auto i)
+  {
+    result[i] -= scalar;
   });
   return result;
 }
