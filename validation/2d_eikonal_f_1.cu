@@ -15,11 +15,9 @@
 //
 //==------------------------------------------------------------------------==//
 
-//#include <fluidity/setting/settings.hpp>
-//#include <fluidity/state/state_components.hpp>
-//#include <fluidity/simulator/multimaterial_simulator.hpp>
 #include <fluidity/algorithm/fill.hpp>
 #include <fluidity/container/device_tensor.hpp>
+#include <fluidity/geometry/sphere.hpp>
 #include <fluidity/scheme/eikonal/fast_iterative.hpp>
 #include <fluidity/solver/eikonal_solver.hpp>
 #include <iostream>
@@ -29,40 +27,15 @@
 
 using namespace fluid;
 
-static constexpr auto size_x    = int{1500};
-static constexpr auto size_y    = int{1500};
-static constexpr auto center_x  = static_cast<double>(size_x) / 4.0;
-static constexpr auto center_y  = static_cast<double>(size_y) / 4.0;
-static constexpr auto center_x1 = 723.2;
-static constexpr auto center_y1 = 744.7;
-static constexpr auto dims      = 2;
-static constexpr auto res       = 1.0;
+using real_t = double;
 
-
-template <typename T>
-class Sphere {
- public:
-  fluidity_host_device Sphere(T r) : _r(r) {}
-
-  fluidity_host_device Sphere(T x, T y, T z) : _x(x), _y(y), _z(z) {}
-
-  fluidity_host_device Sphere(T x, T y, T z, T r)
-  : _x(x), _y(y), _z(z), _r(r) {}
-
-  template <typename Vec>
-  fluidity_host_device auto distance(Vec&& pos) const -> T {
-    const auto dx = static_cast<T>(pos[0]) - _x;
-    const auto dy = static_cast<T>(pos[1]) - _y;
-    const auto dz = static_cast<T>(pos[2]) - _z;
-    return std::sqrt(dx*dx + dy*dy + dz*dz) - _r;
-  }
-
- private:
-  T _x = 0;
-  T _y = 0;
-  T _z = 0;
-  T _r = 0;
-};
+static constexpr auto size_x   = int{1500};
+static constexpr auto size_y   = int{1500};
+static constexpr auto center_x = static_cast<real_t>(size_x) / 4.0;
+static constexpr auto center_y = static_cast<real_t>(size_y) / 4.0;
+static constexpr auto radius   = static_cast<real_t>(size_x) / 10.0;
+static constexpr auto dims     = 2;
+static constexpr auto res      = 1.0;
 
 template <typename I, typename T, typename O>
 auto output_data(I&& it, T d, O& output) -> void {
@@ -124,7 +97,7 @@ int main(int argc, char** argv) {
   // TODO: Finish this example with the ideal interface ...
 
   // The test is going to be run on the device, so we use a device tensor.
-  using storage_t = DeviceTensor<double, 2>;
+  using storage_t = DeviceTensor<real_t, 2>;
   auto input = storage_t{size_x, size_y};
 
   // Fill the input data, we set each cell as the signed distance from the
@@ -132,16 +105,11 @@ int main(int argc, char** argv) {
   // signed distance for all cells is positive.
   fill(input.multi_iterator(), [&] fluidity_host_device (auto& cell)
   {
-    auto p = Array<double, 3>{
-      static_cast<double>(flattened_id(dim_x)),
-      static_cast<double>(flattened_id(dim_y)),
-      static_cast<double>(flattened_id(dim_z))
+    using namespace geometry;
+    auto p = Pos<real_t>{
+      flattened_id(dim_x), flattened_id(dim_y), flattened_id(dim_z)
     };
-
-    *cell = std::min(
-      Sphere<double>(center_x, center_y, 0.0, 80.0).distance(p),
-      Sphere<double>(center_x * 1.2, center_y * 1.5, 0.0, 60.0).distance(p)
-    );
+    *cell = Sphere<real_t>(center_x, center_y, 0.0, radius).distance(p);
   });
 
   // Create the output data from the input data. We don't care about the data
@@ -159,5 +127,4 @@ int main(int argc, char** argv) {
   // Print the results ...
   auto outer_dim = iter_t::dimensions - 1;
   write_data(host_out_it, iter_t::dimensions - 1);
-//  print_data(host_out_it, iter_t::dimensions - 1);
 }
