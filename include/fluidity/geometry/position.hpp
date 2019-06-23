@@ -21,10 +21,17 @@
 namespace fluid    {
 namespace geometry {
 
-/// Defines an alias for a position type, which is just a 3D array.
+/// Defines an alias for a position type for 2 dimensions. Currently this is
+/// just an alias to a 2D array.
 /// \tparam T The type of the position data.
 template <typename T>
-using Pos = Array<T, 3>;
+using Pos2 = Array<T, 2>;
+
+/// Defines an alias for a position type for 3 dimensions. Currently this is
+/// just an alias to a 3D array.
+/// \tparam T The type of the position data.
+template <typename T>
+using Pos3 = Array<T, 3>;
 
 }} // namespace fluid::geometry
 

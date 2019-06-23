@@ -1,4 +1,4 @@
-//==--- fluidity/validation/2d_eikonal_f_1.cu -------------- -*- C++ -*- ---==//
+//==--- fluidity/validation/2d_eikonal_f_1_multi_source.cu - -*- C++ -*- ---==//
 //            
 //                                Fluidity
 // 
@@ -8,10 +8,10 @@
 //
 //==------------------------------------------------------------------------==//
 //
-/// \file  2d_eikonal_f_1.cu
+/// \file  2d_eikonal_f_1_multi_source.cu
 /// \brief This file defines a two dimensional validation case for the Eikonal
-///        solver where the speed function has speed f=1, and the source node
-///        is places in the centre of the domain.
+///        solver with two source nodes, to test that the data correctly
+///        propogates in all directions across the domain.
 //
 //==------------------------------------------------------------------------==//
 
@@ -60,7 +60,7 @@ auto output_data(I&& it, T d, O& output) -> void {
 template <typename I, typename T>
 void write_data(I& it, T d) {
   std::ofstream output_file;
-  auto filename = "sphere_2d_output.dat";
+  auto filename = "multi_source_2d_output.dat";
   output_file.open(filename, std::fstream::trunc);
   output_data(std::forward<I>(it), d, output_file);
   output_file.close();
@@ -105,7 +105,6 @@ int main(int argc, char** argv) {
   fill(input.multi_iterator(), [&] fluidity_host_device (auto& cell) {
     constexpr auto center_x = static_cast<real_t>(size_x) / 2.0;
     constexpr auto center_y = static_cast<real_t>(size_y) / 2.0;
-    constexpr auto radius   = static_cast<real_t>(size_x) / 4.0;
 
     using namespace geometry;
 
@@ -113,7 +112,22 @@ int main(int argc, char** argv) {
       flattened_id(dim_x), flattened_id(dim_y), flattened_id(dim_z)
     );
 
-    *cell = Sphere<real_t>(pos_t{center_x, center_y, 0.0}, radius).distance(p); 
+    const auto source_a = 
+      Sphere<real_t>(
+        pos_t{
+          center_x / 4.0,
+          center_y / 4.0,
+          0.0
+        }, 0.0);
+    const auto source_b = 
+      Sphere<real_t>(
+        pos_t{
+          3.0 * center_x / 2.0,
+          7.0 * center_y / 4.0,
+          0.0
+        }, 0.0);
+
+    *cell = std::min(source_a.distance(p), source_b.distance(p));
   });
 
   // Create the output data from the input data. We don't care about the data

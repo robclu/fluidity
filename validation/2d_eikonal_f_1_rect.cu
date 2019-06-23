@@ -1,4 +1,4 @@
-//==--- fluidity/validation/2d_eikonal_f_1.cu -------------- -*- C++ -*- ---==//
+//==--- fluidity/validation/2d_eikonal_f_1_rect.cu --------- -*- C++ -*- ---==//
 //            
 //                                Fluidity
 // 
@@ -8,16 +8,17 @@
 //
 //==------------------------------------------------------------------------==//
 //
-/// \file  2d_eikonal_f_1.cu
+/// \file  2d_eikonal_f_1_rect.cu
 /// \brief This file defines a two dimensional validation case for the Eikonal
 ///        solver where the speed function has speed f=1, and the source node
-///        is places in the centre of the domain.
+///        is places in the centre of the domain and is a rectangle.
 //
 //==------------------------------------------------------------------------==//
 
 #include <fluidity/algorithm/fill.hpp>
 #include <fluidity/container/device_tensor.hpp>
-#include <fluidity/geometry/sphere.hpp>
+#include <fluidity/container/vec.hpp>
+#include <fluidity/geometry/rectangle.hpp>
 #include <fluidity/scheme/eikonal/fast_iterative.hpp>
 #include <fluidity/solver/eikonal_solver.hpp>
 #include <iostream>
@@ -28,8 +29,8 @@
 using namespace fluid;
 
 using real_t = double;
-using vec3_t = Vec3<real_t>;
-using pos_t  = geometry::Pos<real_t>;
+using vec2_t = Vec2<real_t>;
+using pos_t  = Vec2<real_t>;
 
 static constexpr auto size_x = int{2000};
 static constexpr auto size_y = int{2000};
@@ -60,7 +61,7 @@ auto output_data(I&& it, T d, O& output) -> void {
 template <typename I, typename T>
 void write_data(I& it, T d) {
   std::ofstream output_file;
-  auto filename = "sphere_2d_output.dat";
+  auto filename = "box_2d_output.dat";
   output_file.open(filename, std::fstream::trunc);
   output_data(std::forward<I>(it), d, output_file);
   output_file.close();
@@ -102,18 +103,19 @@ int main(int argc, char** argv) {
   // Fill the input data, we set each cell as the signed distance from the
   // center of the domain. Since everything is outside of the center cell, the
   // signed distance for all cells is positive.
-  fill(input.multi_iterator(), [&] fluidity_host_device (auto& cell) {
+  fill(input.multi_iterator(), [&] fluidity_host_device (auto& cell)
+  {
     constexpr auto center_x = static_cast<real_t>(size_x) / 2.0;
     constexpr auto center_y = static_cast<real_t>(size_y) / 2.0;
-    constexpr auto radius   = static_cast<real_t>(size_x) / 4.0;
+    constexpr auto length_x = static_cast<real_t>(size_x) / 2.0;
+    constexpr auto length_y = static_cast<real_t>(size_y) / 2.0;
 
     using namespace geometry;
+    auto p = pos_t(flattened_id(dim_x), flattened_id(dim_y));
 
-    auto p = pos_t(
-      flattened_id(dim_x), flattened_id(dim_y), flattened_id(dim_z)
-    );
-
-    *cell = Sphere<real_t>(pos_t{center_x, center_y, 0.0}, radius).distance(p); 
+    *cell = Rect<real_t>{
+      vec2_t(length_x, length_y), pos_t{center_x, center_y}
+    }.distance(p);
   });
 
   // Create the output data from the input data. We don't care about the data

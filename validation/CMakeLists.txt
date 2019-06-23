@@ -113,6 +113,20 @@ fluid_target_link_libraries(2d_liska_case_15 ${CUDA_LIBRARIES})
 
 #==--- [Eikonal tests] ------------------------------------------------------==#
 
+# 2D Eikonal test with speed function: f = 1 and multiple sources
+fluid_add_executable(
+  2d_eikonal_f_1_multi_source
+  ${SOURCE_DIR}/2d_eikonal_f_1_multi_source.cu
+)
+fluid_target_link_libraries(2d_eikonal_f_1_multi_source ${CUDA_LIBRARIES})
+
+# 2D Eikonal test with speed function: f = 1 and a rectangle
+fluid_add_executable(
+  2d_eikonal_f_1_rect
+  ${SOURCE_DIR}/2d_eikonal_f_1_rect.cu
+)
+fluid_target_link_libraries(2d_eikonal_f_1_rect ${CUDA_LIBRARIES})
+
 # 2D Eikonal test with speed function: f = 1 and a sphere (circle)
 fluid_add_executable(
   2d_eikonal_f_1_sphere
@@ -120,12 +134,12 @@ fluid_add_executable(
 )
 fluid_target_link_libraries(2d_eikonal_f_1_sphere ${CUDA_LIBRARIES})
 
-# 2D Eikonal test with speed function: f = 1 and a box (square)
+# 2D Eikonal test with speed function: f = 1 and a triangle
 fluid_add_executable(
-  2d_eikonal_f_1_box
-  ${SOURCE_DIR}/2d_eikonal_f_1_box.cu
+  2d_eikonal_f_1_triangle
+  ${SOURCE_DIR}/2d_eikonal_f_1_triangle.cu
 )
-fluid_target_link_libraries(2d_eikonal_f_1_box ${CUDA_LIBRARIES})
+fluid_target_link_libraries(2d_eikonal_f_1_triangle ${CUDA_LIBRARIES})
 
 #==--- Finish Up ------------------------------------------------------------==#
 

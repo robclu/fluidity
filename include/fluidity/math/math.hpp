@@ -39,6 +39,63 @@ fluidity_host_device constexpr auto abs(const Array<T, S>& a) -> Array<T, S> {
   return r;
 }
 
+//==--- [clamp] ------------------------------------------------------------==//
+
+/// Clamps the input \p a between \p min_val and \p max_val.
+/// \param[in] a The value to clamp.
+/// \param[in] min_val The minimum value in the clamp range.
+/// \param[in] max_val The maximum value in the clamp range.
+/// \tparam    T The type of the data.
+template <typename T>
+fluidity_host_device constexpr auto clamp(T a, T min_val, T max_val) -> T {
+  return std::max(min_val, std::min(a, max_val));
+}
+
+/// Performs an elementwise clamp of each of the inputs in the array\p a
+/// between \p min_val and \p max_val.
+/// \param[in] a       The array to clamp each element for.
+/// \param[in] min_val The minimum value in the clamp range.
+/// \param[in] max_val The maximum value in the clamp range.
+/// \tparam    T The type of the data.
+template <typename T, std::size_t S>
+fluidity_host_device constexpr auto
+clamp(const Array<T, S>& a, T min_val, T max_val) -> Array<T, S> {
+  auto r = Array<T, S>{};
+  unrolled_for_bounded<S>([&] (auto i) {
+    r[i] = clamp(a[i], min_val, max_val);
+  });
+  return r;
+}
+
+//==--- [dot] --------------------------------------------------------------==//
+
+/// Performs a dot (inner) product of the arrays \p a and \p, returning the
+/// result.
+/// \param[in] a  The first array for the dot product.
+/// \param[in] b  The second array for the dot product.
+/// \tparam    T  The type of the data.
+/// \tparam    S  The number of elements in the arrays.
+template <typename T, std::size_t S>
+fluidity_host_device constexpr auto
+dot(const Array<T, S>& a, const Array<T, S>& b) -> T {
+  constexpr auto unroll_size      = 4;
+  constexpr auto unroll_loops     = S / unroll_size;
+  constexpr auto last_unroll_size = S - unroll_loops * unroll_size;
+
+  auto sum = T{0};
+  for (auto outer_idx : range(unroll_loops)) {
+    unrolled_for<unroll_size>([&] (auto inner_idx) {
+      const auto i = outer_idx * unroll_size + inner_idx;
+      sum += a[i] * b[i];
+    });
+  }
+  
+  unrolled_for<last_unroll_size>([&] (auto i) {
+    sum += a[i] * b[i];
+  });
+  return sum;
+}
+
 //==--- [length] -----------------------------------------------------------==//
 
 /// Returns the length (eucledian distance) of an array.

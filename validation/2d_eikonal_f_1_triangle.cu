@@ -8,16 +8,16 @@
 //
 //==------------------------------------------------------------------------==//
 //
-/// \file  2d_eikonal_f_1.cu
+/// \file  2d_eikonal_f_1_triangle.cu
 /// \brief This file defines a two dimensional validation case for the Eikonal
-///        solver where the speed function has speed f=1, and the source node
-///        is places in the centre of the domain.
-//
+///        solver where the speed function has speed f=1, and the initial data
+///        is the signed distance function to a triangle.
+///
 //==------------------------------------------------------------------------==//
 
 #include <fluidity/algorithm/fill.hpp>
 #include <fluidity/container/device_tensor.hpp>
-#include <fluidity/geometry/sphere.hpp>
+#include <fluidity/geometry/triangle.hpp>
 #include <fluidity/scheme/eikonal/fast_iterative.hpp>
 #include <fluidity/solver/eikonal_solver.hpp>
 #include <iostream>
@@ -28,8 +28,7 @@
 using namespace fluid;
 
 using real_t = double;
-using vec3_t = Vec3<real_t>;
-using pos_t  = geometry::Pos<real_t>;
+using pos2_t = geometry::Pos2<real_t>;
 
 static constexpr auto size_x = int{2000};
 static constexpr auto size_y = int{2000};
@@ -60,7 +59,7 @@ auto output_data(I&& it, T d, O& output) -> void {
 template <typename I, typename T>
 void write_data(I& it, T d) {
   std::ofstream output_file;
-  auto filename = "sphere_2d_output.dat";
+  auto filename = "triangle_2d_output.dat";
   output_file.open(filename, std::fstream::trunc);
   output_data(std::forward<I>(it), d, output_file);
   output_file.close();
@@ -103,17 +102,17 @@ int main(int argc, char** argv) {
   // center of the domain. Since everything is outside of the center cell, the
   // signed distance for all cells is positive.
   fill(input.multi_iterator(), [&] fluidity_host_device (auto& cell) {
-    constexpr auto center_x = static_cast<real_t>(size_x) / 2.0;
-    constexpr auto center_y = static_cast<real_t>(size_y) / 2.0;
-    constexpr auto radius   = static_cast<real_t>(size_x) / 4.0;
-
     using namespace geometry;
 
-    auto p = pos_t(
-      flattened_id(dim_x), flattened_id(dim_y), flattened_id(dim_z)
-    );
+    auto scaled_x = [&] (auto in) { return in * size_x; };
+    auto scaled_y = [&] (auto in) { return in * size_y; };
 
-    *cell = Sphere<real_t>(pos_t{center_x, center_y, 0.0}, radius).distance(p); 
+    auto p0 = pos2_t{scaled_x(0.25), scaled_y(0.25)};
+    auto p1 = pos2_t{scaled_x(0.75), scaled_y(0.25)};
+    auto p2 = pos2_t{scaled_x(0.50), scaled_y(0.683)};
+    auto  p = pos2_t(flattened_id(dim_x), flattened_id(dim_y));
+
+    *cell = Triangle<real_t>(p0, p1, p2).distance(p);
   });
 
   // Create the output data from the input data. We don't care about the data

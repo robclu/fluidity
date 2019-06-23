@@ -251,6 +251,24 @@ fluidity_host_device constexpr auto operator*(T scalar, const Array<U, S>& a)
     result[i] *= scalar;
   });
   return result;
+}
+
+/// Overload of multiplication operator to perform elementwise multiplication of
+/// a scalar constant to an array.
+/// \param[in] a      The array to multiply with the scalar.
+/// \param[in] scalar The scalar to multiply to each element of the array.
+/// \tparam    U      The type of the data in the array.
+/// \tparam    S      The size of the array.
+/// \tparam    T      The type of the scalar data.
+template <typename U, std::size_t S, typename T, conv_enable_t<T, U> = 0>
+fluidity_host_device constexpr auto operator*(const Array<U, S>& a, T scalar)
+    -> Array<U, S> {
+  auto result = a;
+  unrolled_for_bounded<S>([&] (auto i)
+  {
+    result[i] *= scalar;
+  });
+  return result;
 } 
 
 /// Overload of devision operator to perform elementwise division of a scalar
@@ -277,10 +295,10 @@ fluidity_host_device constexpr auto operator/(T scalar, const Array<U, S>& a)
 /// the conrresponding element in the input array divided by the scalar.
 /// \param[in] a      The array to be divided by the scalar.
 /// \param[in] scalar The scalar to divide to each element by.
-/// \tparam    T      The type of the scalar data.
 /// \tparam    U      The type of the data in the array.
 /// \tparam    S      The size of the array.
-template <typename T, typename U, std::size_t S, conv_enable_t<T, U> = 0>
+/// \tparam    T      The type of the scalar data.
+template <typename U, std::size_t S, typename T, conv_enable_t<T, U> = 0>
 fluidity_host_device constexpr auto operator/(const Array<U, S>& a, T scalar)
     -> Array<U, S> {
   auto result = a;
@@ -313,10 +331,10 @@ fluidity_host_device constexpr auto operator+(T scalar, const Array<U, S>& a)
 /// constant to an array.
 /// \param[in] a      The array to add with the scalar.
 /// \param[in] scalar The scalar to add to each element of the array.
-/// \tparam    T      The type of the scalar data.
 /// \tparam    U      The type of the data in the array.
 /// \tparam    S      The size of the array.
-template <typename T, typename U, std::size_t S, conv_enable_t<T, U> = 0>
+/// \tparam    T      The type of the scalar data.
+template <typename U, std::size_t S, typename T, conv_enable_t<T, U> = 0>
 fluidity_host_device constexpr auto operator+(const Array<U, S>& a, T scalar)
     -> Array<U, S> {
   return scalar + a;
@@ -344,10 +362,10 @@ fluidity_host_device constexpr auto operator-(T scalar, const Array<U, S>& a)
 /// array and a constant.
 /// \param[in] a      The array to subtract by the scalar.
 /// \param[in] scalar The scalar to subtract from each element of the array.
-/// \tparam    T      The type of the scalar data.
 /// \tparam    U      The type of the data in the array.
 /// \tparam    S      The size of the array.
-template <typename T, typename U, std::size_t S, conv_enable_t<T, U> = 0>
+/// \tparam    T      The type of the scalar data.
+template <typename U, std::size_t S, typename T, conv_enable_t<T, U> = 0>
 fluidity_host_device constexpr auto operator-(const Array<U, S>& a, T scalar)
     -> Array<U, S> {
   auto result = a;
