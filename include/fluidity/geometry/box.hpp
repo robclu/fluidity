@@ -17,7 +17,7 @@
 #define FLUIDITY_GEOMETRY_BOX_HPP
 
 #include "position.hpp"
-#include <fluidity/container/vec3.hpp>
+#include <fluidity/container/vec.hpp>
 #include <fluidity/math/math.hpp>
 
 namespace fluid    {
@@ -56,14 +56,15 @@ class Box {
     using namespace math;
     // Move back to the origin, and compute dist to each side.
     const auto dist = abs(pos - _center) - (_sides / T(2));
-    return max(dist[0], max(dist[1], dist[2]));
+    return length(max(dist, T(0.0)))
+      + min(max(dist[0], max(dist[1], dist[2])), T(0.0));
   }
 
  private:
-  length_t _sides  = {1, 1, 1};  //!< The position of the center of the sphere.
+  length_t _sides  = {1, 1, 1};      //!< The position of the center of the sphere.
   pos_t    _center = {0, 0, 0};  //!< The center of the box.
 };
 
 }} // namespace fluid::geometry
 
-#endif // FLUIDITY_GEOMETRY_SPHERE_HPP
+#endif // FLUIDITY_GEOMETRY_BOX_HPP

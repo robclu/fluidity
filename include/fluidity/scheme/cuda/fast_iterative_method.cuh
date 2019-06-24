@@ -290,7 +290,7 @@ void fast_iterative(I&& input, I&& output, T dh) {
   fill(converged.multi_iterator(), [&] fluidity_host_device (auto& conv) {
     *conv = false;
   });
-  it_bound = std::sqrt(it_bound) * 2;
+  it_bound = std::sqrt(it_bound) * 20;
   
   //const auto total_blocks = converged.total_size() - 2 * iter_t::dimensions;
   auto block_convergence  = [&] (auto&& conv, auto it) {
