@@ -2,3 +2,4 @@ build/
 googletest/
 lscamr/
 .vscode/
+.nfs*
