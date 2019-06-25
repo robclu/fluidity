@@ -23,7 +23,7 @@
 #include <cuda_runtime.h>
 
 #ifndef MAX_UNROLL_DEPTH
-  #define MAX_UNROLL_DEPTH 4
+  #define MAX_UNROLL_DEPTH 0
 #endif  // MAX_UNROLL_DEPTH
 
 namespace fluid {

@@ -59,6 +59,46 @@ struct ReconstructorTraits<MHReconstructor<Limiter>>
   static constexpr auto width = limiter_t::width;
 };
 
+/// Forward declaration of the Muscl-Hancock unsplit reconstructor.
+/// \tparam Limiter The limiter to use in the reconstruction.
+template <typename Limiter> struct MHUReconstructor;
+
+/// Specialization for reconstruction traits for the Muscl Hancock unsplit
+/// reconstructor. 
+/// \tparam Limiter The limiter to use in the reconstruction.
+template <typename Limiter>
+struct ReconstructorTraits<MHUReconstructor<Limiter>>
+{
+  /// Defines the type of the reconstructor implementation.
+  using reconstructor_t = MHUReconstructor<Limiter>;
+  /// Defines the type of the limiter used by the reconstructor.
+  using limiter_t       = Limiter;
+  
+  /// Defines the width of the limiter (the number of elements to the side of a
+  /// state which are required to perform the limiting).
+  static constexpr auto width = limiter_t::width;
+};
+
+/// Forward declaration of the Muscl-Hancock reconstructor.
+/// \tparam Limiter The limiter to use in the reconstruction.
+template <typename Limiter> struct BasicReconstructor;
+
+/// Specialization for reconstruction traits for the Muscl Hancock
+/// reconstructor. 
+/// \tparam Limiter The limiter to use in the reconstruction.
+template <typename Limiter>
+struct ReconstructorTraits<BasicReconstructor<Limiter>>
+{
+  /// Defines the type of the reconstructor implementation.
+  using reconstructor_t = BasicReconstructor<Limiter>;
+  /// Defines the type of the limiter used by the reconstructor.
+  using limiter_t       = Limiter;
+  
+  /// Defines the width of the limiter (the number of elements to the side of a
+  /// state which are required to perform the limiting).
+  static constexpr auto width = limiter_t::width;
+};
+
 }} // namespace fluid::recon
 
 #endif // FLUIDITY_RECONSTRUCTION_RECONSTRUCTOR_TRAITS_HPP

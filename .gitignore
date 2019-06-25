@@ -1,5 +1,6 @@
 build/
 googletest/
+testings/
 lscamr/
 .vscode/
 .nfs*

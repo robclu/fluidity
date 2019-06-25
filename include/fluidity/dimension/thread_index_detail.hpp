@@ -24,252 +24,177 @@ namespace detail {
 
 #if defined(__CUDACC__)
 
-/// The BlockSizeImpl struct defines a struct which can be specialized for
-/// the different dimension types.
-/// \tparam Dimension The dimension to implement to the block size computation
-///         for.
-template <typename Dimension>
-struct BlockSizeImpl;
+/// Returns the block size in the x dimension.
+fluidity_device_only inline std::size_t block_size_impl(dimx_t)
+{
+  return blockDim.x;
+}
 
-/// Specialization of the blockcomputation for the x dimension.
-template <>
-struct BlockSizeImpl<dimx_t> {
-  /// Overload of function call operator to return the block size in the
-  /// x dimension.
-  fluidity_device_only std::size_t operator()() const
-  {
-    return blockDim.x;
-  }
-};
+/// Returns the block size in the y dimension.
+fluidity_device_only inline std::size_t block_size_impl(dimy_t)
+{
+  return blockDim.y;
+}
 
-/// Specialization of the block size computation for the y dimension.
-template <>
-struct BlockSizeImpl<dimy_t> {
-  /// Overload of function call operator to return the block size in the
-  /// y dimension.
-  fluidity_device_only std::size_t operator()() const
-  {
-    return blockDim.y;
-  }
-};
+/// Returns the block size in the z dimension.
+fluidity_device_only inline std::size_t block_size_impl(dimz_t)
+{
+  return blockDim.z;
+}
 
-/// Specialization of the block size computation for the z dimension.
-template <>
-struct BlockSizeImpl<dimz_t> {
-  /// Overload of function call operator to return the block size in the
-  /// z dimension.
-  fluidity_device_only std::size_t operator()() const
-  {
-    return blockDim.z;
-  }
-};
+/// Returns the block size in the \p dim dimension.
+/// \param[in] dim The dimension to get the block size for.
+fluidity_device_only inline std::size_t block_size_impl(std::size_t dim)
+{
+  return dim == dimx_t::value ? block_size_impl(dim_x) :
+         dim == dimy_t::value ? block_size_impl(dim_y) :
+         dim == dimz_t::value ? block_size_impl(dim_z) : 0;
+}
+
+/// Returns the grid size in the x dimension.
+fluidity_device_only inline std::size_t grid_size_impl(dimx_t)
+{
+  return gridDim.x * block_size_impl(dim_x);
+}
+
+/// Returns the grid size in the y dimension.
+fluidity_device_only inline std::size_t grid_size_impl(dimy_t)
+{
+  return blockDim.y * block_size_impl(dim_y);
+}
+
+/// Returns the grid size in the z dimension.
+fluidity_device_only inline std::size_t grid_size_impl(dimz_t)
+{
+  return blockDim.z * block_size_impl(dim_z);
+}
+
+/// Returns the grid size in the \p dim dimension.
+/// \param[in] dim The dimension to get the grid size for.
+fluidity_device_only inline std::size_t grid_size_impl(std::size_t dim)
+{
+  return dim == dimx_t::value ? grid_size_impl(dim_x) :
+         dim == dimy_t::value ? grid_size_impl(dim_y) :
+         dim == dimz_t::value ? grid_size_impl(dim_z) : 0;
+}
+
+/// Returns the index of the thread if the dimensional space was flattened in
+/// the x direction.
+fluidity_device_only inline std::size_t flattened_id_impl(dimx_t)
+{
+  return threadIdx.x + blockIdx.x * blockDim.x;
+}
+
+/// Returns the index of the thread if the dimensional space was flattened in
+/// the y direction.
+fluidity_device_only inline std::size_t flattened_id_impl(dimy_t)
+{
+  return threadIdx.y + blockIdx.y * blockDim.y;
+}
+
+/// Returns the index of the thread if the dimensional space was flattened in
+/// the z direction.
+fluidity_device_only inline std::size_t flattened_id_impl(dimz_t)
+{
+  return threadIdx.z + blockIdx.z * blockDim.z;
+}
+
+/// Returns the flattened index in the \p dim dimension.
+/// \param[in] dim The dimension to get the flattened index for.
+fluidity_device_only inline std::size_t flattened_id_impl(std::size_t dim)
+{
+  return dim == dimx_t::value ? flattened_id_impl(dim_x) :
+         dim == dimy_t::value ? flattened_id_impl(dim_y) :
+         dim == dimz_t::value ? flattened_id_impl(dim_z) : 0;
+}
+
+/// Returns the block index if the blocks were flattened in the x direction.
+fluidity_device_only inline std::size_t flattened_block_id_impl(dimx_t)
+{
+  return blockIdx.x             +
+         blockIdx.y * gridDim.x +
+         blockIdx.z * gridDim.y * gridDim.x;
+}
 
 
-/// The GridSizeImpl struct defines a struct which can be specialized for
-/// the different dimension types.
-/// \tparam Dimension The dimension to implement to the block size computation
-///         for.
-template <typename Dimension>
-struct GridSizeImpl;
+/// Returns the block index if the blocks were flattened in the y direction.
+fluidity_device_only inline std::size_t flattened_block_id_impl(dimy_t)
+{
+  return blockIdx.y             +
+         blockIdx.x * gridDim.y +
+         blockIdx.z * gridDim.y * gridDim.x;
+}
 
-/// Specialization of the grid size computation for the x dimension.
-template <>
-struct GridSizeImpl<dimx_t> {
-  /// Overload of function call operator to return the grid size in the
-  /// x dimension.
-  fluidity_device_only std::size_t operator()() const
-  {
-    return gridDim.x * BlockSizeImpl<dimx_t>()();
-  }
-};
+/// Returns the block index if the blocks were flattened in the z direction.
+fluidity_device_only inline std::size_t flattend_block_id_impl(dimz_t)
+{
+  return blockIdx.z             +
+         blockIdx.y * gridDim.z +
+         blockIdx.x * gridDim.y * gridDim.z;
+}
 
-/// Specialization of the grid size computation for the y dimension.
-template <>
-struct GridSizeImpl<dimy_t> {
-  /// Overload of function call operator to return the grid size in the
-  /// y dimension.
-  fluidity_device_only std::size_t operator()() const
-  {
-    return gridDim.y * BlockSizeImpl<dimy_t>()();
-  }
-};
+/// Returns the flattened block index in the \p dim dimension.
+/// \param[in] dim The dimension to get the flattened block index for.
+fluidity_device_only inline std::size_t flattened_block_id_impl(std::size_t dim)
+{
+  return dim == dimx_t::value ? flattened_block_id_impl(dim_x) :
+         dim == dimy_t::value ? flattened_block_id_impl(dim_y) :
+         dim == dimz_t::value ? flattened_block_id_impl(dim_z) : 0;
+}
 
-/// Specialization of the grid size computation for the z dimension.
-template <>
-struct GridSizeImpl<dimz_t> {
-  /// Overload of function call operator to return the block size in the
-  /// z dimension.
-  fluidity_device_only std::size_t operator()() const
-  {
-    return gridDim.z * BlockSizeImpl<dimz_t>()();
-  }
-};
+/// Returns the thread index in the x direction.
+fluidity_device_only inline std::size_t thread_id_impl(dimx_t)
+{
+  return threadIdx.x;
+}
 
-/// The FlattenedIdImpl struct defines a struct which can be specialized for
-/// the different dimension types.
-/// \tparam Dimension The dimension to implement to the flattened index
-///         computation for.
-template <typename Dimension>
-struct FlattenedIdImpl;
+/// Returns the thread index in the y direction.
+fluidity_device_only inline std::size_t thread_id_impl(dimy_t)
+{
+  return threadIdx.y;
+}
 
-/// Specialization of the flattened index computation for the x dimension.
-template <>
-struct FlattenedIdImpl<dimx_t> {
-  /// Overload of function call operator to return the flattened index in the
-  /// x dimension.
-  fluidity_device_only std::size_t operator()() const
-  {
-    return threadIdx.x + blockIdx.x * blockDim.x;
-  }
-};
+/// Returns the thread index in the z direction.
+fluidity_device_only inline std::size_t thread_id_impl(dimz_t)
+{
+  return threadIdx.z;
+}
 
-/// Specialization of the flattened index computation for the y dimension.
-template <>
-struct FlattenedIdImpl<dimy_t> {
-  /// Overload of function call operator to return the flattened index in the
-  /// y dimension.
-  fluidity_device_only std::size_t operator()() const
-  {
-    return threadIdx.y + blockIdx.y * blockDim.y;
-  }
-};
+/// Returns the thread index in the \p dim dimension.
+/// \param[in] dim The dimension to get the thread index for.
+fluidity_device_only inline std::size_t thread_id_impl(std::size_t dim)
+{
+  return dim == dimx_t::value ? thread_id_impl(dim_x) :
+         dim == dimy_t::value ? thread_id_impl(dim_y) :
+         dim == dimz_t::value ? thread_id_impl(dim_z) : 0;
+}
 
-/// Specialization of the flattened index computation for the z dimension.
-template <>
-struct FlattenedIdImpl<dimz_t> {
-  /// Overload of function call operator to return the flattened index in the
-  /// z dimension.
-  fluidity_device_only std::size_t operator()() const
-  {
-    return threadIdx.z + blockIdx.z * blockDim.z;
-  }
-};
+/// Returns the block index in the x direction.
+fluidity_device_only inline std::size_t block_id_impl(dimx_t)
+{
+  return blockIdx.x;
+}
 
-/// The FlattenedBlockIdImpl struct defines a struct which can be specialized
-/// for the different dimension types.
-/// \tparam Dimension The dimension to implement to the flattened block index
-///         computation for.
-template <typename Dimension>
-struct FlattenedBlockIdImpl;
+/// Returns the thread index in the y direction.
+fluidity_device_only inline std::size_t block_id_impl(dimy_t)
+{
+  return blockIdx.y;
+}
 
-/// Specialization of the flattened block index computation for the x dimension.
-template <>
-struct FlattenedBlockIdImpl<dimx_t> {
-  /// Overload of function call operator to return the flattened block index in
-  /// the x dimension.
-  fluidity_device_only std::size_t operator()() const
-  {
-    return blockIdx.x
-         + blockIdx.y * gridDim.x
-         + blockIdx.z * gridDim.y * gridDim.x;
-  }
-};
+/// Returns the block index in the z direction.
+fluidity_device_only inline std::size_t block_id_impl(dimz_t)
+{
+  return blockIdx.z;
+}
 
-/// Specialization of the flattened block index computation for the y dimension.
-template <>
-struct FlattenedBlockIdImpl<dimy_t> {
-  /// Overload of function call operator to return the flattened block index in
-  /// the y dimension.
-  fluidity_device_only std::size_t operator()() const
-  {
-    return blockIdx.y
-         + blockIdx.x * gridDim.y
-         + blockIdx.z * gridDim.y * gridDim.x;
-  }
-};
-
-/// Specialization of the flattened block index computation for the z dimension.
-template <>
-struct FlattenedBlockIdImpl<dimz_t> {
-  /// Overload of function call operator to return the flattened block index in
-  /// the z dimension.
-  fluidity_device_only std::size_t operator()() const
-  {
-    return blockIdx.z
-         + blockIdx.y * gridDim.z
-         + blockIdx.x * gridDim.y * gridDim.z;
-  }
-};
-
-/// The ThreadIdImpl struct defines a struct which can be specialized for
-/// the different dimension types.
-/// \tparam Dimension The dimension to implement to the thread index
-///         computation for.
-template <typename Dimension>
-struct ThreadIdImpl;
-
-/// Specialization of the thread index computation for the x dimension.
-template <>
-struct ThreadIdImpl<dimx_t> {
-  /// Overload of function call operator to return the thread index in the
-  /// x dimension.
-  fluidity_device_only std::size_t operator()() const
-  {
-    return threadIdx.x;
-  }
-};
-
-/// Specialization of the thread index computation for the y dimension.
-template <>
-struct ThreadIdImpl<dimy_t> {
-  /// Overload of function call operator to return the thread index in the
-  /// y dimension.
-  fluidity_device_only std::size_t operator()() const
-  {
-    return threadIdx.y;
-  }
-};
-
-/// Specialization of the thread index computation for the z dimension.
-template <>
-struct ThreadIdImpl<dimz_t> {
-  /// Overload of function call operator to return the thread index in the
-  /// z dimension.
-  fluidity_device_only std::size_t operator()() const
-  {
-    return threadIdx.z;
-  }
-};
-
-/// The BlockIdImpl struct defines a struct which can be specialized for
-/// the different dimension types.
-/// \tparam Dimension The dimension to implement to the block index
-///         computation for.
-template <typename Dimension>
-struct BlockIdImpl;
-
-/// Specialization of the block index computation for the x dimension.
-template <>
-struct BlockIdImpl<dimx_t> {
-  /// Overload of function call operator to return the block index in the
-  /// x dimension.
-  fluidity_device_only std::size_t operator()() const
-  {
-    return blockIdx.x;
-  }
-};
-
-/// Specialization of the block index computation for the y dimension.
-template <>
-struct BlockIdImpl<dimy_t> {
-  /// Overload of function call operator to return the block index in the
-  /// y dimension.
-  fluidity_device_only std::size_t operator()() const
-  {
-    return blockIdx.y;
-  }
-};
-
-/// Specialization of the block index computation for the z dimension.
-template <>
-struct BlockIdImpl<dimz_t> {
-  /// Overload of function call operator to return the block index in the
-  /// z dimension.
-  fluidity_device_only std::size_t operator()() const
-  {
-    return blockIdx.z;
-  }
-};
+/// Returns the block index in the \p dim dimension.
+/// \param[in] dim The dimension to get the block index for.
+fluidity_device_only inline std::size_t block_id_impl(std::size_t dim)
+{
+  return dim == dimx_t::value ? block_id_impl(dim_x) :
+         dim == dimy_t::value ? block_id_impl(dim_y) :
+         dim == dimz_t::value ? block_id_impl(dim_z) : 0;
+}
 
 #endif // __CUDACC__  
 

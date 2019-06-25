@@ -43,14 +43,21 @@ fluid_library_directories(${CUDA_LIB_DIRS} ${GTEST_LIB_DIRS})
 
 #==--- Tests ----------------------------------------------------------------==#
 
-#add_executable(algorithm_host_tests algorithm_tests_host.cpp)
-#target_link_libraries(algorithm_host_tests ${GTEST_BOTH_LIBRARIES})
+fluid_add_executable(
+  algorithm_host_tests
+  ${fluidity_SOURCE_DIR}/tests/algorithm_tests_host.cpp
+)
+fluid_target_link_libraries(algorithm_host_tests ${GTEST_BOTH_LIBRARIES})
 
-#add_executable(algorithm_device_tests algorithm_tests_device.cu)
-#set_target_properties(
-#  algorithm_device_tests PROPERTIES CUDA_SEPARABLE_COMPILATION ON
-#)
-#target_link_libraries(algorithm_device_tests ${GTEST_BOTH_LIBRARIES})
+fluid_add_executable(
+  algorithm_device_tests
+  ${fluidity_SOURCE_DIR}/tests/algorithm_tests_device.cu
+)
+fluid_target_link_libraries(
+  algorithm_device_tests
+  ${GTEST_BOTH_LIBRARIES}
+  ${CUDA_LIBRARIES}
+)
 
 #add_executable(container_device_tests container_tests_device.cu)
 #set_target_properties(
@@ -91,6 +98,16 @@ fluid_target_link_libraries(
 )
 
 fluid_add_executable(
+  levelset_tests
+  ${fluidity_SOURCE_DIR}/tests/levelset_tests.cu
+)
+fluid_target_link_libraries(
+  levelset_tests
+  ${GTEST_BOTH_LIBRARIES}
+  ${CUDA_LIBRARIES}
+)
+
+fluid_add_executable(
   reconstruction_tests
   ${fluidity_SOURCE_DIR}/tests/reconstruction_tests.cpp
 )
@@ -99,6 +116,12 @@ fluid_target_link_libraries(
   ${GTEST_BOTH_LIBRARIES}
   ${CUDA_LIBRARIES}
 )
+
+fluid_add_executable(
+  setting_tests
+  ${fluidity_SOURCE_DIR}/tests/setting_tests.cpp
+)
+fluid_target_link_libraries(setting_tests ${GTEST_BOTH_LIBRARIES})
 
 fluid_add_executable(
   simulator_tests

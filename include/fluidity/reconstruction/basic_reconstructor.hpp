@@ -29,13 +29,6 @@ namespace recon {
 /// \tparam Limter The type of the sloper limiter to use.
 template <typename Limiter>
 struct BasicReconstructor : public Reconstructor<BasicReconstructor<Limiter>> {
-  /// Defines the type of the limiter.
-  using limter_t = Limiter;
-
-  /// Sets the number of elements which are required in the backward and forward
-  /// directions during the reconstruction process.
-  static constexpr size_t width = 1;
-
  private:
   /// Defines the value of the reconstruction application to a forward face.
   static constexpr int  forward_face  = 1;
@@ -43,6 +36,13 @@ struct BasicReconstructor : public Reconstructor<BasicReconstructor<Limiter>> {
   static constexpr int  backward_face = -1;
 
  public:
+  /// Defines the type of the limiter.
+  using limiter_t = Limiter;
+
+  /// Sets the number of elements which are required in the backward and forward
+  /// directions during the reconstruction process.
+  static constexpr size_t width = 1;
+
   /// Constructor, required so that the reconstructor can be created on both the
   /// host and the device.
   fluidity_host_device constexpr BasicReconstructor() {}
@@ -58,11 +58,12 @@ struct BasicReconstructor : public Reconstructor<BasicReconstructor<Limiter>> {
   /// \tparam     Material   The type of the material.
   /// \tparam     T          The type of the scaling factor.
   /// \tparam     Value      The value which defines the dimension.
-  template <typename Iterator, typename Material, typename T, std::size_t Value>
+  template <typename Iterator, typename Material, typename T, typename Dim>
   fluidity_host_device constexpr auto
-  input_fwrd_left(Iterator&& state_it, Material&&, T, Dimension<Value>) const
+  input_fwrd_left(Iterator&& state_it, Material&&, T, Dim dim) const
   {
-    return *state_it;
+    auto new_state = *state_it;
+    return new_state;
   }
 
   /// Returns the left right state in the forward direction, where the forward
@@ -76,11 +77,12 @@ struct BasicReconstructor : public Reconstructor<BasicReconstructor<Limiter>> {
   /// \tparam     Material   The type of the material.
   /// \tparam     T          The type of the scaling factor.
   /// \tparam     Value      The value which defines the dimension.
-  template <typename Iterator, typename Material, typename T, std::size_t Value>
+  template <typename Iterator, typename Material, typename T, typename Dim>
   fluidity_host_device constexpr auto
-  input_fwrd_right(Iterator&& state_it, Material&&, T, Dimension<Value>) const
+  input_fwrd_right(Iterator&& state_it, Material&&, T, Dim dim) const
   {
-    return *state_it.offset(forward_face, Dimension<Value>{});
+    auto new_state = *state_it.offset(forward_face, dim);
+    return new_state;
   }
 
   /// Returns the left input state in the backward direction, where the backward
@@ -94,11 +96,12 @@ struct BasicReconstructor : public Reconstructor<BasicReconstructor<Limiter>> {
   /// \tparam     Material   The type of the material.
   /// \tparam     T          The type of the scaling factor.
   /// \tparam     Value      The value which defines the dimension.
-  template <typename Iterator, typename Material, typename T, std::size_t Value>
+  template <typename Iterator, typename Material, typename T, typename Dim>
   fluidity_host_device constexpr auto
-  input_back_left(Iterator&& state_it, Material&&, T, Dimension<Value>) const
+  input_back_left(Iterator&& state_it, Material&&, T, Dim dim) const
   {
-    return *state_it.offset(backward_face, Dimension<Value>{});
+    auto new_state = *state_it.offset(backward_face, dim);
+    return new_state;
   }
 
   /// Returns the right state in the backward direction, where the backward
@@ -112,11 +115,12 @@ struct BasicReconstructor : public Reconstructor<BasicReconstructor<Limiter>> {
   /// \tparam     Material   The type of the material.
   /// \tparam     T          The type of the scaling factor.
   /// \tparam     Value      The value which defines the dimension.
-  template <typename Iterator, typename Material, typename T, std::size_t Value>
+  template <typename Iterator, typename Material, typename T, typename Dim>
   fluidity_host_device constexpr auto
-  input_back_right(Iterator&& state_it, Material&&, T, Dimension<Value>) const
+  input_back_right(Iterator&& state_it, Material&&, T, Dim dim) const
   {
-    return *state_it;
+    auto new_state = *state_it;
+    return new_state;
   }
 };
 

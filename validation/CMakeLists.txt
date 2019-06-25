@@ -14,7 +14,11 @@ set(LIBS -lstdc++-fs)
 if (APPLE)
   set(CUDA_LIBRARIES -lcudart -ldl -lrt -lcudadevrt -pthread)
 else()
-  set(CUDA_LIBRARIES -lcudart_static -ldl -lrt -lcudadevrt -pthread)
+  set(CUDA_LIBRARIES -lcudart_static -ldl -lrt -lcudadevrt)
+endif()
+
+if (${USING_CLANG})
+  set(CUDA_LIBRARIES "${CUDA_LIBRARIES} -pthread")
 endif()
 
 set(SOURCE_DIR ${fluidity_SOURCE_DIR}/validation)
@@ -24,6 +28,8 @@ fluid_include_directories(${CUDA_INCLUDE_DIR} ${fluidity_SOURCE_DIR}/include)
 fluid_library_directories(${CUDA_LIB_DIRS})
 
 #==--- Valiation tests ------------------------------------------------------==#
+
+#==--- [1D tests] -----------------------------------------------------------==#
 
 # TORO test case 1:
 fluid_add_executable(1d_toro_case_1 ${SOURCE_DIR}/1d_toro_case_1_validation.cu)
@@ -45,6 +51,31 @@ fluid_target_link_libraries(1d_toro_case_4 ${CUDA_LIBRARIES})
 fluid_add_executable(1d_toro_case_5 ${SOURCE_DIR}/1d_toro_case_5_validation.cu)
 fluid_target_link_libraries(1d_toro_case_5 ${CUDA_LIBRARIES})
 
+#==--- [1D MM Tests] --------------------------------------------------------==#
+
+# Multimaterial TORO test case 1:
+fluid_add_executable(
+  1d_mm_toro_case_1 ${SOURCE_DIR}/1d_mm_toro_case_1_validation.cu)
+fluid_target_link_libraries(1d_mm_toro_case_1 ${CUDA_LIBRARIES})
+
+# Multimaterial TORO test case 4:
+fluid_add_executable(
+  1d_mm_toro_case_4 ${SOURCE_DIR}/1d_mm_toro_case_4_validation.cu)
+fluid_target_link_libraries(1d_mm_toro_case_4 ${CUDA_LIBRARIES})
+
+# Multimaterial GFM shock tube air-helium test:
+fluid_add_executable(
+  1d_mm_shock_tube_air_helium ${SOURCE_DIR}/1d_mm_shock_tube_air_helium.cu)
+fluid_target_link_libraries(1d_mm_shock_tube_air_helium ${CUDA_LIBRARIES})
+
+# Multimaterial FEDKIW test case 1:
+fluid_add_executable(
+  1d_mm_fedkiw_test_1 ${SOURCE_DIR}/1d_mm_fedkiw_test_1_validation.cu)
+fluid_target_link_libraries(1d_mm_fedkiw_test_1 ${CUDA_LIBRARIES})
+
+
+#==--- [2D tests] -----------------------------------------------------------==#
+
 # 2D Shock bubble test case:
 fluid_add_executable(
   2d_shock_bubble
@@ -54,10 +85,61 @@ fluid_target_link_libraries(2d_shock_bubble ${CUDA_LIBRARIES})
 
 # 2D Riemann test case 4:
 fluid_add_executable(
-  2d_riemann_liska_case_4
-  ${SOURCE_DIR}/2d_riemann_liska_case_4_validation.cu
+  2d_liska_case_4
+  ${SOURCE_DIR}/2d_liska_case_4_validation.cu
 )
-fluid_target_link_libraries(2d_riemann_liska_case_4 ${CUDA_LIBRARIES})
+fluid_target_link_libraries(2d_liska_case_4 ${CUDA_LIBRARIES})
+
+# 2D Riemann test case 6:
+fluid_add_executable(
+  2d_liska_case_6
+  ${SOURCE_DIR}/2d_liska_case_6_validation.cu
+)
+fluid_target_link_libraries(2d_liska_case_6 ${CUDA_LIBRARIES})
+
+# 2D Riemann test case 12:
+fluid_add_executable(
+  2d_liska_case_12
+  ${SOURCE_DIR}/2d_liska_case_12_validation.cu
+)
+fluid_target_link_libraries(2d_liska_case_12 ${CUDA_LIBRARIES})
+
+# 2D Riemann test case 15:
+fluid_add_executable(
+  2d_liska_case_15
+  ${SOURCE_DIR}/2d_liska_case_15_validation.cu
+)
+fluid_target_link_libraries(2d_liska_case_15 ${CUDA_LIBRARIES})
+
+#==--- [Eikonal tests] ------------------------------------------------------==#
+
+# 2D Eikonal test with speed function: f = 1 and multiple sources
+fluid_add_executable(
+  2d_eikonal_f_1_multi_source
+  ${SOURCE_DIR}/2d_eikonal_f_1_multi_source.cu
+)
+fluid_target_link_libraries(2d_eikonal_f_1_multi_source ${CUDA_LIBRARIES})
+
+# 2D Eikonal test with speed function: f = 1 and a rectangle
+fluid_add_executable(
+  2d_eikonal_f_1_rect
+  ${SOURCE_DIR}/2d_eikonal_f_1_rect.cu
+)
+fluid_target_link_libraries(2d_eikonal_f_1_rect ${CUDA_LIBRARIES})
+
+# 2D Eikonal test with speed function: f = 1 and a sphere (circle)
+fluid_add_executable(
+  2d_eikonal_f_1_sphere
+  ${SOURCE_DIR}/2d_eikonal_f_1_sphere.cu
+)
+fluid_target_link_libraries(2d_eikonal_f_1_sphere ${CUDA_LIBRARIES})
+
+# 2D Eikonal test with speed function: f = 1 and a triangle
+fluid_add_executable(
+  2d_eikonal_f_1_triangle
+  ${SOURCE_DIR}/2d_eikonal_f_1_triangle.cu
+)
+fluid_target_link_libraries(2d_eikonal_f_1_triangle ${CUDA_LIBRARIES})
 
 #==--- Finish Up ------------------------------------------------------------==#
 

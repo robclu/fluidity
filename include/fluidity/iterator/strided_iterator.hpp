@@ -30,7 +30,9 @@ namespace fluid {
 /// \tparam IsConst If the iterator is a const iterator.
 /// \tparam Exec    The type of execution policy for the iterator -- what type
 ///                 of computational device it must use for execution.
-template <typename T, bool IsConst = false, typename Exec = exec::default_type>
+template <typename T,
+          bool     IsConst = false,
+          typename Exec    = exec::default_exec_t>
 struct StridedIterator {
   /// Defines the type of the TensorIterator.
   using self_t        = StridedIterator;

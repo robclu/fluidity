@@ -18,6 +18,7 @@
 #define FLUIDITY_SIMULATOR_PARAMETERS_HPP
 
 #include "domain.hpp"
+#include <fluidity/utility/portability.hpp>
 #include <type_traits>
 
 namespace fluid {
@@ -81,6 +82,15 @@ struct Parameters {
     return _dt;
   }
 
+  /// Returns the spacial resolution for the simulation, in dimension \p dim.
+  /// \param[in] dim The dimension to get the resolution for.
+  /// \tparam    Dim The type of the dimension specifier.
+  template <typename Dim = std::size_t>
+  fluidity_host_device value_t dh(Dim&& dim = std::size_t{0}) const
+  {
+    return domain.resolution();
+  }
+
   /// Returns the value of the timestep divided by the resolution, which is
   /// commonly referred to as ($\lambda$) in the literature.
   fluidity_host_device value_t dt_dh() const
@@ -94,9 +104,9 @@ struct Parameters {
     printf(
       "------------------------------------------------------------\n"
       "| ITERATION      | %39lu |\n"
-      "| TIME DELTA     | %39.4f |\n"
-      "| DT/DH          | %39.4f |\n"
-      "| RUN TIME       | %39.4f |\n"
+      "| TIME DELTA     | %39.9f |\n"
+      "| DT/DH          | %39.9f |\n"
+      "| RUN TIME       | %39.9f |\n"
       "------------------------------------------------------------\n",
       iters, _dt, dt_dh(), run_time
     );
@@ -113,6 +123,19 @@ struct Parameters {
       "| MAX ITERATIONS | %39lu |\n"
       "------------------------------------------------------------\n",
       domain.resolution(), cfl, sim_time, max_iters
+    );
+  }
+
+  /// Prints the final summary.
+  void print_final_summary() const
+  {
+    printf(
+      "------------------------------------------------------------\n"
+      "| ITERATIONS     | %39lu |\n"
+      "| LAST TIME DELTA| %39.4f |\n"
+      "| RUN TIME       | %39.4f |\n"
+      "------------------------------------------------------------\n",
+      iters, _dt, run_time
     );
   }
 

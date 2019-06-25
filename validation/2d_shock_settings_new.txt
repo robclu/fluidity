@@ -1,0 +1,43 @@
+{
+  simulator : {
+    data_type     : double,
+    material      : ideal-gas,
+    limit_form    : conservative,
+    limiter       : van-leer,
+    reconstructor : muscl-hancock,
+    flux_method   : force,
+    solve_method  : split,
+    execution     : gpu
+  },
+  cfl         : 0.9,
+  shock       : {
+    x    : 0.1,
+    mach : 1.22
+  },
+  ambient_state : {
+    rho : 1.0,
+    v_x : 0.0,
+    v_y : 0.0,
+    p   : 1.0
+  },
+  domain : {
+   resolution : 0.001,
+   x          : { start : 0.0, end : 1.6 },
+   y          : { start : 0.0, end : 1.0 }
+  },
+  geometry : {
+    type : circle,
+    x    : 0.4,
+    y    : 0.5,
+    r    : 0.2,
+    state : {
+      rho : 1.0,
+      v_x : 0.0,
+      v_y : 0.0,
+      p   : 0.1
+    }
+  }
+}
+}
+
+

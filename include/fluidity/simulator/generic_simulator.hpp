@@ -19,12 +19,12 @@
 #include "parameters.hpp"
 #include "simulation_data.hpp"
 #include "simulation_traits.hpp"
-//#include "simulation_updater.hpp"
 #include "simulator.hpp"
 #include "wavespeed_initialization.hpp"
 #include <fluidity/algorithm/fill.hpp>
 #include <fluidity/algorithm/max_element.hpp>
 #include <fluidity/dimension/dimension_info.hpp>
+#include <fluidity/utility/timer.hpp>
 #include <fluidity/utility/type_traits.hpp>
 #include <fstream>
 #include <iomanip>
@@ -72,6 +72,8 @@ class GenericSimulator final : public Simulator<Traits> {
  public:
   /// Defines the number of spacial dimensions in the simulation.
   static constexpr auto dimensions = state_t::dimensions;
+  /// Defines the amount of padding used for the simulation.
+  static constexpr auto padding    = solver_t::loader_t::padding;
 
   /// Creates the simulator.
   GenericSimulator() : _params{dimensions} {}
@@ -173,58 +175,41 @@ class GenericSimulator final : public Simulator<Traits> {
 template <typename Traits>
 void GenericSimulator<Traits>::simulate()
 {
-  using namespace std::chrono;
-
-  // Variables for debug info:
-  auto start = high_resolution_clock::now();
-  auto end   = high_resolution_clock::now();
-
-  // Variables for simulation specification:
   auto solver = solver_t{_data.input_iterator()};
   auto mat    = material_t{};
 
   _params.print_static_summary();
-
-  // Initialize the data:
   _data.initialize();
 
-  auto cfl = _params.cfl;
+  auto cfl        = _params.cfl;
+  auto wavespeeds = _data.wavespeed_iterator();
+  auto timer      = util::default_timer_t();
+
+  fluid::solver::load_boundaries(solver, in, _setter);
+
   while (_params.continue_simulation())
   {
-    _params.cfl = _params.iters < 5 ? 0.18 : cfl;
+    //_params.cfl = _params.iters < 5 ? 0.18 : cfl;
 
-    auto in         = _data.input_iterator();
-    auto out        = _data.output_iterator();
-    auto wavespeeds = _data.wavespeed_iterator();
+    auto in  = _data.input_iterator();
+    auto out = _data.output_iterator();
 
     // Set the wavespeed data based on the updated state data from the previous
     // iteration, and then update sim time delta based on max wavespeed:
     set_wavespeeds(in, wavespeeds, mat);
-    //printf("ME: %4.4f\n", max_element(_data.wavespeeds().begin(),
-//                                _data.wavespeeds().end()));
     _params.update_time_delta(max_element(_data.wavespeeds().begin(),      
                                           _data.wavespeeds().end()));
-    _params.print_current_status();
+    //_params.print_current_status();
 
     solver.solve(in, out, mat, _params.dt_dh(), _setter);
     _params.update_simulation_info();
-
-    _data.reset(out, in);
-    //_data.swap_states();
-
-    // Debugging ...
-    //_data.finalise_states();
-    // If debugging, set option to print based on iterations check:
-    //std::string filename = "Debug_" + std::to_string(_params.iters);
-    //this->write_results(filename);
+    _data.swap(out, in);
   }
-
-  end = high_resolution_clock::now();
-  printf("Simulation time : %8lu ms\n", 
-    std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count());
+  printf("Simulation time : %8lu ms\n", timer.elapsed_time());
+  _params.print_final_summary();
 
   // Finalise the data, making sure it is all available on the host.
-  _data.finalise();
+  _data.sync_device_to_host();
 }
 
 template <typename Traits>
@@ -242,7 +227,7 @@ GenericSimulator<Traits>::configure_dimension(std::size_t dim  ,
                                               double      end  )
 {
   _params.domain.set_dimension(dim, start, end);
-  _data.resize_dim(dim, _params.domain.elements(dim));
+  _data.resize_dim(dim, _params.domain.elements(dim) + (padding << 1);
   return this;
 }
 
@@ -356,7 +341,7 @@ void GenericSimulator<Traits>::write_blob(Iter iter, std::string prefix, dimx_t)
   std::vector<std::ofstream> streams;
   for (auto name : index_t::element_names())
   { 
-    streams.emplace_back(prefix + "_" + name + ".ext");
+    streams.emplace_back(prefix + "_" + name + "_" + std::to_string(_params.sim_time) + ".dat");
   }
   write_blob(iter, streams, dim_x);
   for (auto& stream : streams) stream << "\n";
@@ -369,7 +354,7 @@ void GenericSimulator<Traits>::write_blob(Iter iter, std::string prefix, dimy_t)
   std::vector<std::ofstream> streams;
   for (auto name : index_t::element_names())
   { 
-    streams.emplace_back(prefix + "_" + name + ".ext");
+    streams.emplace_back(prefix + "_" + name + "_" + std::to_string(_params.sim_time) + ".dat");
   }
   for (const auto y : range(iter.size(dim_y)))
   {

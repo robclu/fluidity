@@ -82,6 +82,46 @@ struct IdealGas {
     return std::sqrt(_adi_index * state.pressure(*this) / state.density());
   } 
 
+  /// Computes the density for a \p state_to such that it will have the same
+  /// entropy as \p state_from for this equation of state. This returns the
+  /// density for \p state_to such that setting the density of \p state_to with
+  /// the returned density and the given pressure for \p state_to, will result
+  /// in \p state_to and \p state_from having the same entropy.
+  /// \param[in] state_from
+  /// \param[in] state_to
+
+  template <typename StateFrom, typename StateTo>
+  fluidity_host_device constexpr value_t
+  density_for_const_entropy(const StateFrom& state_from,
+                            const StateTo&   state_to  ) const
+  {
+    const auto entropy = eos(state_from);
+    return state_to.pressure(*this) / ((_adi_index - value_t{1}) / entropy);
+  }
+
+  /// Computes the density for a \p state_to such that it will have the same
+  /// entropy as \p state_from for this equation of state. This returns the
+  /// density for \p state_to such that setting the density of \p state_to with
+  /// the returned density and the given pressure for \p state_to, will result
+  /// in \p state_to and \p state_from having the same entropy.
+  /// \param[in] state_from
+  /// \param[in] state_to
+
+  template <typename StateFrom, typename StateTo>
+  fluidity_host_device constexpr value_t
+  density_for_const_entropy_log(const StateFrom& state_from,
+                                const StateTo&   state_to  ) const
+  {
+    const auto a_inv = 1.0 / _adi_index;
+    const auto s //= log(state_from.pressure(*this)) 
+                 //- _adi_index * log(state_from.density());
+                 = log(std::pow(state_from.pressure(*this), a_inv)
+                 / state_from.density());
+    return std::pow(state_to.pressure(*this), a_inv) * std::exp(s);
+    //return (state_to.pressure(*this) - exp(s)) / exp(_adi_index);
+  }
+
+
  private:
   value_t _adi_index = 1.4; //!< The adiabatic index for the gas.
 };

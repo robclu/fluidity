@@ -23,6 +23,7 @@
 #include <fluidity/execution/execution_policy.hpp>
 #include <fluidity/iterator/multidim_iterator.hpp>
 #include <fluidity/iterator/strided_iterator.hpp>
+#include <fluidity/traits/container_traits.hpp>
 #include <fluidity/utility/cuda.hpp>
 
 namespace fluid {
@@ -36,15 +37,14 @@ class DeviceTensor : public BaseTensor<T, N> {
   /// Defines the host version of the tensor to be a friend of this class.
   template <typename TT, std::size_t D> friend class HostTensor;
 
-  /// Defines the type of the executor for the iterator to be a GPU executor.
-  using exec_t = exec::gpu_type;
-
  public:
   /// Defines the number of dimensions in the tensor.
-  static constexpr auto dimensions = std::size_t{N};
+  static constexpr auto dimensions = N;
 
   /// Defines the type of the tensor.
   using self_t            = DeviceTensor;
+  /// Defines the type of the executor for the iterator to be a GPU executor.
+  using exec_t            = exec::gpu_t;
   /// Defines the type of the elements in the tensor.
   using element_t         = std::decay_t<T>;
   /// Defines an alias for the base tensor class.
@@ -62,6 +62,8 @@ class DeviceTensor : public BaseTensor<T, N> {
   /// Defines the type of a non const iterator.
   using multi_iterator_t  = MultidimIterator<element_t, dim_info_t, exec_t>;
 
+  //==--- [Constructors, copying, moving] ----------------------------------==//
+
   /// Creates a device tensor with no elements. This requires the tensor to be
   /// resized before using it.
   DeviceTensor() = default;
@@ -70,11 +72,28 @@ class DeviceTensor : public BaseTensor<T, N> {
   /// total number of elements in the tensor.
   /// \param[in] dim_sizes The size of each dimension for the tensor..
   /// \tparam    DimSizes  The type of the dimension sizes.
-  template <typename... DimSizes>
-  DeviceTensor(DimSizes&&... dim_sizes);
+  template <typename S1, typename... Sz, size_enable_t<S1> = 0>
+  DeviceTensor(S1&& size_one, Sz&&... other_sizes)
+  : base_t{std::forward<S1>(size_one), std::forward<Sz>(other_sizes)...} {
+    allocate();
+  }
+
+  /// Initializes the size of each of the dimensions in the tensor, and the
+  /// total number of elements in the tensor.
+  /// \param[in] dim_sizes The size of each dimension for the tensor..
+  /// \tparam    DimSizes  The type of the dimension sizes.
+  template <typename S, traits::container_enable_t<S> = 0>
+  DeviceTensor(const S& dim_sizes) {
+    unrolled_for<dimensions>([&] (auto d) {
+        resize_dim(d, dim_sizes[d]);
+    });
+    allocate();
+  }
 
   /// Cleans up any memory allocated for the tensor.
-  ~DeviceTensor();
+  ~DeviceTensor() {
+    cleanup();
+  }
 
   /// Constructor to copy a device tensor to another device tensor.
   /// \param[in] other The other device tensor to copy from.
@@ -98,6 +117,19 @@ class DeviceTensor : public BaseTensor<T, N> {
 
   /// Returns the device tensor as a host tensor.
   auto as_host() const;
+
+  /// Returns a new device tensor without copying the memory from the \p other
+  /// tensor. This is useful for creating a device tensor of the same shape.
+  auto copy_without_data() const {
+    auto new_tensor = self_t();
+    unrolled_for<dimensions>([&] (auto d) {
+        new_tensor.resize_dim(d, this->_dim_sizes[d]);
+    });
+    new_tensor.allocate();
+    return new_tensor;
+  }
+
+  //==--- [Iterators] ------------------------------------------------------==//
 
   /// Returns an iterator to the first element in the tensor.
   fluidity_host_device iterator_t begin()
@@ -186,19 +218,6 @@ class DeviceTensor : public BaseTensor<T, N> {
 
 //===== Public ----------------------------------------------------------=====//
 
-template <typename T, std::size_t N> template <typename... DimSizes>
-DeviceTensor<T, N>::DeviceTensor(DimSizes&&... dim_sizes)
-: base_t{std::forward<DimSizes>(dim_sizes)...}
-{
-  allocate();
-}
-
-template <typename T, std::size_t N>
-DeviceTensor<T, N>::~DeviceTensor()
-{
-  cleanup();
-}
-
 template <typename T, std::size_t N>
 DeviceTensor<T, N>::DeviceTensor(const self_t& other) : base_t{other}
 {
@@ -252,7 +271,7 @@ auto& DeviceTensor<T, N>::operator=(self_t&& other)
 template <typename T, std::size_t N>
 auto DeviceTensor<T, N>::as_host() const
 {
-  return HostTensor<T, N>(*this);
+  return host_t(*this);
 }
 
 template <typename T, std::size_t N> template <typename... DimSizes>

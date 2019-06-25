@@ -36,18 +36,18 @@ struct Hllc {
  private:
   /// The Impl struct provides the implementation of the LF flux method for a
   /// given material type in a specific dimension.
-  /// \tparam Material The type of the material used for the flux computation.
-  /// \tparam Value    The value which defines the dimension.
-  template <typename Material, std::size_t Value>
+  /// \tparam Mat The type of the material used for the flux computation.
+  /// \tparam Dim The type of the dimension.
+  template <typename Mat, typename Dim>
   struct Impl {
    private:
     /// Defines the type of material used for the flux computation.
-    using material_t = std::decay_t<Material>;
+    using material_t = std::decay_t<Mat>;
     /// Defines the data type used in the implementation.
     using value_t    = typename material_t::value_t;
 
     /// Defines the dimension which the implementation solves for.
-    static constexpr auto dim = Dimension<Value>{};
+    static constexpr auto dim = Dim();
 
     /// Stores a reference to the material to use for the implementation.
     material_t _mat;   //!< The material to solve for.
@@ -78,12 +78,12 @@ struct Hllc {
     /// \param[in] pstar       The calculated star state for the pressure.
     /// \param[in] sound_speed Sound speed (-aL:left state, aR:right state).
     /// \param[in] adi_scale   Scaling factor computed from the adiabatic index.
-    /// \tparam    State       The type of the state.
-    template <typename State>
-    fluidity_host_device value_t wavespeed(const State& state      ,
-                                           value_t      pstar      ,
-                                           value_t      sound_speed,
-                                           value_t      adi_scale  ) const
+    /// \tparam    StateType   The type of the state.
+    template <typename StateType>
+    fluidity_host_device value_t wavespeed(const StateType& state      ,
+                                           value_t          pstar      ,
+                                           value_t          sound_speed,
+                                           value_t          adi_scale  ) const
     {
       const auto pressure = state.pressure(_mat);
       // Rarefaction wave:
@@ -110,12 +110,12 @@ struct Hllc {
     /// \param[in] stater     The __conservative__ right state vector.
     /// \param[in] wavespeedl The left wave speed: SL.
     /// \param[in] wavespeedr The right wave speed: SR.
-    /// \tparam    State      The type of the states.
-    template <typename State>
-    fluidity_host_device value_t star_speed(const State& statel    ,
-                                            const State& stater    ,
-                                            value_t      wavespeedl,
-                                            value_t      wavespeedr) const
+    /// \tparam    StateType  The type of the states.
+    template <typename StateType>
+    fluidity_host_device value_t star_speed(const StateType& statel    ,
+                                            const StateType& stater    ,
+                                            value_t          wavespeedl,
+                                            value_t          wavespeedr) const
     {
       const auto vl = statel.velocity(dim);
       const auto vr = stater.velocity(dim);
@@ -145,15 +145,16 @@ struct Hllc {
     /// \param[in] state       The __conservative__ input state.
     /// \param[in] state_speed The max wave speed, Sk, in direction k.
     /// \param[in] star_speed  The wave speed in the star region.
-    /// \tparam    State       The type of the state.
-  template <typename State>
-  fluidity_host_device auto star_state(const State& state      ,
-                                       value_t      state_speed,
-                                       value_t      star_speed ) const
+    /// \tparam    StateType   The type of the state.
+  template <typename StateType>
+  fluidity_host_device auto star_state(const StateType& state      ,
+                                       value_t          state_speed,
+                                       value_t          star_speed ) const
   {
-    using state_t  = std::decay_t<State>;
-    using index_t  = typename state_t::index;
-    using vector_t = Array<typename state_t::value_t, state_t::elements>;
+    using state_t   = std::decay_t<StateType>;
+    using value_t   = typename state_t::value_t;
+    using indexer_t = typename state_t::index;
+    using vector_t  = Array<value_t, state_t::elements>;
 
     // Factors used to set the flux values. Stored here so that they only have
     // to be computed once.
@@ -166,14 +167,14 @@ struct Hllc {
 
     // Set the velocity component:
     //  = rho_k * ((S_k - u_k) / (S_k - S_*)) * S_*
-    u[index_t::velocity(dim)] = star_speed * state.density() * scale_factor;
+    u[indexer_t::velocity(dim)] = star_speed * state.density() * scale_factor;
 
     // Set the energy component:
     //  = rho_k * ((S_k - u_k) / (S_k - S_*)) * S_* 
     //      [ E_k / rho_k + (S_* - u_k) * [S_* + (p_k / (rho_k *(S_k - u_k)))]
     //
     // Currently stored is \rho_k * U_k, so add the rest:
-    u[index_t::energy] =
+    u[indexer_t::energy] =
       scale_factor                        *
       (state.energy(_mat)                 +
        state.density()                    *
@@ -192,11 +193,12 @@ struct Hllc {
 
     /// Overload of operator() to compute the flux between the \p left and 
     /// \p right conservative states.
-    /// \param[in] ul     The left state for the Riemann problem.
-    /// \param[in] ur     The right state for the Riemann problem.
-    /// \tparam    State  The type of the states.
-    template <typename State>
-    fluidity_host_device auto operator()(const State& ul, const State& ur) const
+    /// \param[in] ul         The left state for the Riemann problem.
+    /// \param[in] ur         The right state for the Riemann problem.
+    /// \tparam    StateType  The type of the states.
+    template <typename StateType>
+    fluidity_host_device auto
+    operator()(const StateType& ul, const StateType& ur) const
     {
       const auto al  = _mat.sound_speed(ul);
       const auto ar  = _mat.sound_speed(ur);
@@ -240,13 +242,13 @@ struct Hllc {
   /// given dimension.
   /// \param[in] mat      The material to use for the flux method.
   /// \param[in] dtdh     The space and time discretization factor.
-  /// \tparam    Material The type of the material.
-  /// \tparam    Value    The value which defines the dimension. 
-  template <typename Material, typename T, std::size_t Value>
-  fluidity_host_device static auto 
-  get(const Material& mat, T dtdh, Dimension<Value> /*dim*/)
+  /// \tparam    T        The type of the scaling factor.
+  /// \tparam    Mat      The type of the material.
+  /// \tparam    Dim      The type of the dimension.
+  template <typename Mat, typename T, typename Dim>
+  fluidity_host_device static auto get(const Mat& mat, T dtdh, Dim)
   {
-    using flux_impl_t = Impl<Material, Value>;
+    using flux_impl_t = Impl<Mat, Dim>;
     return flux_impl_t{mat, dtdh};
   }
 };

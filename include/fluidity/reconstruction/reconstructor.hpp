@@ -32,21 +32,8 @@ class Reconstructor
 {
   /// Defines the type of the reconstructor implementation.
   using impl_t   = ReconImpl;
-  /// Defines the type of the traits for the limiter.
+  /// Defines the type of the traits for the reconstructor.
   using traits_t = ReconstructorTraits<impl_t>;
-
-  /// See constructor comment, need to allow onl RecomImpl to call constructor.
-  friend ReconImpl;
-
-  /// Constructor, which is made private so that there is no bug if some
-  /// reconstructor inherits from another one, i.e, given Impl1 and Impl2,
-  /// then:
-  /// \begin{code}
-  ///   class Impl1 : Reconstructor<Impl1> { ... };
-  ///
-  ///   class Impl2 : Reconstructor<Impl1> { ... }; // Error without fix.
-  /// \end{code}
-  fluidity_host_device constexpr Reconstructor() {};
 
   /// Returns a pointer to the implementation.
   fluidity_host_device impl_t* impl()
@@ -79,17 +66,17 @@ class Reconstructor
   /// \tparam     Material   The type of the material.
   /// \tparam     T          The type of the scaling factor.
   /// \tparam     Value      The value which defines the dimension.
-  template <typename Iterator, typename Material, typename T, std::size_t Value>
+  template <typename Iterator, typename Material, typename T, typename Dim>
   fluidity_host_device constexpr auto
-  forward_left(Iterator&&       state_it,
-               Material&&       material,
-               T                dtdh    ,
-               Dimension<Value> /*dim*/ ) const
+  forward_left(Iterator&& state_it,
+               Material&& material,
+               T          dtdh    ,
+               Dim        dim ) const
   {
     assert_valid_iterator<Iterator>();
     return impl()->input_fwrd_left(std::forward<Iterator>(state_it),
                                    std::forward<Material>(material),
-                                   dtdh, Dimension<Value>()        );
+                                   dtdh, dim                       );
   }
 
   /// Returns the left right state in the forward direction, where the forward
@@ -106,17 +93,17 @@ class Reconstructor
   /// \tparam     Material   The type of the material.
   /// \tparam     T          The type of the scaling factor.
   /// \tparam     Value      The value which defines the dimension.
-  template <typename Iterator, typename Material, typename T, std::size_t Value>
+  template <typename Iterator, typename Material, typename T, typename Dim>
   fluidity_host_device constexpr auto
-  forward_right(Iterator&&       state_it,
-                Material&&       material,
-                T                dtdh    ,
-                Dimension<Value> /*dim*/ ) const
+  forward_right(Iterator&& state_it,
+                Material&& material,
+                T          dtdh    ,
+                Dim        dim     ) const
   {
     assert_valid_iterator<Iterator>();
     return impl()->input_fwrd_right(std::forward<Iterator>(state_it),
                                     std::forward<Material>(material),
-                                    dtdh, Dimension<Value>()        );
+                                    dtdh, dim                       );
   }
 
   /// Returns the left input state in the backward direction, where the backward
@@ -133,17 +120,17 @@ class Reconstructor
   /// \tparam     Material   The type of the material.
   /// \tparam     T          The type of the scaling factor.
   /// \tparam     Value      The value which defines the dimension.
-  template <typename Iterator, typename Material, typename T, std::size_t Value>
+  template <typename Iterator, typename Material, typename T, typename Dim>
   fluidity_host_device constexpr auto
-  backward_left(Iterator&&       state_it,
-                Material&&       material,
-                T                dtdh    ,
-                Dimension<Value> /*dim*/ ) const
+  backward_left(Iterator&& state_it,
+                Material&& material,
+                T          dtdh    ,
+                Dim        dim     ) const
   {
     assert_valid_iterator<Iterator>();
     return impl()->input_back_left(std::forward<Iterator>(state_it),
                                    std::forward<Material>(material),
-                                   dtdh, Dimension<Value>()        );
+                                   dtdh, dim                       );
   }
 
   /// Returns the right state in the backward direction, where the backward
@@ -160,17 +147,17 @@ class Reconstructor
   /// \tparam     Material   The type of the material.
   /// \tparam     T          The type of the scaling factor.
   /// \tparam     Value      The value which defines the dimension.
-  template <typename Iterator, typename Material, typename T, std::size_t Value>
+  template <typename Iterator, typename Material, typename T, typename Dim>
   fluidity_host_device constexpr auto
-  backward_right(Iterator&&       state_it,
-                 Material&&       material,
-                 T                dtdh    ,
-                 Dimension<Value> /*dim*/ ) const
+  backward_right(Iterator&& state_it,
+                 Material&& material,
+                 T          dtdh    ,
+                 Dim        dim     ) const
   {
     assert_valid_iterator<Iterator>();
     return impl()->input_back_right(std::forward<Iterator>(state_it),
                                     std::forward<Material>(material),
-                                    dtdh, Dimension<Value>()        );
+                                    dtdh, dim                       );
   }
 
  private:
@@ -179,6 +166,7 @@ class Reconstructor
   template <typename Iterator>
   fluidity_host_device static constexpr void assert_valid_iterator()
   {
+/*
     using iter_t  = std::decay_t<Iterator>;
     using value_t = typename iter_t::value_t;
     static_assert(state::traits::is_conservative_v<value_t>,
@@ -189,6 +177,7 @@ class Reconstructor
     static_assert(iter_t::is_multi_dimensional,
       "Can only reconstruct using an iterator which is multi dimensional."
       "Convert current iterator to a multi dimensional version.");
+*/
   }
 };
 

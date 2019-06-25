@@ -49,7 +49,7 @@ class SimulationData<Traits, exec::DeviceKind::gpu> {
   /// Defines the type of the traits class.
   using traits_t            = Traits;
   /// Defines the type of the state data to store, always conservative.
-  using state_t             = typename traits_t::conservative_t;
+  using state_t             = typename traits_t::state_t;
   /// Defines the data type used in the state vector.
   using value_t             = typename state_t::value_t;
   /// Defines the type of the container used to store the host state data.
@@ -83,25 +83,23 @@ class SimulationData<Traits, exec::DeviceKind::gpu> {
     _wavespeeds.resize(_states.total_size());
   }
 
-  /// Ensures that the data is on the host.
-  void finalise()
+  /// Ensures that the host data is synchronized with the device data.
+  void sync_device_to_host()
   {
     _states = _states_in.as_host();
   }
 
-  /// Swaps the input and output state data pointers. This should be called at
-  /// the end of each iteration of the simulation.
-  void swap_states()
+  /// Swaps the data using the \p a data for the input data, and the \p b data
+  /// for the output data.
+  /// \param[in] a The data to set the input state data to.
+  /// \param[in] b The data to set the output state data to.
+  /// \tparam    A The type of the a data.
+  /// \tparam    B The type of the b data.
+  template <typename A, typename B>
+  void swap(A&& a, B&& b)
   {
-    std::swap(_states_in, _states_out);
-  }
-
-  /// Resets the data using the \p in and \p out iterators.
-  template <typename In, typename Out>
-  void reset(In&& in, Out&& out)
-  {
-    _states_in.reset_data(&(*in));
-    _states_out.reset_data(&(*out));
+    _states_in.reset_data(&(*a));
+    _states_out.reset_data(&(*b));
   }
 
   /// Returns an iterator to the simulation input states.

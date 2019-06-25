@@ -16,6 +16,7 @@
 #ifndef FLUIDITY_SIMULATOR_SIMULATOR_HPP
 #define FLUIDITY_SIMULATOR_SIMULATOR_HPP
 
+#include <fluidity/container/array.hpp>
 #include <functional>
 #include <vector>
 
@@ -24,19 +25,24 @@ namespace sim   {
 
 /// The Simulator class defines the interface for simulation objects.
 /// \tparam Traits The traits of the simulator.
-template <typename Traits>
+//template <typename Traits>
 class Simulator {
  public:
   /// Defines the type of this simulator.
-  using self_t   = Simulator<Traits>;
+  //using self_t   = Simulator<Traits>;
+  using self_t   = Simulator;
   /// Defines the traits of the simulation.
-  using traits_t = std::decay_t<Traits>;
+  //using traits_t = std::decay_t<Traits>;
   /// Defines the type of the state which is used for the simulation.
-  using state_t  = typename traits_t::state_t;
+  //using state_t  = typename traits_t::state_t;
   /// Defines the type of the data used by the state.
-  using value_t  = typename state_t::value_t;
+  //using value_t  = typename state_t::value_t;
   /// Defines the type of the functor which can be used to fill elements.
-  using filler_t = std::function<value_t(const Array<float,3>&)>;
+  using filler_t = std::function<float(const Array<float,3>&)>;
+
+  /// Defines the type of the parameter manager used to set the parameters for
+  /// the simulation.
+  //using param_ptr_t = std::shared_ptr<setting::ParameterManager>;
 
   /// Defines a struct which stores information to fill the simulation data.
   struct FillInfo {
@@ -49,33 +55,42 @@ class Simulator {
 
   /// Enables invocation of the derived class constructor through a pointer to
   /// the base class.
-  ~Simulator() {}
+  virtual ~Simulator() {}
 
   /// Runs the simulation.
   virtual void simulate() = 0;
 
+  //virtual void configure(const setting::Parameter* param)
+  //{
+  //  std::cout << "Don't know how to set this parameter\n";
+  //}
+
+  /// Overload of configuration function to set the CFL number.
+  /// \param[in] param The parameter which defins the cfl.
+  //virtual void configure(const setting::CflParameter* param) = 0;
+
   /// Configures the CFL number to use for the simulation.
   /// \param[in] cfl The CFL number for the simulation.
-  virtual self_t* configure_cfl(double cfl) = 0;
+  virtual void configure_cfl(double cfl) = 0;
 
   /// Configures the simulator to set size and resolution of a dimension \p dim.
   /// \param[in] dim   The dimension to specify.
   /// \param[in] start The start value of the dimension.
   /// \param[in] end   The end value of the dimension.
-  virtual self_t*
+  virtual void
   configure_dimension(std::size_t dim, double start, double end) = 0;
 
   /// Configures the simulator to use the \p resolution for the domain.
   /// \param[in] resolution The resolution to use for the domain.
-  virtual self_t* configure_resolution(double resolution) = 0;
+  virtual void configure_resolution(double resolution) = 0;
 
   /// Configures the simulator to simulate until a certain simulation time.
   /// \param[in] sim_time The time to run the simulation until.
-  virtual self_t* configure_sim_time(double sim_time) = 0;
+  virtual void configure_sim_time(double sim_time) = 0;
 
   /// Configures the simulator to simulate for a maximum number of iterations.
   /// \param[in] iters  The maximum number of iterations to simulate for.
-  virtual self_t* configure_max_iterations(std::size_t iters) = 0;
+  virtual void configure_max_iterations(std::size_t iters) = 0;
 
   /// Fills the simulator with simulation data for a simulator, where each of
   /// the fillers store the name of the property which they are filling, and 

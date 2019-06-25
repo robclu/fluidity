@@ -16,7 +16,7 @@
 #ifndef FLUIDITY_SIMULATOR_WAVESPEED_INITIALIZATION_HPP
 #define FLUIDITY_SIMULATOR_WAVESPEED_INITIALIZATION_HPP
 
-#include "wavespeed_initialization.cuh"
+#include "cuda/wavespeed_initialization.cuh"
 #include <fluidity/execution/execution_policy.hpp>
 
 namespace fluid {

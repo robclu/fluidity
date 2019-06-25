@@ -25,7 +25,7 @@ using host_tensor1d   = fluid::HostTensor<T, 1>;
 
 // Alias for the type of device tensor used for the tests.
 template <typename T>
-using device_tensor1d = fluid::HostTensor<T, 1>;
+using device_tensor1d = fluid::DeviceTensor<T, 1>;
 
 using element_t = int;
 
@@ -36,20 +36,21 @@ struct SumPredicate {
   }
 };
 
+// Size of the test container.
+constexpr auto test_size = int{100001};
+
 TEST(algorithm_device_tests, can_reduce_container)
 {
-  const auto size  = 20;
-  const int  value = 2;
-  device_tensor1d<element_t> t(size);
+  const int value = 2;
+  device_tensor1d<element_t> t(test_size);
   fluid::fill(t.begin(), t.end(), value);
 
   auto result = fluid::reduce(t.begin(), t.end(), SumPredicate{});
-  EXPECT_EQ(result,  value * size);
+  EXPECT_EQ(result,  value * test_size);
 }
 
-
 struct SetPredicate {
-  fluidity_host_device void operator()(element_t& a, const element_t& /*b*/)
+  fluidity_host_device void operator()(element_t& a)
   {
     a = fluid::flattened_id(fluid::dim_x);
   }
@@ -57,19 +58,17 @@ struct SetPredicate {
 
 TEST(algorithm_device_tests, can_get_max_element)
 {
-  const auto size = 20;
-  device_tensor1d<element_t> t(size);
+  device_tensor1d<element_t> t(test_size);
 
   fluid::fill(t.begin(), t.end(), SetPredicate{});
   auto result = fluid::max_element(t.begin(), t.end());
 
-  EXPECT_EQ(result, size - 1);
+  EXPECT_EQ(result, test_size - 1);
 }
 
 TEST(algorithm_device_tests, can_get_min_element)
 {
-  const auto size = 20;
-  device_tensor1d<int> t(size);
+  device_tensor1d<int> t(test_size);
 
   fluid::fill(t.begin(), t.end(), SetPredicate{});
   auto result = fluid::min_element(t.begin(), t.end());

@@ -18,28 +18,10 @@
 #define FLUIDITY_ALGORITHM_UNROLLED_FOR_IMPL_HPP
 
 #include <fluidity/utility/debug.hpp>
-#include <fluidity/utility/portability.hpp>
+#include <fluidity/utility/number.hpp>
 
 namespace fluid  {
 namespace detail {
-
-/// This is a wrapper struct which stores an index which can provide a compile
-/// time and runtime value.
-/// \tparam   Value  The value of the index.
-template <std::size_t Value>
-struct Index {
-  /// Returns the value of the index.
-  fluidity_host_device static constexpr std::size_t value()
-  {
-    return Value;
-  }
-
-  /// Conversion to size_t so that the index can be used exactly as a size type.
-  fluidity_host_device constexpr operator size_t()
-  {
-    return Value;
-  }
-};
 
 /// The Unroll struct invokes a callable object N times, where the invokations
 /// are unrolled at compile time.
@@ -62,7 +44,7 @@ struct Unroll : Unroll<Amount - 1> {
   : previous_level_t(std::forward<Functor>(functor),
                      std::forward<Args>(args)...   )
   {
-    functor(Index<previous_level_v>(), std::forward<Args>(args)...);
+    functor(Num<previous_level_v>(), std::forward<Args>(args)...);
   }
 };
 
@@ -78,7 +60,7 @@ struct Unroll<1> {
   template <typename Functor, typename... Args>
   fluidity_host_device Unroll(Functor&& functor, Args&&... args)
   {
-    functor(Index<0>(), std::forward<Args>(args)...);
+    functor(Num<0>(), std::forward<Args>(args)...);
   }
 };
 

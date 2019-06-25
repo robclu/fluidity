@@ -13,7 +13,6 @@
 //
 //==------------------------------------------------------------------------==//
 
-
 #ifndef FLUIDITY_STATE_STATE_TRAITS_HPP
 #define FLUIDITY_STATE_STATE_TRAITS_HPP
 
@@ -33,9 +32,9 @@ enum class FormType {
 
 /// Defines a class to represent a state.
 /// \tparam T The type of data used by the state.
-template <typename T,
-          FormType      Form,         
-          std::size_t   Dimensions,
+template <typename      T             ,
+          FormType      Form          ,
+          std::size_t   Dimensions    ,
           std::size_t   Components = 0,
           StorageFormat Format     = StorageFormat::row_major>
 class State;
@@ -75,17 +74,17 @@ static constexpr bool is_state_v = detail::IsState<T>::value;
 /// Constexpr trait function which returns true if the State is has a primitive
 /// form. This can be used to enable function overloads for a primitve state.
 /// \tparam State The state to check if in primitive form.
-template <typename State>
+template <typename StateType>
 static constexpr auto is_primitive_v = 
-  std::decay_t<State>::format == FormType::primitive;
+  std::decay_t<StateType>::format == FormType::primitive;
 
 /// Constexpr trait function which returns true if the State is has a
 /// conservative form. This can be used to enable function overloads for a
 /// conservative state.
 /// \tparam State The state to check if in primitive form.
-template <typename State>
+template <typename StateType>
 static constexpr auto is_conservative_v = 
-  std::decay_t<State>::format == FormType::conservative;
+  std::decay_t<StateType>::format == FormType::conservative;
 
 /// Alias for a primtiive dispatch tag type.
 using primitive_tag_t    = detail::StateDispatchTag<FormType::primitive>;
@@ -94,19 +93,42 @@ using conservative_tag_t = detail::StateDispatchTag<FormType::conservative>;
 
 /// Creates a consetexpr instance of a dispatch tag from a state.
 /// \tparam State The state to create a dispatch tag for.
-template <typename State>
+template <typename StateType>
 static constexpr auto state_dispatch_tag = 
-  detail::StateDispatchTag<std::decay_t<State>::format>{};
+  detail::StateDispatchTag<std::decay_t<StateType>::format>{};
 
 /// Defines a type which enables functions for a primitive state type.
 /// \tparam State The type to base the primitive enabling on.
-template <typename State>
-using primitive_enable_t = std::enable_if_t<is_primitive_v<State>, int>;
+template <typename StateType>
+using prim_enable_t = std::enable_if_t<is_primitive_v<StateType>, int>;
 
 /// Defines a type which enables functions for a conservative state type.
 /// \tparam State The type to base the conservative enabling on.
-template <typename State>
-using conservative_enable_t = std::enable_if_t<is_conservative_v<State>, int>;
+template <typename StateType>
+using cons_enable_t =
+  std::enable_if_t<is_conservative_v<StateType>, int>;
+
+/// Defines a primitive state with the same properties as the S type.
+/// \tparam S The state to get a primitive form of.
+template <typename S, typename state_t = std::decay_t<S>>
+using make_prim_form_t =
+  State<
+    typename state_t::value_t     ,
+    FormType::primitive           ,
+    state_t::dimensions           ,
+    state_t::additional_components,
+    state_t::storage_layout       >;
+
+/// Defines a conservatice state with the same properties as the S type.
+/// \tparam S The state to get a conservative form of.
+template <typename S, typename state_t = std::decay_t<S>>
+using make_cons_form_t =
+  State<
+    typename state_t::value_t     ,
+    FormType::conservative        ,
+    state_t::dimensions           ,
+    state_t::additional_components,
+    state_t::storage_layout       >;
 
 /// Defines the storage type used by the state class. If the storage format is
 /// row major, then a traditional array is used which stores each element

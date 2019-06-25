@@ -19,9 +19,10 @@
 
 #include "tensor_fwrd.hpp"
 #include <fluidity/algorithm/accumulate.hpp>
+#include <fluidity/dimension/dimension_info.hpp>
+#include <fluidity/traits/container_traits.hpp>
 #include <fluidity/utility/portability.hpp>
 #include <cstddef>
-#include <type_traits>
 
 namespace fluid {
 
@@ -33,24 +34,25 @@ using size_enable_t =
   std::enable_if_t<std::is_integral<std::decay_t<T>>::value, int>;
 
 /// Implementation of a base tensor class which contains functionality common
-/// to both host and device implementations of the tensor class. This class
-/// holds the tensor data and the information about the tensor, but cannot
-/// allocate data and set data, which must be done by the derived class.
-/// \tparam T          The type of the data to store in the tensor.
-/// \tparam Dimensions The number of dimensions for the tensor.
-template <typename T, std::size_t Dimensions>
+/// to both host and device implementations of the tensor class. More
+/// specifically, this class holds the tensor data and metadata for the tensor,
+/// but cannot allocate data and set data, since this is an implementation
+/// detail of the implementation (for example, device tensors need to allocate
+/// the memory on the device).
+/// \tparam T The type of the data to store in the tensor.
+/// \tparam D The number of dimensions for the tensor.
+template <typename T, std::size_t D>
 class BaseTensor {
  private:
-  /// Allows device tensor to create base tensors.
-  template <typename TT, std::size_t D> friend class DeviceTensor;
-
-  /// Make the HostTensor a friend to allow it to create base tensors.
-  template <typename TT, std::size_t D> friend class HostTensor;
+  /// Allows a device tensor to create base tensors.
+  template <typename TT, std::size_t DD> friend class DeviceTensor;
+  /// Allows a host tensor to create base tensors.
+  template <typename TT, std::size_t DD> friend class HostTensor;
 
   /// Defines the type of the data being stored in the tensor.
   using value_t           = std::decay_t<T>;
   /// Defines the type of dimension information used for the tensor.
-  using dim_info_t        = DimInfo<Dimensions>;
+  using dim_info_t        = DimInfo<D>;
   /// Defines the type of the pointer to the data to store.
   using pointer_t         = value_t*;
   /// Defines the type of a reference to the data type.
@@ -59,29 +61,46 @@ class BaseTensor {
   using const_reference_t = const value_t&;
 
   /// Defines the number of dimensions for the tensor.
-  static constexpr auto dimensions = Dimensions;
+  static constexpr auto dimensions = D;
 
   /// Creates a base tensor, with no elements or size. Calling this constructor
   /// required resizing the tensor.
   BaseTensor() = default;
 
   /// Initializes the size of each of the dimensions in the tensor, and the
-  /// total number of elements in the tensor. This is only enabled when the
-  /// types of the paramters are integral types.
-  /// \param[in] size_0     The size of dimension 0.
-  /// \param[in] size_other The sizes of the other dimensions.
-  /// \tparam    Size0      The type of the size of dimension 0.
-  /// \tparam    SizeOther  The types of the other dimensions.
-  template <typename Size0, typename... SizeOther, size_enable_t<Size0> = 0>
-  fluidity_host_device BaseTensor(Size0&& size_0, SizeOther&&... size_other);
+  /// total number of elements in the tensor.
+  ///
+  /// This is only enabled when the type of template parameters are not
+  /// containers.
+  ///
+  /// \param[in] dim_sizes The size of each dimension for the tensor..
+  /// \tparam    DimSizes  The type of the dimension sizes.
+  template <typename S1, typename... Sz, size_enable_t<S1> = 0>
+  fluidity_host_device BaseTensor(S1&& size_one, Sz&&... other_sizes)
+  : _data{nullptr},
+    _dim_sizes{
+      static_cast<std::size_t>(size_one),
+      static_cast<std::size_t>(other_sizes)...
+    } {}
 
   /// Creates a base tensor from the \p other tensor.
+  /// This only sets the sizes of this base tensor from the other base tensor.
+  /// It does not set the data from the tensor as the data to set depends on
+  /// the implementation.
+  ///
   /// \param[in] other The other tensor to create this one from.
-  fluidity_host_device BaseTensor(const BaseTensor& other);
+  fluidity_host_device BaseTensor(const BaseTensor& other)
+  : _data{nullptr} {
+    set_dim_sizes(other);
+  }
 
-  /// Creates a base tensor from the \p other tensor.
+  /// Creates a base tensor from the \p other tensor, copying the metadata from
+  /// the \p other tensor.
   /// \param[in] other The other tensor to create this one from.
-  fluidity_host_device BaseTensor& operator=(const BaseTensor& other);
+  fluidity_host_device BaseTensor& operator=(const BaseTensor& other) {
+    _data = nullptr;
+    set_dim_sizes(other);
+  }
 
   /// Sets the sizes of the dimensions from another device tensor.
   /// \param[in] other The other tensor to set the sizes from.
@@ -145,30 +164,6 @@ class BaseTensor {
 };
 
 //==--- BaseTensor Implementation -----------------------------------------==//
-
-template <typename T, std::size_t D>
-template <typename Size0, typename... SizeOther, size_enable_t<Size0>>
-fluidity_host_device
-BaseTensor<T, D>::BaseTensor(Size0&& size_0, SizeOther&&... size_other)
-: _data{nullptr},
-  _dim_sizes{static_cast<std::size_t>(size_0),
-             static_cast<std::size_t>(size_other)...}
-{}
-
-template <typename T, std::size_t D>
-fluidity_host_device BaseTensor<T, D>::BaseTensor(const BaseTensor<T, D>& other)
-: _data{nullptr}
-{
-  set_dim_sizes(other);
-}
-
-template <typename T, std::size_t D>
-fluidity_host_device BaseTensor<T, D>&
-BaseTensor<T, D>::operator=(const BaseTensor<T, D>& other)
-{
-  _data = nullptr;
-  set_dim_sizes(other);
-}
 
 template <typename T, std::size_t D>
 fluidity_host_device std::size_t BaseTensor<T, D>::mem_requirement() const

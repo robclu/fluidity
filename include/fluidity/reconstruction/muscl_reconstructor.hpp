@@ -30,14 +30,11 @@ namespace recon {
 /// \tparam Limter The type of the sloper limiter to use.
 template <typename Limiter>
 struct MHReconstructor : public Reconstructor<MHReconstructor<Limiter>> {
- private:
+ public:
   /// Defines the type of the slope limiter used by the reconstructor.
   using limiter_t = Limiter;
 
-  /// Sets the number of elements which are required in the backward and forward
-  /// directions during the reconstruction process.
-  static constexpr size_t width = limiter_t::width;
-
+ private:
   /// Defines the value of the reconstruction application to a right face.
   static constexpr auto right_face = int{1};
   /// Defiens the value of the reconstruction application to a left face.
@@ -58,106 +55,149 @@ struct MHReconstructor : public Reconstructor<MHReconstructor<Limiter>> {
   /// Defines an intance of a right face overload type.
   static constexpr auto right_face_select = right_face_t{};
 
+
+  template <typename IT, typename Mat, typename Dim>
+  fluidity_host_device static auto
+  chi(IT&& state, Mat&& mat, Dim dim)
+  {
+    auto eita = [] (auto z)
+    {
+      constexpr auto z_0  = 0.75;
+      constexpr auto z_1  = 0.85;
+      const auto     temp = 1.0 - ((z - z_0) / (z_1 - z_0));
+      return std::min(1.0, std::max(0.0, temp));
+    };
+
+    constexpr auto sigma = 0.33;
+    
+    const auto p_next   = state.offset(1 , dim)->pressure(mat);
+    const auto p_prev   = state.offset(-1, dim)->pressure(mat);
+    const auto p_nnext  = state.offset(2 , dim)->pressure(mat);
+    const auto p_pprev  = state.offset(-2, dim)->pressure(mat);
+    const auto u_factor = state.offset(-1, dim)->velocity(dim)
+                        - state.offset(1 , dim)->velocity(dim);
+
+    const auto flatten  = 
+      u_factor > 0.0 && 
+      (std::abs(p_next - p_prev) / std::min(p_next, p_prev)) > sigma;
+      
+    return flatten
+      ? eita(std::abs(p_next - p_prev) / std::abs(p_nnext - p_pprev))
+      : 1.0;
+  }
+
   /// Creates the evolution of the data, returning the appropriate reconstructed
   /// data. This overload returns the evolved data for the right face in the
   /// x-direction (up face in the y dimension, in face in the z direction).
-  /// \param[in] state_it An iterator over the state data.
+  /// \param[in] state    An iterator over the state data.
   /// \param[in] mat      The material in which the faces lie.
   /// \param[in] dtdh     The space time scaling factor.
-  /// \tparam    Iterator The type of the state iterator.
-  /// \tparam    Material The type of the material.
+  /// \tparam    IT       The type of the state iterator.
+  /// \tparam    Mat      The type of the material.
   /// \tparam    T        The type of the scaling factor.
-  /// \tparam    V        The value which defines the the dimension.
-  template <typename Iterator, typename Material, typename T, std::size_t V> 
-  fluidity_host_device static auto evolve(Iterator&&       state_it, 
-                                          Material&&       mat     ,
-                                          T                dtdh    ,
-                                          Dimension<V>     /*dim*/ ,
-                                          right_face_t     /*face*/)
+  /// \tparam    Dim      The type of the dimension.
+  template <typename IT, typename Mat, typename T, typename Dim> 
+  fluidity_host_device static auto
+  evolve(IT&& state, Mat&& mat, T dtdh, Dim dim, right_face_t) 
   {
-    using state_t = std::decay_t<decltype(*state_it)>;
+    using state_t = std::decay_t<decltype(*state)>;
     using value_t = std::decay_t<T>;
 
+    auto chi_v = std::numeric_limits<value_t>::max();
+    unrolled_for<state_t::dimensions>([&] (auto d)
+    {
+      int sign = math::signum(state.offset(1, d)->pressure(mat) -
+                              state.offset(-1, d)->pressure(mat));
+      chi_v =
+        std::min(chi_v, 
+          std::min(chi(state, mat, d), chi(state.offset(sign, d), mat, d)));
+    });
+
     constexpr auto half    = value_t{0.5};
-    constexpr auto dim     = Dimension<V>{};
     const auto     limiter = limiter_t();
-    const auto     delta   = half * limiter.limit(state_it, mat, dim);
+    const auto     delta   = chi_v * half * limiter.limit(state, mat, dim);
 
     // Boundary extrapolated value:
     // U_i^n \pm \frac{1}{2} \delta \eita i
-    const auto bev = state_t{*state_it + delta};
+    const auto bev = state_t{*state + delta};
 
     // Evolve BEV in time:
     return state_t{
       bev + 
       (half * dtdh) * 
-      (state_t{*state_it - delta}.flux(mat, dim) - bev.flux(mat, dim))
+      (state_t{*state - delta}.flux(mat, dim) - bev.flux(mat, dim))
     };
   }
 
   /// Creates the evolution of the data, returning the appropriate reconstructed
   /// data. This overload returns the evolved data for the left face in the
   /// x-direction (down face in the y dimension, out face in the z direction).
-  /// \param[in] state_it An iterator over the state data.
+  /// \param[in] state    An iterator over the state data.
   /// \param[in] mat      The material in which the faces lie.
   /// \param[in] dtdh     The space time scaling factor.
-  /// \tparam    Iterator The type of the state iterator.
-  /// \tparam    Material The type of the material.
+  /// \tparam    IT       The type of the state iterator.
+  /// \tparam    Mat      The type of the material.
   /// \tparam    T        The type of the scaling factor.
-  /// \tparam    V        The value which defines the the dimension.
-  template <typename Iterator, typename Material, typename T, std::size_t V> 
-  fluidity_host_device static auto evolve(Iterator&&       state_it, 
-                                          Material&&       mat     ,
-                                          T                dtdh    ,
-                                          Dimension<V>     /*dim*/ ,
-                                          left_face_t      /*face*/)
+  /// \tparam    Dim      The type of the dimension.
+  template <typename IT, typename Mat, typename T, typename Dim> 
+  fluidity_host_device static auto
+  evolve(IT&& state, Mat&& mat, T dtdh, Dim dim, left_face_t)
   {
-    using state_t = std::decay_t<decltype(*state_it)>;
+    using state_t = std::decay_t<decltype(*state)>;
     using value_t = std::decay_t<T>;
 
+    auto chi_v = std::numeric_limits<value_t>::max();
+    unrolled_for<state_t::dimensions>([&] (auto d)
+    {
+      int sign = math::signum(state.offset(1, d)->pressure(mat) -
+                              state.offset(-1, d)->pressure(mat));
+      chi_v =
+        std::min(chi_v, 
+          std::min(chi(state, mat, d), chi(state.offset(sign, d), mat, d)));
+    });
+
     constexpr auto half    = value_t{0.5};
-    constexpr auto dim     = Dimension<V>{};
     const auto     limiter = limiter_t();
-    const auto     delta   = half * limiter.limit(state_it, mat, dim);
+    const auto     delta   = chi_v * half * limiter.limit(state, mat, dim);
 
     // Boundary extrapolated value:
-    const auto bev = state_t{*state_it - delta};
+    const auto bev = state_t{*state - delta};
     
     // Evolve BEV in time:
     return state_t{
       bev +
       (half * dtdh) *
-      (bev.flux(mat, dim) - state_t{*state_it + delta}.flux(mat, dim))
+      (bev.flux(mat, dim) - state_t{*state + delta}.flux(mat, dim))
     };
   }
 
  public:
+  /// Sets the number of elements which are required in the backward and forward
+  /// directions during the reconstruction process.
+  static constexpr size_t width = limiter_t::width;
+
   /// Constructor, required so that the reconstructor can be created on both the
   /// host and the device.
-  fluidity_host_device constexpr MHReconstructor() {}
+  //fluidity_host_device constexpr MHReconstructor() {}
 
   /// Returns the left input state in the forward direction, where the forward
   /// direction is one of:
   ///
   ///   { right (x-dim), up (y-dim), inward (z-dim) }
   /// 
-  /// \param[in]  state_it   The state iterator to reconstruct from.
-  /// \param[in]  material   The material for the system.
-  /// \param[in]  dtdh       The space time scaling factor.
-  /// \tparam     Iterator   The type of the iterator, which must be
-  ///                        multi-dimensional 
-  /// \tparam     Material   The type of the material.
-  /// \tparam     T          The type of the scaling factor.
-  /// \tparam     Value      The value which defines the dimension.
-  template <typename Iterator, typename Material, typename T, std::size_t Value>
+  /// \param[in]  state   The state iterator to reconstruct from.
+  /// \param[in]  mat     The material for the system.
+  /// \param[in]  dtdh    The space time scaling factor.
+  /// \param[in]  dim     The dimesion for reconstruction.
+  /// \tparam     IT      The type of the iterator.
+  /// \tparam     Mat     The type of the material.
+  /// \tparam     T       The type of the scaling factor.
+  /// \tparam     Dim     The type of the dimension.
+  template <typename IT, typename Mat, typename T, typename Dim>
   fluidity_host_device constexpr auto
-  input_fwrd_left(Iterator&&        state_it,
-                  Material&&        material, 
-                  T                 dtdh    , 
-                  Dimension<Value>  /*dim*/ ) const
+  input_fwrd_left(IT&& state, Mat&& mat, T dtdh, Dim dim) const
   {
-    constexpr auto dim = Dimension<Value>{};
-    return evolve(state_it, material, dtdh, dim, right_face_select);
+    return evolve(state, mat, dtdh, dim, right_face_select);
   }
 
   /// Returns the left right state in the forward direction, where the forward
@@ -165,27 +205,20 @@ struct MHReconstructor : public Reconstructor<MHReconstructor<Limiter>> {
   ///
   ///   { right (x-dim), up (y-dim), inward (z-dim) }
   /// 
-  /// \param[in]  state_it   The state iterator to reconstruct from.
-  /// \param[in]  material   The material for the system.
-  /// \param[in]  dtdh       The space time scaling factor.
-  /// \tparam     Iterator   The type of the iterator, which must be
-  ///                        multi-dimensional 
-  /// \tparam     Material   The type of the material.
-  /// \tparam     T          The type of the scaling factor.
-  /// \tparam     Value      The value which defines the dimension.
-  template <typename Iterator, typename Material, typename T, std::size_t Value>
+  /// \param[in]  state   The state iterator to reconstruct from.
+  /// \param[in]  mat     The material for the system.
+  /// \param[in]  dtdh    The space time scaling factor.
+  /// \param[in]  dim     The dimesion for reconstruction.
+  /// \tparam     IT      The type of the iterator.
+  /// \tparam     Mat     The type of the material.
+  /// \tparam     T       The type of the scaling factor.
+  /// \tparam     Dim     The type of the dimension.
+  template <typename IT, typename Mat, typename T, typename Dim>
   fluidity_host_device constexpr auto
-  input_fwrd_right(Iterator&&       state_it,
-                   Material&&       material,
-                   T                dtdh    ,
-                   Dimension<Value> /*dim*/ ) const
+  input_fwrd_right(IT&& state, Mat&& mat, T dtdh, Dim dim) const
   {
-    constexpr auto dim = Dimension<Value>{};
-    return evolve(state_it.offset(right_face, dim),
-                  material                        ,
-                  dtdh                            ,
-                  dim                             ,
-                  left_face_select                );
+    return
+      evolve(state.offset(right_face, dim), mat, dtdh, dim, left_face_select);
   }
 
   /// Returns the left input state in the backward direction, where the backward
@@ -193,27 +226,20 @@ struct MHReconstructor : public Reconstructor<MHReconstructor<Limiter>> {
   ///
   ///   { left (x-dim), down (y-dim), outward (z-dim) }
   /// 
-  /// \param[in]  state_it   The state iterator to reconstruct from.
-  /// \param[in]  material   The material for the system.
-  /// \param[in]  dtdh       The space time scaling factor.
-  /// \tparam     Iterator   The type of the iterator, which must be
-  ///                        multi-dimensional 
-  /// \tparam     Material   The type of the material.
-  /// \tparam     T          The type of the scaling factor.
-  /// \tparam     Value      The value which defines the dimension.
-  template <typename Iterator, typename Material, typename T, std::size_t Value>
+  /// \param[in]  state   The state iterator to reconstruct from.
+  /// \param[in]  mat     The material for the system.
+  /// \param[in]  dtdh    The space time scaling factor.
+  /// \param[in]  dim     The dimesion for reconstruction.
+  /// \tparam     IT      The type of the iterator.
+  /// \tparam     Mat     The type of the material.
+  /// \tparam     T       The type of the scaling factor.
+  /// \tparam     Dim     The type of the dimension.
+  template <typename IT, typename Mat, typename T, typename Dim>
   fluidity_host_device constexpr auto
-  input_back_left(Iterator&&       state_it,
-                  Material&&       material,
-                  T                dtdh    ,
-                  Dimension<Value> /*dim*/ ) const
+  input_back_left(IT&& state, Mat&& mat, T dtdh, Dim dim) const
   {
-    constexpr auto dim = Dimension<Value>{};
-    return evolve(state_it.offset(left_face, dim),
-                  material                       ,
-                  dtdh                           ,
-                  dim                            ,
-                  right_face_select              ); 
+    return 
+      evolve(state.offset(left_face, dim), mat, dtdh, dim, right_face_select);
   }
 
   /// Returns the right state in the backward direction, where the backward
@@ -221,23 +247,19 @@ struct MHReconstructor : public Reconstructor<MHReconstructor<Limiter>> {
   ///
   ///   { left (x-dim), down (y-dim), outward (z-dim) }
   /// 
-  /// \param[in]  state_it   The state iterator to reconstruct from.
-  /// \param[in]  material   The material for the system.
-  /// \param[in]  dtdh       The space time scaling factor.
-  /// \tparam     Iterator   The type of the iterator, which must be
-  ///                        multi-dimensional 
-  /// \tparam     Material   The type of the material.
-  /// \tparam     T          The type of the scaling factor.
-  /// \tparam     Value      The value which defines the dimension.
-  template <typename Iterator, typename Material, typename T, std::size_t Value>
+  /// \param[in]  state   The state iterator to reconstruct from.
+  /// \param[in]  mat     The material for the system.
+  /// \param[in]  dtdh    The space time scaling factor.
+  /// \param[in]  dim     The dimesion for reconstruction.
+  /// \tparam     IT      The type of the iterator.
+  /// \tparam     Mat     The type of the material.
+  /// \tparam     T       The type of the scaling factor.
+  /// \tparam     Dim     The type of the dimension.
+  template <typename IT, typename Mat, typename T, typename Dim>
   fluidity_host_device constexpr auto
-  input_back_right(Iterator&&       state_it,
-                   Material&&       material,
-                   T                dtdh    ,
-                   Dimension<Value> /*dim*/ ) const
+  input_back_right(IT&& state, Mat&& mat, T dtdh, Dim dim) const
   {
-    constexpr auto dim = Dimension<Value>{};
-    return evolve(state_it, material, dtdh, dim, left_face_select);
+    return evolve(state, mat, dtdh, dim, left_face_select);
   }
 };
 

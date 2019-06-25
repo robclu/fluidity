@@ -37,13 +37,13 @@ namespace limit  {
 template < typename    Form
          , typename    Iterator
          , typename    Material
-         , std::size_t Value>
+         , typename    Dim>
 fluidity_host_device constexpr auto
-backward_diff(Iterator&& state_it, Material&& mat, Dimension<Value>)
+backward_diff(Iterator&& state_it, Material&& mat, Dim dim)
 {
   return detail::backward_diff<Form>(std::forward<Iterator>(state_it),
                                      std::forward<Material>(mat)     ,
-                                     Dimension<Value>{}              );
+                                     dim                             );
 }
 
 /// Computes the forward difference between the state ahead of the state
@@ -62,13 +62,13 @@ backward_diff(Iterator&& state_it, Material&& mat, Dimension<Value>)
 template < typename    Form
          , typename    Iterator
          , typename    Material
-         , std::size_t Value>
+         , typename    Dim>
 fluidity_host_device constexpr auto
-forward_diff(Iterator&& state_it, Material&& mat, Dimension<Value>)
+forward_diff(Iterator&& state_it, Material&& mat, Dim dim)
 {
   return detail::forward_diff<Form>(std::forward<Iterator>(state_it),
                                     std::forward<Material>(mat)     ,
-                                    Dimension<Value>{}              );
+                                    dim                             );
 }
 
 /// Computes the central difference between the state ahead of the state
@@ -87,13 +87,13 @@ forward_diff(Iterator&& state_it, Material&& mat, Dimension<Value>)
 template < typename    Form
          , typename    Iterator
          , typename    Material
-         , std::size_t Value>
+         , typename    Dim>
 fluidity_host_device constexpr auto
-central_diff(Iterator&& state_it, Material&& mat, Dimension<Value>)
+central_diff(Iterator&& state_it, Material&& mat, Dim dim)
 {
   return detail::central_diff<Form>(std::forward<Iterator>(state_it),
                                     std::forward<Material>(mat)     ,
-                                    Dimension<Value>{}              );
+                                    dim                             );
 }
 
 }} // namespace fluid::limit

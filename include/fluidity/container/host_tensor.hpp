@@ -38,15 +38,14 @@ class HostTensor : public BaseTensor<T, N> {
   /// Defines the device version of the tensor to be a friend of this class.
   template <typename TT, std::size_t D> friend class DeviceTensor;
 
-  /// Defines the type of the executor for the iterator to be a GPU executor.
-  using exec_t = exec::cpu_type;
-
  public:
   /// Defines the number of dimensions for the tensor.
   static constexpr auto dimensions = N;
 
   /// Defines the type of the tensor.
   using self_t            = HostTensor;
+  /// Defines the type of the executor for the iterator to be a GPU executor.
+  using exec_t            = exec::cpu_t;
   /// Defines the type of the elements stored in the tensor.
   using element_t         = std::decay_t<T>;
   /// Defines an alias for the base tensor class.
@@ -76,10 +75,26 @@ class HostTensor : public BaseTensor<T, N> {
 
   /// Initializes the size of each of the dimensions in the tensor, and the
   /// total number of elements in the tensor.
-  /// \param[in] elements The number of elements in each dimension.
-  /// \tparam    Elements The type of the elements.
-  template <typename... Elements>
-  HostTensor(Elements&&... elements);
+  /// \param[in] dim_sizes The size of each dimension for the tensor..
+  /// \tparam    DimSizes  The type of the dimension sizes.
+  template <typename S1, typename... Sz, size_enable_t<S1> = 0>
+  HostTensor(S1&& size_one, Sz&&... other_sizes)
+  : base_t{std::forward<S1>(size_one), std::forward<Sz>(other_sizes)...} {
+    allocate();
+  }
+
+  /// Initializes the size of each of the dimensions in the tensor, and the
+  /// total number of elements in the tensor.
+  /// \param[in] dim_sizes The size of each dimension for the tensor..
+  /// \tparam    DimSizes  The type of the dimension sizes.
+  template <typename S, traits::container_enable_t<S> = 0>
+  HostTensor(S&& dim_sizes) {
+    unrolled_for<dimensions>([&] (auto d) {
+        resize_dim(d, dim_sizes[d]);
+    });
+    allocate();
+  }
+
 
   /// Cleans up any memory allocated for the tensor.
   ~HostTensor();
@@ -104,6 +119,17 @@ class HostTensor : public BaseTensor<T, N> {
 
   /// Returns the HostTensor as a device tensor.
   auto as_device() const;
+
+  /// Returns a new host tensor without copying the memory from the \p other
+  /// tensor. This is useful for creating a device tensor of the same shape.
+  auto copy_without_data() const {
+    auto new_tensor = self_t();
+    unrolled_for<dimensions>([&] (auto d) {
+        new_tensor.resize_dim(d, this->_dim_sizes[d]);
+    });
+    new_tensor.allocate();
+    return new_tensor;
+  }
 
   /// Returns an iterator to the first element in the tensor.
   iterator_t begin()
@@ -158,13 +184,6 @@ class HostTensor : public BaseTensor<T, N> {
 //==--- HostTensor 1D Implementation ---------------------------------------==//
 
 //===== Public ----------------------------------------------------------=====//
-
-template <typename T, std::size_t N> template <typename... Elements>
-HostTensor<T, N>::HostTensor(Elements&&... elements) 
-: base_t{std::forward<Elements>(elements)...}
-{
-  allocate();
-}
 
 template <typename T, std::size_t N>
 HostTensor<T, N>::~HostTensor()
