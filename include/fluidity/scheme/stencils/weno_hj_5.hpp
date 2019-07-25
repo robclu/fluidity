@@ -37,72 +37,52 @@ struct HJWeno5 : public Stencil<HJWeno5> {
 
  public:
   /// Returns the width of the stencil.
-  fluidity_host_device constexpr auto width() const { return max_offset; }
+  fluidity_host_device constexpr auto width() const {
+    return max_offset; 
+  }
 
   /// Implementation of the forward difference for the WENO scheme.
-  /// \param[in] it     The iterable data to apply the stencil to.
-  /// \param[in] h      The delta for the stencil.
-  /// \param[in] dim    The dimension to compute the difference in.
-  /// \tparam    It     The type of the iterator.
-  /// \tparam    T      The type of the delta.
-  /// \tparam    Dim    The type of the dimension specifier.
-  template <typename It, typename T, typename Dim>
-  fluidity_host_device auto backward_deriv_impl(It&& it, T h, Dim dim) const
-  {
-    const auto d1 = it.offset(int{-2}, dim).backward_diff(dim) / h;
-    const auto d2 = it.offset(int{-1}, dim).backward_diff(dim) / h;
-    const auto d3 = it.backward_diff(dim) / h;
-    const auto d4 = it.forward_diff(dim) / h;
-    const auto d5 = it.offset(int{1}, dim).forward_diff(dim) / h;
+  /// \param[in] it       The iterable data to apply the stencil to.
+  /// \param[in] h        The delta for the stencil.
+  /// \param[in] dim      The dimension to compute the difference in.
+  /// \tparam    Iterator The type of the iterator.
+  /// \tparam    T        The type of the delta.
+  /// \tparam    Dim      The type of the dimension specifier.
+  template <typename Iterator, typename T, typename Dim>
+  fluidity_host_device auto backward_deriv_impl(
+    Iterator&& it ,
+    T          h  ,
+    Dim        dim
+  ) const {
+    const auto h1 = T(1) / h;
+    const auto d1 = h1 * it.offset(int{-2}, dim).backward_diff(dim);
+    const auto d2 = h1 * it.offset(int{-1}, dim).backward_diff(dim);
+    const auto d3 = h1 * it.backward_diff(dim);
+    const auto d4 = h1 * it.forward_diff(dim);
+    const auto d5 = h1 * it.offset(int{1}, dim).forward_diff(dim);
     return diff(d1, d2, d3, d4, d5);
   }
 
   /// Implementation of the forward difference for the WENO scheme.
-  /// \param[in] it     The iterable data to apply the stencil to.
-  /// \param[in] h      The delta for the stencil.
-  /// \param[in] dim    The dimension to compute the difference in.
-  /// \tparam    It     The type of the iterator.
-  /// \tparam    T      The type of the delta.
-  /// \tparam    Dim    The type of the dimension specifier.
-  template <typename It, typename T, typename Dim>
-  fluidity_host_device auto forward_deriv_impl(It&& it, T h, Dim dim) const
-  {
-    const auto d1 = it.offset(int{2}, dim).forward_diff(dim) / h;
-    const auto d2 = it.offset(int{1}, dim).forward_diff(dim) / h;
-    const auto d3 = it.forward_diff(dim) / h;
-    const auto d4 = it.backward_diff(dim) / h;
-    const auto d5 = it.offset(int{-1}, dim).backward_diff(dim) / h;
+  /// \param[in] it       The iterable data to apply the stencil to.
+  /// \param[in] h        The delta for the stencil.
+  /// \param[in] dim      The dimension to compute the difference in.
+  /// \tparam    Iterator The type of the iterator.
+  /// \tparam    T        The type of the delta.
+  /// \tparam    Dim      The type of the dimension specifier.
+  template <typename Iterator, typename T, typename Dim>
+  fluidity_host_device auto forward_deriv_impl(
+    Iterator&& it ,
+    T          h  ,
+    Dim        dim
+  ) const {
+    const auto h1 = T(1) / h;
+    const auto d1 = h1 * it.offset(int{2}, dim).forward_diff(dim);
+    const auto d2 = h1 * it.offset(int{1}, dim).forward_diff(dim);
+    const auto d3 = h1 * it.forward_diff(dim);
+    const auto d4 = h1 * it.backward_diff(dim);
+    const auto d5 = h1 * it.offset(int{-1}, dim).backward_diff(dim);
     return diff(d1, d2, d3, d4, d5);
-  }
-
-  /// Implementation of the calculation of the quadratic coefficients iin the
-  /// backward direction.
-  /// \param[in] it     The iterable data to apply the stencil to.
-  /// \param[in] dh     The delta for the stencil.
-  /// \param[in] dim    The dimension to compute the coefficients for.
-  /// \tparam    It     The type of the iterator.
-  /// \tparam    T      The type of the delta.
-  /// \tparam    Dim    The type of the dimension specifier.
-  template <typename It, typename T, typename Dim>
-  fluidity_host_device auto quadratic_back_impl(It&& it, T dh, Dim dim) const
-  {
-    static_assert(false, "Not yet implemented");
-    return Quadratic{0, 0, 0};
-  }
-
-  /// Implementation of the calculation of the quadratic coefficients iin the
-  /// forward direction.
-  /// \param[in] it     The iterable data to apply the stencil to.
-  /// \param[in] dh     The delta for the stencil.
-  /// \param[in] dim    The dimension to compute the coefficients for.
-  /// \tparam    It     The type of the iterator.
-  /// \tparam    T      The type of the delta.
-  /// \tparam    Dim    The type of the dimension specifier.
-  template <typename It, typename T, typename Dim>
-  fluidity_host_device auto quadratic_fwrd_impl(It&& it, T dh, Dim dim) const
-  {
-    static_assert(false, "Not yet implemented");
-    return Quadratic{0, 0, 0};
   }
 
  private:
@@ -115,27 +95,42 @@ struct HJWeno5 : public Stencil<HJWeno5> {
   /// \param[in] d4 The fourth finite difference.
   /// \param[in] d5 The fifth finite difference.
   template <typename T>
-  fluidity_host_device auto diff(T&& d1, T&& d2, T&& d3, T&& d4, T&& d5) const
-  {
+  fluidity_host_device auto diff(T&& d1, T&& d2, T&& d3, T&& d4, T&& d5) const {
+    // NOTE: Here, we want to avoid multiple divisions, so compared to the
+    // literature, any division by 3 has been changed to a multiplication by two
+    // and then division by 6.
     const auto phi_1 = 2.0 * d1 - 7.0 * d2 + 11.0 * d3;
     const auto phi_2 = -d2      + 5.0 * d3 + 2.0 * d4;
     const auto phi_3 = 2.0 * d3 + 5.0 * d4 - d5;
 
+    // Factors to avoid division:
+    constexpr auto f1 = 13.0 / 12.0;
+    constexpr auto f2 = 1.0 / 4.0;
     // Compute the coefficients:
-    auto alpha_1 = 13.0 / 12.0 * std::pow(d1 - 2.0 * d2 + d3, 2)
-                 + std::pow(d1 - 4.0 * d2 + 3.0 * d3, 2) / 4.0;
-    auto alpha_2 = 13.0 / 12.0 * std::pow(d2 - 2 * d3 + d4 , 2)
-                 + std::pow(d2 - d4, 2) / 4.0;
-    auto alpha_3 = 13.0 / 12.0 * std::pow(d3 - 2.0 * d4 + d5, 2)
-                 + std::pow(3.0 * d3 - 4.0 * d4 + d5, 2);
+    auto alpha_1 = 
+      f1 * std::pow(d1 - 2.0 * d2 + d3, 2) +
+      f2 * std::pow(d1 - 4.0 * d2 + 3.0 * d3, 2);
+    auto alpha_2 = 
+      f1 * std::pow(d2 - 2 * d3 + d4 , 2) +
+      f2 * std::pow(d2 - d4, 2);
+    auto alpha_3 = 
+      f1 * std::pow(d3 - 2.0 * d4 + d5, 2) +
+      f2 * std::pow(3.0 * d3 - 4.0 * d4 + d5, 2);
 
     // Compute the error term:
-    const auto e = 10.0e-6
-                 * std::max(
-                     std::max(
-                       std::max(
-                         std::max(d1*d1, d2*d2), d3 * d3), d4 * d4), d5 * d5)
-                 + 10.0e-99;
+    const auto e = 
+      10.0e-6 * 
+        std::max(
+          std::max(
+            std::max(
+              std::max(d1*d1, d2*d2), 
+              d3 * d3
+            ), 
+            d4 * d4
+          ), 
+          d5 * d5
+        )
+        + 10.0e-99;
 
     // Update the coefficients:
     alpha_1 = 0.1 / std::pow(alpha_1 + e, 2);

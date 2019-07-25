@@ -38,10 +38,6 @@ void reinit_levelset_init_impl(Init init, Levelset levelset, Conv conv)
     conv.shift(dim, flattened_id(dim));
   });
 
-
-
-
-
   constexpr auto dims = std::decay_t<VIT>::dimensions;
     
   // Set the velocity for a cell using the velocity from the material to which

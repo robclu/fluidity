@@ -35,56 +35,103 @@ class Evolver {
   using impl_t = EvolverImpl;
 
   /// Returns a pointer to the implementation.
-  fluidity_host_device impl_t* impl()
-  {
+  fluidity_host_device impl_t* impl() {
     return static_cast<impl_t*>(this);
   }
 
   /// Returns a const pointer to the implementation.
-  fluidity_host_device const impl_t* impl() const
-  {
+  fluidity_host_device const impl_t* impl() const {
     return static_cast<const impl_t*>(this);
   }
 
  public:
   /// Returns the width required by the evolver. This is the number of cells
   /// on a single side which are required.
-  constexpr auto width() const
-  {
+  constexpr auto width() const {
     return impl()->width();
   }
 
-  /// This function evolves the data by updating the \p it_out data using
-  /// the \p it_in data. The method used to do so is defined by the
+  /// Loads valid data into the padding cells for the \p shared_in shared memory
+  /// iterator, from the \p global_it iterator over the global data, and the
+  /// boundaries defined by \p bounds.
+  ///
+  /// \pre The the shared_it points to the data at the block thread indices and
+  ///      the global_it points to the global data at the global thread indices.
+  ///
+  /// \param[in] global_it      The global memory iterator to load from.
+  /// \param[in] shared_it      The shared memory iterator to load.
+  /// \param[in] bounds         The information for the boundaries.
+  /// \tparam    GlobalIterator The global memory iterator type.
+  /// \tparam    SharedIterator The shared memory iterator type.
+  /// \tparam    BoundContianer The type of the boundaries.
+  template <
+    typename GlobalIterator,
+    typename SharedIterator,
+    typename BoundContainer
+  >
+  fluidity_host_device auto load_padding(
+    GlobalIterator&& global_it,
+    SharedIterator&& shared_it,
+    BoundContainer&& bounds 
+  ) const -> void {
+    impl()->load_padding_impl(
+      std::forward<GlobalIterator>(global_it),
+      std::forward<SharedIterator>(shared_it),
+      std::forward<BoundContainer>(bounds)
+    );
+  }
+
+  /// This function evolves the data by updating the \p out_it data using
+  /// the \p in_it data. The method used to do so is defined by the
   /// implemenation of the interface.
   ///
   /// This interface allows different input and output iterator types since it
   /// is possible that this will be the case for multi-materials. So long as the
-  /// \p it_out data can be set from the \p it_in data, this is okay.
+  /// \p out_it data can be set from the \p in_it data, this is okay.
   ///
-  /// \param[in] it_in    The iterable input data to use to evolve.
-  /// \param[in] it_out   The iteratable output data to update.
-  /// \param[in] dt       The time resolution to use for the update.
-  /// \param[in] dh       The spacial resolution to use for the update.
-  /// \param[in] args     Additional arguments for the evolution.
-  /// \tparam    ItIn     The type of the input iterator.
-  /// \tparam    ItOut    The type of the output iterator.
-  /// \tparam    T        The type of the timestep and resolution.
-  /// \tparam    Args     The types of any additional arguments.
-  template <typename ItIn, typename ItOut, typename T, typename... Args>
-  fluidity_host_device void
-  evolve(ItIn&& it_in, ItOut&& it_out, T dt, T dh, Args&&... args) const
-  {
-    static_assert(is_multidim_iter_v<ItIn>, 
-                  "Input iterator must be a multidimensional iterator!");
-    static_assert(is_multidim_iter_v<ItOut>, 
-                  "Output iterator must be a multidimensional iterator!");
+  /// \param[in] in_it          The iterable input data to use to evolve.
+  /// \param[in] out_it         The iteratable output data to update.
+  /// \param[in] dt             The time resolution to use for the update.
+  /// \param[in] dh             The spacial resolution to use for the update.
+  /// \param[in] func_or_it     An additional functor/iterator for the update.
+  /// \param[in] args           Additional arguments for the evolution.
+  /// \tparam    InIterator     The type of the input iterator.
+  /// \tparam    OutIterator    The type of the output iterator.
+  /// \tparam    T              The type of the timestep and resolution.
+  /// \tparam    FuncOrIt       The type of the functor/additional iterator.
+  /// \tparam    Args           The types of any additional arguments.
+  template <
+    typename    InIterator   ,
+    typename    OutIterator  ,
+    typename    T            ,
+    typename    FuncOrIt     ,
+    typename... Args
+  >
+  fluidity_host_device auto evolve(
+    InIterator&&    in_it     ,
+    OutIterator&&   out_it    ,
+    T               dt        ,
+    T               dh        ,
+    FuncOrIt&&      func_or_it,
+    Args&&...       args 
+  ) const -> void {
+    static_assert(
+      is_multidim_iter_v<InIterator>,
+      "Input iterator must be a multidimensional iterator!"
+    );
+    static_assert(
+      is_multidim_iter_v<OutIterator>, 
+      "Output iterator must be a multidimensional iterator!"
+    );
 
-    return impl()->evolve_impl(std::forward<ItIn>(it_in)  ,
-                               std::forward<ItOut>(it_out),
-                               dt                         ,
-                               dh                         ,
-                               std::forward<Args>(args)...);
+    return impl()->evolve_impl(
+      std::forward<InIterator>(in_it)   ,
+      std::forward<OutIterator>(out_it) ,
+      dt                                ,
+      dh                                ,
+      std::forward<FuncOrIt>(func_or_it),
+      std::forward<Args>(args)...
+    );
   }
 };
 

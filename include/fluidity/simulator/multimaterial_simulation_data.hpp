@@ -49,7 +49,7 @@ template <typename Traits, typename Material>
 class MultimaterialSimData<Traits, Material, exec::DeviceKind::gpu> {
  public:
   /// Defines the execution policy for the data.
-  using exec_t              = exec::gpu_type;
+  using exec_t              = exec::gpu_t;
 
  private:
   /// Defines the type of the traits class.
@@ -92,21 +92,23 @@ class MultimaterialSimData<Traits, Material, exec::DeviceKind::gpu> {
   /// \tparam    T               The type of the timestep factor.
   /// \tparam    BoundarySetter  The type of the boundary setter.
   template <typename T, typename BoundarySetter>
-  void evolve(T dtdh, const BoundarySetter& boundary_setter)
-  {
+  auto evolve(T dtdh, const BoundarySetter& boundary_setter) -> void {
     auto material_solver = solver_t();
     auto input_it        = input_iterator();
     material_solver.set_grid_sizes(input_it);
-    material_solver.solve(std::move(input_it)         ,
-                          std::move(output_iterator()),
-                          _material.eos()             ,
-                          dtdh                        ,
-                          boundary_setter             );
+    material_solver.solve(
+      std::move(input_it)         ,
+      std::move(output_iterator()),
+      _material.eos()             ,
+      dtdh                        ,
+      boundary_setter             
+    );
   }
 
   /// Returns a MaterialIteratorWrapper which holds the equation of state for
   /// the material, and iterators to the levelset and state data for the
   /// material.
+/*
   auto get_iterator_wrapper() const
   {
     return make_material_iterator_wrapper(
@@ -114,18 +116,19 @@ class MultimaterialSimData<Traits, Material, exec::DeviceKind::gpu> {
 	    _material.levelset().multi_iterator(),
 	    _states_in.multi_iterator()          );
   }
+*/
 
   /// Returns a material iterator over the levelset and state data.
-  auto material_iterator() const
-  {
-    return make_material_iterator(_material.eos()                      ,
-                                  _material.levelset().multi_iterator(),
-                                  _states_in.multi_iterator()          );
+  auto material_iterator() const {
+    return make_material_iterator(
+      _material.eos()                      ,
+      _material.levelset().multi_iterator(),
+      _states_in.multi_iterator()          
+    );
   }
 
   /// Initializes the data.
-  void initialize()
-  {
+  void initialize() {
     _wavespeeds.resize(_states.total_size());
     _solver.set_grid_sizes(_states.multi_iterator());
   }
@@ -134,8 +137,20 @@ class MultimaterialSimData<Traits, Material, exec::DeviceKind::gpu> {
   /// dimension.
   /// \param[in] dim      The dimension to resize.
   /// \param[in] elements The number of elements for the dimension.
-  void resize_dim(std::size_t dim, std::size_t elements)
-  {
+  void resize_dim(std::size_t dim, std::size_t elements) {
+    // TODO: Change this to:
+    /*
+    apply(
+      [&] (auto& container) {
+        container.resize_dim(dim, elements);
+      }                       ,
+      _states                 ,
+      _states_in              ,
+      _states_out             , 
+      _material.levelset()    , 
+      _material_out.levelset()
+    );
+    */
     _states.resize_dim(dim, elements);
     _states_in.resize_dim(dim, elements);
     _states_out.resize_dim(dim, elements);

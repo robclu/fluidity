@@ -18,6 +18,7 @@
 #define FLUIDITY_MATERIAL_COMBINE_MATERIALS_HPP
 
 #include "cuda/combine_materials.cuh"
+#include <fluidity/traits/device_traits.hpp>
 
 namespace fluid    {
 namespace material {
@@ -27,11 +28,10 @@ namespace detail   {
 /// iterators have a CPU execution policy, which simply forwards the iterators
 /// to the parallel CPU implementation. This overload is only enabled when the
 /// iterators have a CPU execution policy.
-/// \param[in] iterators         The iterators over the material data.
-/// \tparam    MaterialIterators The type of the iterator container.
-template <typename MaterialIterators, exec::cpu_enable_t<MaterialIterators> = 0>
-void combine_into_first_impl(MaterialIterators&& iterators)
-{
+/// \param[in] iterators    The iterators over the material data.
+/// \tparam    MatIterators The type of the iterator container.
+template <typename MatIterators, traits::cpu_enable_t<MatIterators> = 0>
+void combine_into_first_impl(MatIterators&& iterators) {
   // TODO: Add parallel CPU implementation.
 }
 
@@ -39,12 +39,11 @@ void combine_into_first_impl(MaterialIterators&& iterators)
 /// iterators have a GPU execution policy, which simply forwards the iterators
 /// to the CUDA kernel.  This overload is only enabled when the iterators have a
 /// GPU execution policy.
-/// \param[in] iterators         The iterators over the material data.
-/// \tparam    MaterialIterators The type of the iterator container.
-template <typename MaterialIterators, exec::gpu_enable_t<MaterialIterators> = 0>
-void combine_into_first_impl(MaterialIterators&& iterators)
-{
-  cuda::combine_into_first(std::forward<MaterialIterators>(iterators));
+/// \param[in] iterators    The iterators over the material data.
+/// \tparam    MatIterators The type of the iterator container.
+template <typename MatIterators, traits::gpu_enable_t<MatIterators> = 0>
+void combine_into_first_impl(MatIterators&& iterators) {
+  cuda::combine_into_first(std::forward<MatIterators>(iterators));
 }
 
 } // namespace detail
@@ -56,11 +55,9 @@ void combine_into_first_impl(MaterialIterators&& iterators)
 /// \param[in] materials        The materials which hold the data.
 /// \tparam    MaterialContainer The container for the materials.
 template <typename MaterialContainer>
-void combine_into_first(MaterialContainer&& materials)
-{
+void combine_into_first(MaterialContainer&& materials) {
   detail::combine_into_first_impl(
-    unpack(materials, [&] (auto&&... mat_data)
-    {
+    unpack(materials, [&] (auto&&... mat_data) {
       return make_tuple(mat_data.material_iterator()...);
     })
   );

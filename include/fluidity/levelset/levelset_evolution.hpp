@@ -17,7 +17,7 @@
 #define FLUIDITY_LEVELSET_EVOLUTION_HPP
 
 #include "cuda/levelset_evolution.cuh"
-#include <fluidity/execution/execution_policy.hpp>
+#include <fluidity/traits/device_traits.hpp>
 
 namespace fluid    {
 namespace levelset {
@@ -26,26 +26,24 @@ template <typename Evolver   ,
           typename InData    ,
           typename OutData   ,
           typename Velocities,
-          typename T, exec::cpu_enable_t<InData> = 0>
+          typename T         , traits::cpu_enable_t<InData> = 0>
 void evolve_levelset(Evolver&&    evolver   ,
                      InData&&     in        ,
                      OutData&&    out       ,
                      Velocities&& velocities,
-                     T            dt        )
-{
+                     T            dt        ) {
 }
 
 template <typename Evolver   ,
           typename InData    ,
           typename OutData   ,
           typename Velocities,
-          typename T, exec::gpu_enable_t<InData> = 0>
+          typename T         , traits::gpu_enable_t<InData> = 0>
 void evolve_levelset(Evolver&&    evolver   ,
                      InData&&     in        ,
                      OutData&&    out       ,
                      Velocities&& velocities,
-                     T            dt        )
-{
+                     T            dt        ) {
   cuda::evolve_levelset(std::forward<Evolver>(evolver)      ,
                         std::forward<InData>(in)            ,
                         std::forward<OutData>(out)          ,

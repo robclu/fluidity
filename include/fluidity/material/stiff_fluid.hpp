@@ -1,20 +1,21 @@
-//==--- fluidity/material/ideal_gas.hpp -------------------- -*- C++ -*- ---==//
+//==--- fluidity/material/stiff_fluid.hpp ------------------ -*- C++ -*- ---==//
 //            
 //                                Fluidity
 // 
-//                      Copyright (c) 2018 Rob Clucas.
+//                      Copyright (c) 2019 Rob Clucas.
 //
 //  This file is distributed under the MIT License. See LICENSE for details.
 //
 //==------------------------------------------------------------------------==//
 //
-/// \file  ideal_gas.hpp
-/// \brief This file implements functionality for an ideal gas.
+/// \file  stiff_fluid.hpp
+/// \brief This file implements functionality for a fluid with a stiffened
+///        equation of state.
 //
 //==------------------------------------------------------------------------==//
 
-#ifndef FLUIDITY_MATERIAL_IDEAL_GAS_HPP
-#define FLUIDITY_MATERIAL_IDEAL_GAS_HPP
+#ifndef FLUIDITY_MATERIAL_STIFF_FLUID_HPP
+#define FLUIDITY_MATERIAL_STIFF_FLUID_HPP
 
 #include <fluidity/utility/portability.hpp>
 #include <cmath>
@@ -22,35 +23,52 @@
 namespace fluid    {
 namespace material {
 
-/// The IdealGas class defines a class for an ideal gas material.
+/// The StiffFluid class defines a class for a fluid with a stiffened equation
+/// of state, which is defined as:
+///
+/// \begin{equation}
+///   P = \rho e ( \gamma - 1 ) - \gamma P_{\inf}
+/// \end{equation}
+///
+/// where
+///   - $\gamma$   = specific heat ratio / Gruneisen exponent
+///   - $P_{\inf}$ = material dependant constant
+///
 /// \tparam T The type of the data used for computation.
 template <typename T>
-struct IdealGas {
+struct StiffFluid {
   /// Defines the type of the data used by the material.
   using value_t = std::decay_t<T>;
 
   /// Sets the value of the gas to have the default adiabatic index of 1.4.
-  constexpr IdealGas() = default;
+  constexpr StiffFluid() = default;
 
-  /// Sets the adiabatic index for the gas to have the value of \p adi_index.
-  /// \param[in] adi_index The adiabatic index of the gas.
-  fluidity_host_device constexpr IdealGas(value_t adi_index)
+  /// Sets the adiabatic index for the fluid to have the value of \p adi_index.
+  /// \param[in] adi_index The adiabatic index of the fluid.
+  fluidity_host_device constexpr StiffFluid(value_t adi_index)
   : _adi_index(adi_index) {}
 
-  /// Returns the value of the adiabatic index for the ideal gas.
+  /// Sets the adiabatic index for the fluid to have the value of \p adi_index,
+  /// and the material contant $P_{\inf}$ to \p p_inf.
+  /// \param[in] adi_index The adiabatic index of the fluid.
+  /// \param[in] p_inf     The constant for the fluid.
+  fluidity_host_device constexpr StiffFluid(value_t adi_index, value_t p_inf)
+  : _adi_index(adi_index), _p_inf(p_inf) {}
+
+  /// Returns the value of the adiabatic index for the fluid.
   fluidity_host_device constexpr value_t& adiabatic() noexcept {
     return _adi_index;
   }
 
-  /// Returns the value of the adiabatic index for the ideal gas.
+  /// Returns the value of the adiabatic index for the fluid.
   fluidity_host_device constexpr value_t adiabatic() const noexcept {
     return _adi_index;
   }
 
-  /// Evaluates the equation of state for the ideal gas, which is given by:
+  /// Evaluates the equation of state for the fluid, which is given by:
   ///
   /// \begin{equation}
-  ///   e = e(p, \rho) = \frac{p}{(\gamma - 1) \rho}
+  ///   e = e(p, \rho) = \frac{p + \gamma P_{\inf}}{(\gamma - 1) \rho}
   /// \end{equation}
   /// 
   /// and returns the result.
@@ -58,11 +76,11 @@ struct IdealGas {
   /// \tparam     State   The type of the state.
   template <typename State>
   fluidity_host_device constexpr value_t eos(State&& state) const {
-    return state.pressure(*this) / 
+    return (state.pressure(*this) + _adi_index * _p_inf) / 
           ((_adi_index - value_t{1}) * state.density());
   }
 
-  /// Calculates the speed of sound for the ideal gas, based on the equation
+  /// Calculates the speed of sound for the fluid, based on the equation
   /// of state, where the sound speed is given by:
   ///
   /// \begin{equation}
@@ -74,7 +92,9 @@ struct IdealGas {
   /// \tparam     State   The type of the state.
   template <typename State>
   fluidity_host_device constexpr value_t sound_speed(State&& state) const {
-    return std::sqrt(_adi_index * state.pressure(*this) / state.density());
+    return std::sqrt(
+      _adi_index * (state.pressure(*this) + _p_inf) / state.density()
+    );
   } 
 
   /// Computes the density for a \p state_to such that it will have the same
@@ -84,13 +104,12 @@ struct IdealGas {
   /// in \p state_to and \p state_from having the same entropy.
   /// \param[in] state_from
   /// \param[in] state_to
-
   template <typename StateFrom, typename StateTo>
   fluidity_host_device constexpr value_t
   density_for_const_entropy(const StateFrom& state_from,
                             const StateTo&   state_to  ) const {
-    const auto entropy = eos(state_from);
-    return state_to.pressure(*this) / ((_adi_index - value_t{1}) / entropy);
+    // TODO: Implement ...
+    return value_t{0};
   }
 
   /// Computes the density for a \p state_to such that it will have the same
@@ -100,25 +119,20 @@ struct IdealGas {
   /// in \p state_to and \p state_from having the same entropy.
   /// \param[in] state_from
   /// \param[in] state_to
-
   template <typename StateFrom, typename StateTo>
   fluidity_host_device constexpr value_t
   density_for_const_entropy_log(const StateFrom& state_from,
                                 const StateTo&   state_to  ) const {
-    const auto a_inv = 1.0 / _adi_index;
-    const auto s //= log(state_from.pressure(*this)) 
-                 //- _adi_index * log(state_from.density());
-                 = log(std::pow(state_from.pressure(*this), a_inv)
-                 / state_from.density());
-    return std::pow(state_to.pressure(*this), a_inv) * std::exp(s);
-    //return (state_to.pressure(*this) - exp(s)) / exp(_adi_index);
+    return value_t{0};
   }
 
+
  private:
-  value_t _adi_index = 1.4; //!< The adiabatic index for the gas.
+  value_t _adi_index = 5.5;   //!< The adiabatic index for the fluid.
+  value_t _p_inf     = 0.613; //!< The material dependant constant.
 };
 
-} // namespace material
-} // namespace fluid
 
-#endif // FLUIDITY_MATERIAL_IDEAL_GAS_HPP
+}} // namespace fluid::material
+
+#endif // FLUIDITY_MATERIAL_STIFF_FLUID_HPP

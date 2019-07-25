@@ -17,7 +17,7 @@
 #define FLUIDITY_STATE_STATE_INITIALIZATION_HPP
 
 #include "cuda/state_initialization.cuh"
-#include <fluidity/execution/execution_policy.hpp>
+#include <fluidity/traits/device_traits.hpp>
 
 namespace fluid {
 namespace state {
@@ -35,13 +35,12 @@ namespace state {
 /// \tparam    LSIT       The type of the wavespeed iterator.
 /// \tparam    State      The type of the state to set with.
 /// \tparam    Eos        The type of the equation of state.
-template <typename SIT               ,
-          typename LSIT              ,
-          typename State             ,
-          typename Eos               ,
-          exec::cpu_enable_t<SIT> = 0>
-void set_states(SIT&& states, LSIT&& levelset, State&& state, Eos&& eos)
-{
+template <typename SIT                          ,
+          typename LSIT                         ,
+          typename State                        ,
+          typename Eos                          ,
+          ::fluid::traits::cpu_enable_t<SIT> = 0>
+void set_states(SIT&& states, LSIT&& levelset, State&& state, Eos&& eos) {
   // Call CPU implementation ...
 }
 
@@ -58,13 +57,12 @@ void set_states(SIT&& states, LSIT&& levelset, State&& state, Eos&& eos)
 /// \tparam    LSIT       The type of the wavespeed iterator.
 /// \tparam    State      The type of the state to set with.
 /// \tparam    Eos        The type of the equation of state.
-template <typename SIT               ,
-          typename LSIT              ,
-          typename State             ,
-          typename Eos               ,
-          exec::gpu_enable_t<SIT> = 0>
-void set_states(SIT&& states, LSIT&& levelset, State&& state, Eos&& eos)
-{
+template <typename SIT                          ,
+          typename LSIT                         ,
+          typename State                        ,
+          typename Eos                          ,
+          ::fluid::traits::gpu_enable_t<SIT> = 0>
+void set_states(SIT&& states, LSIT&& levelset, State&& state, Eos&& eos) {
   cuda::set_states(std::forward<SIT>(states)   ,
                    std::forward<LSIT>(levelset),
                    std::forward<State>(state)  ,

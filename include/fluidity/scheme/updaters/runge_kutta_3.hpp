@@ -36,112 +36,115 @@ struct RungeKutta3 : public Updater<RungeKutta3<Evaluator>> {
 
   /// Returns the width required by the updater. This is the number of cells
   /// on a single side which are required.
-  fluidity_host_device constexpr auto width() const
-  {
+  fluidity_host_device constexpr auto width() const {
     return evaluator_t().width();
   }
 
-  /// Implemenation of the function to update the \p it_out data using the
-  /// \p it_in data and the evaluator.
+  /// Implemenation of the function to update the \p out_it data using the
+  /// \p in_it data and the evaluator.
   ///
-  /// \pre The iterators, \p it_in, \p it_out, must be offset to the cells which
-  ///      will be used (\p it_in) and set (\p it_out). If \p f_v_it is
-  ///      an iterator then it too must be correctly offset.
+  /// \pre The iterators, \p in_it, \p out_it, must be offset to the cells which
+  ///      will be used (\p in_it) and set (\p out_it). Additionally, the
+  ///      callind interface should ensure that they are multi-iterators with
+  ///      `is_multidim_iter_v<>`.
   ///
-  /// \param[in] it_in    The iterable input data to use to evolve.
-  /// \param[in] it_out   The iteratable output data to update.
-  /// \param[in] dt       The time resolution to use for the update.
-  /// \param[in] dh       The spacial resolution to use for the update.
-  /// \tparam    ItIn     The type of the input iterator.
-  /// \tparam    ItOut    The type of the output iterator.
-  /// \tparam    T        The type of the timestep and resolution.
-  template <typename ItIn, typename ItOut, typename T>
-  fluidity_host_device void 
-  update_impl(ItIn&& it_in, ItOut&& it_out, T dt, T dh) const
-  {
-    static_assert(is_multidim_iter_v<ItIn>, 
-                  "Input iterator must be a multidimensional iterator!");
-    static_assert(is_multidim_iter_v<ItOut>, 
-                  "Output iterator must be a multidimensional iterator!");
-
+  /// \param[in] in_it        The iterable input data to use to evolve.
+  /// \param[in] out_it       The iteratable output data to update.
+  /// \param[in] dt           The time resolution to use for the update.
+  /// \param[in] dh           The spacial resolution to use for the update.
+  /// \tparam    InIterator   The type of the input iterator.
+  /// \tparam    OutIterator  The type of the output iterator.
+  /// \tparam    T            The type of the timestep and resolution.
+  template <typename InIterator, typename OutIterator, typename T>
+  fluidity_host_device auto update_impl(
+    InIterator&&  in_it ,
+    OutIterator&& out_it,
+    T             dt    ,
+    T             dh
+  ) const -> void {
     const auto evaluator = evaluator_t();
-    const auto phi_n     = *it_in;
+    const auto phi_n     = *in_it;
 
     // Compute first temp evolution to t^{n+1}. We have to sync here because the
     // scheme in the next evolution needs to access the data from other threads.
-    *it_out = *it_in - dt * evaluator.evaluate(it_in, dh);
+    *out_it = *in_it - dt * evaluator.evaluate(in_it, dh);
     fluidity_syncthreads(); 
 
     // Evolve again in time to t^{n+2} and then use the result in a weighted
     // average to compute phi^{n+ 1/2}. Again we need to sync for the next
     // evolution.
-    *it_in = 0.75 * phi_n 
-           + 0.25 * (*it_out - dt * evaluator.evaluate(it_out, dh));
+    *in_it = 0.75 * phi_n 
+           + 0.25 * (*out_it - dt * evaluator.evaluate(out_it, dh));
     fluidity_syncthreads(); 
 
     // Compute evolution to t^{n + 3/2}:
-    *it_out = *it_in + dt * evaluator.evaluate(it_in, dh);
+    *out_it = *in_it - dt * evaluator.evaluate(in_it, dh);
 
     // Finally, set the output data:
-    *it_out = (phi_n / 3.0) + (2.0 / 3.0 * (*it_out));  
+    constexpr auto fact_13 = T(1.0) / T(3.0);
+    constexpr auto fact_23 = T(2.0) * fact_13;
+    *out_it = (fact_13 * phi_n) + (fact_23 * (*out_it));  
   }
 
-  /// Implemenation of the function to update the \p it_out data using the
-  /// \p it_in data and the evaluator.
+  /// Implemenation of the function to update the \p out_it data using the
+  /// \p in_it data, the evaluator, and the \p func_or_it functor or iterator to
+  /// use in the evaluation.
   ///
-  /// \pre The iterators, \p it_in, \p it_out, must be offset to the cells which
-  ///      will be used (\p it_in) and set (\p it_out). If \p f_v_it is
-  ///      an iterator then it too must be correctly offset./
+  /// \pre The iterators, \p in_it, \p out_it, must be offset to the cells which
+  ///      will be used (\p in_it) and set (\p out_it). If \p func_or_it is
+  ///      an iterator then it too must be correctly offset. Additionally, the
+  ///      callind interface should ensure that they are multi-iterators with
+  ///      `is_multidim_iter_v<>`. 
   ///
-  /// \param[in] it_in    The iterable input data to use to evolve.
-  /// \param[in] it_out   The iteratable output data to update.
-  /// \param[in] dt       The time resolution to use for the update.
-  /// \param[in] dh       The spacial resolution to use for the update.
-  /// \param[in] f_v_it   A functor / additional data for the update.
-  /// \param[in] args     Additional arguments for the functor.
-  /// \tparam    ItIn     The type of the input iterator.
-  /// \tparam    ItOut    The type of the output iterator.
-  /// \tparam    T        The type of the timestep and resolution.
-  /// \tparam    FVIt     The type if the additional data iterator.
-  /// \tparam    Args     The types of any additional arguments.
-  template <typename    ItIn ,
-            typename    ItOut,
-            typename    T    ,
-            typename    FVIt ,
-            typename... Args >
-  fluidity_host_device void update_impl(ItIn&&    it_in ,
-                                        ItOut&&   it_out,
-                                        T         dt    ,
-                                        T         dh    ,
-                                        FVIt&&    f_v_it,
-                                        Args&&... args  ) const
-  {
-    static_assert(is_multidim_iter_v<ItIn>, 
-                  "Input iterator must be a multidimensional iterator!");
-    static_assert(is_multidim_iter_v<ItOut>, 
-                  "Output iterator must be a multidimensional iterator!");
-
+  /// \param[in] in_it        The iterable input data to use to evolve.
+  /// \param[in] out_it       The iteratable output data to update.
+  /// \param[in] dt           The time resolution to use for the update.
+  /// \param[in] dh           The spacial resolution to use for the update.
+  /// \param[in] func_or_it   A functor / iterator over extra data for the update.
+  /// \param[in] args         Additional arguments for the functor.
+  /// \tparam    InIterator   The type of the input iterator.
+  /// \tparam    OutIterator  The type of the output iterator.
+  /// \tparam    T            The type of the timestep and resolution.
+  /// \tparam    FuncOrIt     The type if the functor/extra iterator.
+  /// \tparam    Args         The types of any additional arguments.
+  template <
+    typename    InIterator ,
+    typename    OutIterator,
+    typename    T          ,
+    typename    FunctorOrIt,
+    typename... Args 
+  >
+  fluidity_host_device auto update_impl(
+    InIterator&&  in_it     ,
+    OutIterator&& out_it    ,
+    T             dt        ,
+    T             dh        ,
+    FunctorOrIt&& func_or_it,
+    Args&&...     args 
+  ) const -> void {
     const auto evaluator = evaluator_t();
-    const auto phi_n     = *it_in;
+    const auto phi_n     = *in_it;
 
     // Compute first temp evolution to t^{n+1}. We have to sync here because the
     // scheme in the next evolution needs to access the data from other threads.
-    *it_out = *it_in - dt * evaluator.evaluate(it_in, dh, f_v_it, args...);
+    *out_it = *in_it - dt * evaluator.evaluate(in_it, dh, func_or_it, args...);
     fluidity_syncthreads(); 
 
     // Evolve again in time to t^{n+2} and then use the result in a weighted
     // average to compute phi^{n+ 1/2}. Again we need to sync for the next
     // evolution.
-    *it_in = 0.75 * phi_n 
-           + 0.25 * (*it_out - 
-                     dt * evaluator.evaluate(it_out, dh, f_v_it, args...));
+    *in_it = 0.75 * phi_n 
+           + 0.25 * (*out_it - 
+                     dt * evaluator.evaluate(out_it, dh, func_or_it, args...));
     fluidity_syncthreads(); 
 
     // Compute evolution to t^{n + 3/2}:
-    *it_out = *it_in + dt * evaluator.evaluate(it_in, dh, f_v_it, args...);
+    *out_it = *in_it - dt * evaluator.evaluate(in_it, dh, func_or_it, args...);
 
     // Finally, set the output data:
-    *it_out = (phi_n / 3.0) + (2.0 / 3.0 * (*it_out));  
+    constexpr auto fact_13 = T(1.0) / T(3.0);
+    constexpr auto fact_23 = T(2.0) * fact_13;
+    *out_it = (fact_13 * phi_n) + (fact_23 * (*out_it));  
   }
 };
 

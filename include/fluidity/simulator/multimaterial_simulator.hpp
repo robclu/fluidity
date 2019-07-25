@@ -23,6 +23,7 @@
 #include "wavespeed_initialization.hpp"
 #include <fluidity/algorithm/fill.hpp>
 #include <fluidity/algorithm/max_element.hpp>
+#include <fluidity/boundary/boundary_props.hpp>
 #include <fluidity/dimension/dimension_info.hpp>
 #include <fluidity/ghost_fluid/load_ghost_cells.hpp>
 #include <fluidity/ghost_fluid/simple_ghost_fluid.hpp>
@@ -30,6 +31,7 @@
 #include <fluidity/levelset/levelset_evolution.hpp>
 #include <fluidity/levelset/levelset_projection.hpp>
 #include <fluidity/levelset/velocity_initialization.hpp>
+#include <fluidity/solver/eikonal_solver.hpp>
 #include <fluidity/material/combine_materials.hpp>
 #include <fluidity/setting/parameter/configurable.hpp>
 #include <fluidity/utility/timer.hpp>
@@ -84,22 +86,21 @@ class MultimaterialSimulator final :
   using params_t    = Parameters<value_t>;
   /// Defines the type of the boundary setter.
   using setter_t    = solver::BoundarySetter;
-
-  /// Defines the type of the data storage for the simulation.
-  //using storage_t   = SimulationData<traits_t, exec_t::device>;
-
-  /// Defines the storage type for each of the materials.
-  //using storage_t   = multimaterial_data_t<traits_t>;
+  
+  //==--- [Material] -------------------------------------------------------==//
 
   /// Defines the traits for the materials.
-  using mat_traits_t  = material_traits_t<traits_t, materials_t, levelset_t>;
+  using mat_traits_t      = material_traits_t<traits_t, materials_t, levelset_t>;
   /// Defines the type which holds the simulation data.
-  using mm_sim_data_t = typename mat_traits_t::mm_sim_data_t;
-
+  using mm_sim_data_t     = typename mat_traits_t::mm_sim_data_t;
   /// Defines the type of the ghost fluid loader.
-  using ghost_loader_t     = ghost::SimpleGFM<3>;
+  using interface_solve_t = typename traits_t::interface_solve_t;
   /// Defines the type of the levelset solver.
-  using levelset_evolver_t = typename traits_t::ls_evolver_t;
+  using ls_evolver_t      = typename traits_t::ls_evolver_t;
+  /// Defines the type of the levelset reinitialization scheme.
+  using ls_reinit_t       = typename traits_t::ls_reinit_t;
+
+  //==--- [Constants] ------------------------------------------------------==//
 
   /// Defines a constexpr instance of the execution polcity.
   static constexpr auto execution_policy = exec_t{};
@@ -194,8 +195,7 @@ class MultimaterialSimulator final :
   /// is the iterator to the levelset data which must be set, and the second is
   /// a reference to the indices of the cell in each dimension.
   template <typename Eos, typename LSPred, typename... Elements>
-  void add_material(Eos&& eos, LSPred&& pred, Elements&&... elements)
-  {
+  void add_material(Eos&& eos, LSPred&& pred, Elements&&... elements) {
     //auto es = make_tuple(std::forward<Elements>(elements)...);
     //for_each(es, [] (auto& e)
     //{
@@ -203,8 +203,7 @@ class MultimaterialSimulator final :
     //});
 
     auto eos_type_set = false;
-    for_each(_mm_data, [&] (auto& mm_data)
-    {
+    for_each(_mm_data, [&] (auto& mm_data) {
       using eos_t    = std::decay_t<Eos>;
       using mm_eos_t = std::decay_t<decltype(mm_data.material().eos())>;
 
@@ -216,8 +215,7 @@ class MultimaterialSimulator final :
       // the levelset for the material has not yet been set, then the data can
       // be initialized.
       if (std::is_same<eos_t, mm_eos_t>::value && 
-          !eos_type_set && !material.is_initialized())
-      {
+          !eos_type_set && !material.is_initialized()) {
         material.init_levelset(pred);
       
         // Now set the state data for the material.
@@ -228,8 +226,7 @@ class MultimaterialSimulator final :
   }
 
   /// Performs the simulation for the multimaterial simulator.
-  void simulate_mm()
-  {
+  void simulate_mm() {
     // Initialize everything which doesn't depend on the material type.
     _params.print_static_summary();
     auto       cfl   = _params.cfl;
@@ -238,9 +235,8 @@ class MultimaterialSimulator final :
 
     using host_vel_t = HostTensor<value_t, dimensions>;
     using dev_vel_t  = DeviceTensor<value_t, dimensions>;
-    using vel_data_t =
-      std::conditional_t<
-        std::is_same<exec_t, exec::cpu_type>::value, host_vel_t, dev_vel_t>;
+    using vel_data_t = std::conditional_t<
+      std::is_same<exec_t, exec::cpu_t>::value, host_vel_t, dev_vel_t>;
 
     // Define the velocities for evolving the levelset
     // and resize them to the appropriate size.
@@ -249,19 +245,21 @@ class MultimaterialSimulator final :
     
     init_material_data();
 
-    while (_params.continue_simulation())
-    {
+    // Create all the boundary info:
+    auto levelset_bounds = create_levelset_boundaries();
+    auto material_bounds = create_material_boundaries();
+
+    while (_params.continue_simulation()) {
       //==--- [D] Print iter and levelset data -----------------------------==//
       print_new_iter();
       print_subprocess("Material levelsets");
-      for_each(_mm_data, [] (auto& mm_data)
-      {
+      for_each(_mm_data, [] (auto& mm_data) {
         mm_data.material().levelset().print();
       });
       
       //==-- [R] Loading the ghost cells -----------------------------------==//
       print_subprocess("Loading ghost cells");
-      ghost::load_ghost_cells(ghost_loader_t(), _mm_data, dh);
+      ghost::load_ghost_cells(interface_solve_t(), _mm_data, dh);
 
       //==-- [R] Update the timestep for the iteration ---------------------==//
       update_time_delta();
@@ -270,58 +268,8 @@ class MultimaterialSimulator final :
       evolve_materials();
 
       //==-- [R] Evolve the levelset data ----------------------------------==//
-      evolve_levelsets(velocities);
+      evolve_levelsets(velocities, levelset_bounds);
 
-/*
-      print_subprocess("Settings levelset velocities");
-      auto v_iter = velocities.multi_iterator();
-      levelset::set_velocities(_mm_data, v_iter);
-
-      auto host_vel = velocities.as_host();
-      for (const auto& v : host_vel)
-      {
-          std::cout 
-            << std::right
-            << std::setfill(' ')
-            << std::setw(8)
-            << std::setprecision(4)
-            << v;
-      }
-      std::cout << "\n";
-
-      print_subprocess("Evolving levelsets");
-      int material_index = 0;
-      // Update each of the material levelsets ...
-      auto ls_evolver = levelset_evolver_t();
-      for_each(_mm_data, [&] (auto& mm_data)
-      {
-//        print_mm_data(mm_data.states());
-        print_subprocess("Evolving levelset", material_index);
-        mm_data.material().levelset().print();
-        print_mm_data(mm_data.states(), mm_data.material().eos());
-
-        auto ls_it_in  = mm_data.material().levelset().multi_iterator();
-        auto ls_it_out = mm_data.material_out().levelset().multi_iterator();
-        evolve_levelset(ls_evolver, ls_it_in, ls_it_out, v_iter, _params.dt());
-
-        print_subprocess("Evolved levelset", material_index++);
-        mm_data.material_out().levelset().print();
-
-        mm_data.swap_material_levelsets(ls_it_out, ls_it_in);
-      });
-
-      // Reinitialize the levelsets ...
-      print_subprocess("End if iter data");
-
-
-      for_each(_mm_data, [&] (auto& mm_data)
-      {
-        //auto& mat = mm_sim_data.material().levelset();
-        // reinitialize_levelset(levelset);
-
-        //print_mm_data(mm_data.states(), mm_data.material().eos());
-      });
-*/
       _params.update_simulation_info();
     }
 
@@ -350,32 +298,48 @@ class MultimaterialSimulator final :
   params_t      _params;            //!< The parameters for the simulation.
   setter_t      _boundary_setter;   //!< The boundary setter.
 
-/*
-  void configure(const setting::Parameter* param)
-  {
-    std::cout << "Don't know how to set this param : " << param->type() << "\n";
-  }
-*/
-
   /// Returns the dimension information for the simulator.
-  auto dimension_info() const
-  {
+  auto dimension_info() const {
     auto dim_info = DimInfo<dimensions>();
-    unrolled_for<dimensions>([&] (auto i)
-    {
+    unrolled_for<dimensions>([&] (auto i) {
       dim_info[i] = get<0>(_mm_data).states().size(i);
       //dim_info[i] = _data.states().size(i);
     });
     return dim_info;
   }
 
+  /// Creates the levelset boundary data, setting all boundaries for the
+  /// levelset to be transmissive.
+  ///
+  /// TODO: Change this to allow the simulator to be configured with specific
+  ///       boundary types for the levelset.
+  auto create_levelset_boundaries() const {
+    auto bounds = Array<boundary::DomainBoundary, dimensions>();
+    unrolled_for<dimensions>([&] (auto dim) {
+      bounds[dim] = boundary::DomainBoundary{
+        boundary::BoundaryKind::transmissive,
+        boundary::BoundaryKind::transmissive,
+        _params.domain.elements(dim)
+      };
+    });
+    return bounds;
+  }
+
+  /// Creates the material boundary data, setting all domain boundaries for the
+  /// materials to be transmissive
+  ///
+  /// TODO: Change this to allow the simulator to be configured with specific
+  ///       boundary types for the materials.
+  auto create_material_boundaries() const {
+    // TODO: Change to concrete implementation ...
+    return create_levelset_boundaries();
+  }
+
   /// Initializes the material data, ensuring that it is on both the host and
   /// the device.
-  void init_material_data()
-  {
+  void init_material_data() {
     print_subprocess("Initializing material data");
-    for_each(_mm_data, [&] (auto& mm_data)
-    {
+    for_each(_mm_data, [&] (auto& mm_data) {
       mm_data.initialize();
       mm_data.sync_device_to_host();
 
@@ -386,14 +350,12 @@ class MultimaterialSimulator final :
 
   /// Updates the time delta for the simulation by finding the maximum wavespeed
   /// in the materials.
-  void update_time_delta()
-  {
+  void update_time_delta() {
     print_subprocess("Computing wavespeeds");
     value_t max_ws = 0.0;
       
     // Compute the max wavespeed to use for the time delta ...
-    for_each(_mm_data, [&] (auto& mm_data)
-    {
+    for_each(_mm_data, [&] (auto& mm_data) {
       auto& mat = mm_data.material();
 
       // Get input, output, and wavespeed iterators for this material ...
@@ -412,11 +374,9 @@ class MultimaterialSimulator final :
   }
 
   /// Evolves the data for each of the materials in the simulation.
-  void evolve_materials()
-  {
+  void evolve_materials() {
     print_subprocess("Evolving materials");
-    for_each(_mm_data, [&] (auto& mm_data)
-    {
+    for_each(_mm_data, [&] (auto& mm_data) {
       mm_data.sync_device_to_host();
       print_mm_data(mm_data.states(), mm_data.material().eos());
 
@@ -428,6 +388,8 @@ class MultimaterialSimulator final :
       print_mm_data(mm_data.states(), mm_data.material().eos());
     });
   }
+
+  //==--- [Levelset] -------------------------------------------------------==//
 
   /// Evolves the levelset data for the materials. This comprises of a number of
   /// steps, which are:
@@ -446,53 +408,64 @@ class MultimaterialSimulator final :
   ///
   /// - Perform levelset re-initialization.
   ///
-  /// \param[in] velocities The velocities to evolve the levelsets with.
-  /// \tparam    Velocities The types of the velocities.
-  template <typename Velocities>
-  void evolve_levelsets(Velocities&& velocities)
-  {
+  /// \param[in] velocities     The velocities to evolve the levelsets with.
+  /// \param[in] boundaries     The boundaries for the levelset.
+  /// \tparam    Velocities     The types of the velocities.
+  /// \tparam    BoundContainer The type of the boundary container.
+  template <typename Velocities, typename BoundContainer>
+  void evolve_levelsets(
+    Velocities&&     velocities,
+    BoundContainer&& boundaries 
+  ) {
     //==-- [D] [Print levelsets] -------------------------------------------==//
-    print_subprocess("Levelsets before");
-    for_each(_mm_data, [] (auto& mm_data)
-    {
+    print_subprocess("Levelsets before evolving");
+    for_each(_mm_data, [] (auto& mm_data) {
       mm_data.material().levelset().print();
     });
 
     //==-- [D] [Set velocity data] -----------------------------------------==//
-    print_subprocess("Settings levelset velocities");
-    auto v_iter = velocities.multi_iterator();
-    levelset::set_velocities(_mm_data, v_iter);
-
-    //==-- [D] [Print velocity data] ---------------------------------------==//
-    auto host_vel = velocities.as_host();
-    for (const auto& v : host_vel)
-    {
-      std::cout << std::right   << std::setfill(' ')
-                << std::setw(8) << std::setprecision(4) 
-                << v;
-    }
-    std::cout << "\n";
+    //print_subprocess("Settings levelset velocities");
+    //auto v_iter = velocities.multi_iterator();
+    //levelset::set_velocities(_mm_data, v_iter);
+    set_levelset_velocities_from_materials(
+      std::forward<Velocities>(velocities)
+    );
 
     //==-- [R] [Perform the evolution] -------------------------------------==//
-    evolve_levelsets_impl(v_iter);
+    evolve_levelsets_impl(
+      std::forward<Velocities>(velocities)    ,
+      std::forward<BoundContainer>(boundaries)
+    );
 
     // [D]
-    for_each(_mm_data, [] (auto& mm_data)
-    {
+    print_subprocess("Levelsets after evolving");
+    for_each(_mm_data, [] (auto& mm_data) {
       mm_data.material().levelset().print();
     });
 
-    //==-- [R] [Perform the projection fixup] ------------------------------==//
     project_levelsets();
 
     // [D]
-    for_each(_mm_data, [] (auto& mm_data)
-    {
+    print_subprocess("Levelsets after projecting");
+    for_each(_mm_data, [] (auto& mm_data) {
       mm_data.material().levelset().print();
     });
 
     //==-- [R] [Re-initialize the levelsets] -------------------------------==//
-    //reinit_levelsets(v_iter());
+
+    for_each(_mm_data, [&] (auto& mm_data) {
+      solver::eikonal(
+        mm_data.material().levelset().multi_iterator()    ,
+        mm_data.material_out().levelset().multi_iterator(),
+        _params.dh()                                      ,
+        ls_reinit_t()
+      );
+      mm_data.swap_material_levelset_in_out_data();
+    });
+
+    for_each(_mm_data, [] (auto& mm_data) {
+      mm_data.material().levelset().print();
+    });
   }
 
   /// Sets the velocities for the levelset using the velocity and levelset data
@@ -500,45 +473,56 @@ class MultimaterialSimulator final :
   /// \param[in] velocities The velocities to set the data for.
   /// \tparam    Velocities The types of the velocities.
   template <typename Velocities>
-  void set_levelset_velocities_from_materials(Velocities&& velocities)
-  {
-    print_subprocess("Settings levelset velocities");
+  void set_levelset_velocities_from_materials(Velocities&& velocities) {
+    print_subprocess("Setting levelset velocities");
     levelset::set_velocities(_mm_data, velocities.multi_iterator());
 
     auto host_vel = velocities.as_host();
-    for (const auto& v : host_vel)
-    {
-      std::cout 
+    auto i = 0;
+    for (const auto& v : host_vel) {
+      std::cout
+        //===-- Index ------------------------------------------------------==//
+        << std::left  
+        << std::setfill(' ') 
+        << std::setw(8) 
+        << i++
+        //==--- Value ------------------------------------------------------==//
         << std::right
         << std::setfill(' ')
         << std::setw(8)
         << std::setprecision(4)
-        << v;
+        << v
+        << "\n";
     }
     std::cout << "\n";
   }
 
   /// Implementation of levelset evolution for all levelsets.
-  /// \param[in] v_iter           The iterator over the velocity data.
-  /// \tparam    VelocityIterator The type of the velocity iterator.
-  template <typename VelocityIterator>
-  void evolve_levelsets_impl(VelocityIterator&& v_iter)
-  {
+  /// \param[in] velocities       The velocity data to use to for the evolution.
+  /// \param[in] boundaries       The boundaries for the levelset.
+  /// \tparam    Velocities       The type of the velocity container.
+  /// \tparam    BoundContainer   The type of the container for the boundaries.
+  template <typename Velocities, typename BoundContainer>
+  void evolve_levelsets_impl(
+    Velocities&&     velocities,
+    BoundContainer&& boundaries
+  ) {
     print_subprocess("Evolving levelsets");
       
     // Perform the evolution.
-    auto ls_evolver = levelset_evolver_t();
-    for_each(_mm_data, [&] (auto& mm_data)
-    {
+    for_each(_mm_data, [&] (auto& mm_data) {
       auto ls_it_in  = mm_data.material().levelset().multi_iterator();
       auto ls_it_out = mm_data.material_out().levelset().multi_iterator();
 
-      fluid::scheme::evolve(levelset_evolver_t(),
-                            ls_it_in            ,
-                            ls_it_out           ,
-                            _params.dt()        ,
-                            _params.dh()        ,
-                            v_iter              );
+      fluid::scheme::evolve(
+        ls_evolver_t()                                    ,
+        mm_data.material().levelset().multi_iterator()    ,
+        mm_data.material_out().levelset().multi_iterator(),
+        _params.dt()                                      ,
+        _params.dh()                                      ,
+        std::forward<BoundContainer>(boundaries)          ,
+        velocities.multi_iterator()
+      );
 
       mm_data.swap_material_levelset_in_out_data();
     });
@@ -547,21 +531,20 @@ class MultimaterialSimulator final :
   /// Performs a projection method on the levelsets to ensure that they all
   /// agree on the lolocations of the interfaces and that there are no overlaps
   /// or voids.
-  void project_levelsets()
-  {
-    print_subprocess("Projection levelsets");
+  void project_levelsets() {
+    print_subprocess("Projecting levelsets");
 
-    levelset::project(unpack(_mm_data, [] (auto&&... material_data)
-    {
-      return make_tuple(material_data.material().levelset().multi_iterator()...);
+    levelset::project(unpack(_mm_data, [] (auto&&... material_data) {
+      return make_tuple(
+        material_data.material().levelset().multi_iterator()...
+      );
     }));
   }
 
   //==--- [S - Debug utilities] --------------------------------------------==//
   
   /// Prints a banner for a new iteration for a simulation.
-  void print_new_iter() const
-  {
+  void print_new_iter() const {
     printf("============================================================\n");
     printf("| [S] [New iteration]                                      |\n");
     printf("============================================================\n");
@@ -571,8 +554,7 @@ class MultimaterialSimulator final :
   /// Prints that a new subprocess with \p name is starting.  
   /// \param[in] name The name of the new process.
   template <typename Name>
-  void print_subprocess(Name name) const
-  {
+  void print_subprocess(Name name) const {
     printf("| [S] [New process] : [ %s ]\n", name);
   }
 
@@ -581,35 +563,37 @@ class MultimaterialSimulator final :
   /// \param[in] states The states to print.
   /// \param[in] eos    The equation of state for the material the state is in.
   template <typename States, typename Eos>
-  void print_mm_data(States&& states, Eos&& eos) const
-  {
+  void print_mm_data(States&& states, Eos&& eos) const {
     // Density:
-    std::cout << "[D]" << " : ";
-    for (const auto& state : states)
-    {
-      std::cout << std::right      << std::setfill(' ')
-                << std::setw(8)    << std::setprecision(4)
-                << state.density() << " ";
-    }
-    std::cout << "\n";
-
-    // Pressure:
-    std::cout << "[P]" << " : ";
-    for (const auto& state : states)
-    {
-      std::cout << std::right          << std::setfill(' ')
-                << std::setw(8)        << std::setprecision(4)
-                << state.pressure(eos) << " ";
-    }
-    std::cout << "\n";
-
-    // Velocity:
-    std::cout << "[V]" << " : ";
-    for (const auto& state : states)
-    {          
-      std::cout << std::right                     << std::setfill(' ')
-                << std::setw(8)                   << std::setprecision(4)
-                << state.velocity(std::size_t(0)) << " ";
+    std::cout 
+      << std::setw(3)  << std::left  << std::setfill(' ') << "[I] |"
+      << std::setw(12) << std::right << std::setfill(' ') << "[D] |"
+      << std::setw(12) << std::right << std::setfill(' ') << "[P] |"
+      << std::setw(13) << std::right << std::setfill(' ') << "[U] |\n";
+    std::size_t i = 0;
+    for (const auto& state : states) {
+      std::cout 
+        << std::setw(3) << std::left  << std::setfill(' ') << i++ << " |";
+      for (auto e : range(state.size())) {
+        auto v = (
+          e == 0 
+            ? state.density()
+            : e == 1
+              ? state.pressure(eos)
+              : e == 2
+                ? state.velocity(dim_x)
+                : state.velocity(dim_y)
+        );
+ 
+        std::cout 
+          << std::setw(10) 
+          << std::right 
+          << std::setfill(' ')
+          << std::setprecision(4)
+          << v
+          << " |";
+      }
+      std::cout << "\n";
     }
     std::cout << "\n";
   }

@@ -19,8 +19,8 @@
 //#include "solver_utilities.hpp"
 #include "cuda/split_solver.cuh"
 #include <fluidity/dimension/dimension.hpp>
-#include <fluidity/execution/execution_policy.hpp>
 #include <fluidity/iterator/multidim_iterator.hpp>
+#include <fluidity/traits/device_traits.hpp>
 #include <fluidity/utility/cuda.hpp>
 #include <fluidity/utility/number.hpp>
 
@@ -84,8 +84,7 @@ struct SplitSolver {
   /// \param[in] it The iterator to the data to solve.
   /// \tparam    It The type of the iteraotr.
   template <typename It>
-  void set_grid_sizes(It&& it)
-  {
+  void set_grid_sizes(It&& it) {
     _thread_sizes = get_thread_sizes(it);
     _block_sizes  = get_block_sizes(it, _thread_sizes);
   }
@@ -103,9 +102,10 @@ struct SplitSolver {
   /// \tparam    It    The type of the multi dimensional iterator.
   /// \tparam    Mat   The type of the material for the system.
   /// \tparam    T     The type of the scaling factor.
-  template <typename It, typename Mat, typename T, exec::gpu_enable_t<It> = 0>
-  void solve(It&& in, It&& out, Mat&& mat, T dtdh, setter_ref_t setter) const 
-  {
+  template <typename It ,
+            typename Mat,
+            typename T  , traits::gpu_enable_t<It> = 0>
+  void solve(It&& in, It&& out, Mat&& mat, T dtdh, setter_ref_t setter) const {
     detail::cuda::solve_impl_split(*this                 ,
                                    std::forward<It>(in)  ,
                                    std::forward<It>(out) ,
@@ -115,14 +115,12 @@ struct SplitSolver {
   }
 
   /// Returns the number of threads per block for the solver.
-  auto thread_sizes() const
-  {
+  auto thread_sizes() const {
     return _thread_sizes;
   }
 
   /// Returns the dimension information for the blocks to solve.
-  auto block_sizes() const
-  {
+  auto block_sizes() const {
     return _block_sizes;
   }
 
@@ -143,16 +141,13 @@ struct SplitSolver {
                                           Mat&&            mat   ,
                                           T                dtdh  ,
                                           setter_ref_t     setter,
-                                          Dim              dim   )
-  {
-    if (in_range(in))
-    {
+                                          Dim              dim   ) {
+    if (in_range(in)) {
       const auto flux_solver = flux_solver_t(mat, dtdh);
             auto patch       = make_patch_iterator(in, dispatch_tag, dim);
 
       // Shift the iterators to offset the padding, then set the patch data:
-      unrolled_for<num_dimensions>([&] (auto dim_off)
-      {
+      unrolled_for<num_dimensions>([&] (auto dim_off) {
         shift_iterators(in, out, patch, dim_off, dim);
       });
       *patch = *in;
@@ -182,14 +177,13 @@ struct SplitSolver {
   /// \tparam    SDim      The type of the solve dimension specifier.
   template <typename I1, typename I2, typename ODim, typename SDim>
   fluidity_host_device static auto
-  shift_iterators(I1&& in, I1&& out, I2&& patch, ODim dim_off, SDim dim_solve)
-  {
+  shift_iterators(I1&& in, I1&& out, I2&& patch, ODim dim_off, SDim dim_solve) {
     const auto in_out_shift = flattened_id(dim_off);
     in.shift(in_out_shift , dim_off);
     out.shift(in_out_shift, dim_off);
 
-    const auto shift =
-      thread_id(dim_off) + (dim_solve == dim_off ? padding : 0);
+    const auto shift = thread_id(dim_off) 
+                     + (dim_solve == dim_off ? padding : 0);
     patch.shift(shift, dim_off);
   }
 
@@ -198,8 +192,7 @@ struct SplitSolver {
   /// \tparam    Iterator The type of the iterator.
   /// \tparam    DS       The type which defines the solving dimension.
   template <typename It, typename DS>
-  fluidity_device_only static auto make_patch_iterator(It&& it, tag_1d_t, DS)
-  {
+  fluidity_device_only static auto make_patch_iterator(It&& it, tag_1d_t, DS) {
     using state_t    = std::decay_t<decltype(*(it))>;
     using dim_info_t = DimInfoCt<threads_per_block_1d_x + (padding << 1)>;
     return make_multidim_iterator<state_t, dim_info_t>();
@@ -211,8 +204,7 @@ struct SplitSolver {
   /// \tparam    Iterator The type of the iterator.
   /// \tparam    DS       The type which defines the solving dimension.
   template <typename It, typename DS>
-  fluidity_device_only static auto make_patch_iterator(It&& it, tag_2d_t, DS)
-  {
+  fluidity_device_only static auto make_patch_iterator(It&& it, tag_2d_t, DS) {
     constexpr auto pad_amount = padding << 1;
     using state_t    = std::decay_t<decltype(*(it))>;
     using dim_info_t = 
@@ -228,8 +220,7 @@ struct SplitSolver {
   /// \tparam    Iterator The type of the iterator.
   /// \tparam    DS       The type which defines the solving dimension.
   template <typename It, typename DS>
-  fluidity_device_only static auto make_patch_iterator(It&& it, tag_3d_t, DS)
-  {
+  fluidity_device_only static auto make_patch_iterator(It&& it, tag_3d_t, DS) {
     constexpr auto pad_amount = padding << 1;
     using state_t    = std::decay_t<decltype(*(it))>;
     using dim_info_t = 

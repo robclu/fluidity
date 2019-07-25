@@ -1,4 +1,4 @@
-//==--- fluidity/levelset/levelset_projection.hpp ---------- -*- C++ -*- ---==//
+//==--- fluidity/levelset/levelset_sign_correction.hpp ----- -*- C++ -*- ---==//
 //            
 //                                Fluidity
 // 
@@ -8,10 +8,8 @@
 //
 //==------------------------------------------------------------------------==//
 //
-/// \file  levelset_projection.hpp
-/// \brief This file defines the interface for projecting a collection of
-///        levelsets such that they all agree on the interface locations and
-///        have no overlaps or voids.
+/// \file  levelset_sign_correction.hpp
+/// \brief This file defines t
 //
 //==------------------------------------------------------------------------==//
 

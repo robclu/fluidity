@@ -17,36 +17,56 @@
 #define FLUIDITY_LEVELSET_VELOCITY_INITIALIZATION_HPP
 
 #include "cuda/velocity_initialization.cuh"
-#include <fluidity/execution/execution_policy.hpp>
+#include <fluidity/traits/device_traits.hpp>
 
 namespace fluid    {
 namespace levelset {
 
-/// Sets the velocity values pointed to by the \p velocities using the state
-/// data for each of the materials in the material iterator wrapper. This 
-/// overload is enabled if the velocity iterator has a CPU execution policy.
-/// \param[in] mat_data   Iterator to the material data.
-/// \param[in] velocities Iterator to the velocity data.
-/// \tparam    MatIt      The type of the state iterator.
-/// \tparam    VelIt      The type of the wavespeed iterator.
-template <typename MatIt, typename VelIt, exec::cpu_enable_t<VelIt> = 0>
-void set_velocities(MatIt&& mat_data, VelIt&& velocities)
-{
-  // Call CPU implementation ...
+/// Sets the velocity values stored in the \p velocities iterator using the
+/// state data for each of the \p materials in the materials container.
+///
+/// This  overload is enabled if the velocity iterator has a GPU execution
+/// policy.
+///
+/// \param[in] materials          Container with material simulation data for
+///                               each material.
+/// \param[in] velocities         Iterator to the velocity data.
+/// \tparam    MaterialContainer  The type of the container for the material
+///                               data. 
+/// \tparam    VelIterator        The type of the velocity iterator.
+template <
+  typename MaterialContainer,
+  typename VelIterator      ,
+  traits::cpu_enable_t<VelIterator> = 0
+>
+auto set_velocities(MaterialContainer&& materials, VelIterator&& velocities) 
+-> void {
+  // TODO: Call CPU implementation ...
 }
 
-/// Sets the velocity values pointed to by the \p velocities using the state
-/// data for each of the materials in the material iterator wrapper. This 
-/// overload is enabled if the velocity iterator has a GPU execution policy.
-/// \param[in] mat_data   Iterator to the material data.
-/// \param[in] velocities Iterator to the velocity data.
-/// \tparam    MatIt      The type of the state iterator.
-/// \tparam    VelIt      The type of the wavespeed iterator.
-template <typename MatData, typename VelIt, exec::gpu_enable_t<VelIt> = 0>
-void set_velocities(MatData&& mat_data, VelIt&& velocities)
-{
-  cuda::set_velocities(std::forward<MatData>(mat_data),
-                       std::forward<VelIt>(velocities));
+/// Sets the velocity values stored in the \p velocities iterator using the
+/// state data for each of the \p materials in the materials container.
+///
+/// This  overload is enabled if the velocity iterator has a GPU execution
+/// policy.
+///
+/// \param[in] materials          Container with material simulation data for
+///                               each material.
+/// \param[in] velocities         Iterator to the velocity data.
+/// \tparam    MaterialContainer  The type of the container for the material
+///                               data. 
+/// \tparam    VelIterator        The type of the velocity iterator.
+template <
+  typename MaterialContainer,
+  typename VelIterator      ,
+  traits::gpu_enable_t<VelIterator> = 0
+>
+auto set_velocities(MaterialContainer&& materials, VelIterator&& velocities) 
+-> void {
+  cuda::set_velocities(
+    std::forward<MaterialContainer>(materials),
+    std::forward<VelIterator>(velocities)
+  );
 }
 
 }} // namespace fluid::levelset

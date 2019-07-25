@@ -34,22 +34,19 @@ class Evaluatable {
   using impl_t = EvaluatableImpl;
 
   /// Returns a pointer to the implementation.
-  fluidity_host_device impl_t* impl()
-  {
+  fluidity_host_device impl_t* impl() {
     return static_cast<impl_t*>(this);
   }
 
   /// Returns a const pointer to the implementation.
-  fluidity_host_device const impl_t* impl() const
-  {
+  fluidity_host_device const impl_t* impl() const {
     return static_cast<const impl_t*>(this);
   }
 
   /// Returns the width required when evaluating. The width is the maximum
   /// offset (in any dimension) from a cell to another cell whose data needs to
   /// be used by the cell when performing the evaluation.
-  constexpr auto width() const -> std::size_t
-  {
+  constexpr auto width() const -> std::size_t {
     return impl()->width();
   }
 

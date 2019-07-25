@@ -80,40 +80,6 @@ class Stencil {
                   "Iterator must be a multidimensional iterator!");
     return impl()->forward_deriv_impl(std::forward<It>(it), h, dim);
   }
-
-
-  /// Returns the quadratic coefficients in the \p dim which, when accumulated
-  /// for all dimensions, can be solved for the stencil.
-  /// \param[in] it     The iterable data to apply the stencil to.
-  /// \param[in] h      The delta for the stencil.
-  /// \param[in] dim    The dimension to compute the difference in.
-  /// \tparam    It     The type of the iterator.
-  /// \tparam    T      The type of the delta.
-  /// \tparam    Dim    The type of the dimension specifier.
-  template <typename It, typename T, typename Dim>
-  fluidity_host_device auto quadratic_back(It&& it, T h, Dim dim) const
-  {
-    static_assert(is_multidim_iter_v<It>, 
-                  "Iterator must be a multidimensional iterator!");
-    return impl()->quadratic_back_impl(std::forward<It>(it), h, dim);
-  }
-
-
-  /// Returns the quadratic coefficients in the \p dim which, when accumulated
-  /// for all dimensions, can be solved for the stencil.
-  /// \param[in] it     The iterable data to apply the stencil to.
-  /// \param[in] h      The delta for the stencil.
-  /// \param[in] dim    The dimension to compute the difference in.
-  /// \tparam    It     The type of the iterator.
-  /// \tparam    T      The type of the delta.
-  /// \tparam    Dim    The type of the dimension specifier.
-  template <typename It, typename T, typename Dim>
-  fluidity_host_device auto quadratic_fwrd(It&& it, T h, Dim dim) const
-  {
-    static_assert(is_multidim_iter_v<It>, 
-                  "Iterator must be a multidimensional iterator!");
-    return impl()->quadratic_fwrd_impl(std::forward<It>(it), h, dim);
-  }
 };
 
 //==--- Traits -------------------------------------------------------------==//

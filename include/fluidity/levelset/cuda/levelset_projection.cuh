@@ -50,19 +50,20 @@ using multi_ls_enable_t = std::enable_if_t<(tuple_size_v<Levelsets> > 2), int>;
 /// \param[in] ls_iterators       A collection of levelset iterators.
 /// \tparam    LevelsetIterators  The type of the iterator container. This must
 ///                               be able to be used with for_each().
+
 template <typename LevelsetIterators, two_ls_enable_t<LevelsetIterators> = 0>
-fluidity_global void project_impl(LevelsetIterators ls_iterators)
-{
+fluidity_global void project_impl(LevelsetIterators ls_iterators) {
   auto& front_ls = get_front(ls_iterators);
   auto& back_ls  = get_back(ls_iterators);
 
-  unrolled_for<std::decay_t<decltype(back_ls)>::dimensions>([&] (auto dim)
-  {
+  unrolled_for<std::decay_t<decltype(back_ls)>::dimensions>([&] (auto dim) {
     front_ls.shift(flattened_id(dim), dim);
     back_ls.shift(flattened_id(dim), dim);
-
-    *back_ls = -(*front_ls);
   });
+  auto avg = 0.5 * (*front_ls + *back_ls);
+
+  *front_ls -= avg;
+  *back_ls   = -(*front_ls);
 }
 
 /// This performs a projection of the levelsets which ensures that there are no
@@ -84,38 +85,34 @@ fluidity_global void project_impl(LevelsetIterators ls_iterators)
 /// \tparam    LevelsetIterators  The type of the iterator container. This must
 ///                               be able to be used with for_each().
 template <typename LevelsetIterators, multi_ls_enable_t<LevelsetIterators> = 0>
-fluidity_global void project_impl(LevelsetIterators ls_iterators)
-{
-  using iter_t        = std::decay_t<decltype(get<0>(ls_iterators))>;
-  using value_t       = typename iter_t::value_t;
-  constexpr auto dims = iter_t::dimensions;
+fluidity_global void project_impl(LevelsetIterators ls_iterators) {
+  using iter_t            = std::decay_t<decltype(get<0>(ls_iterators))>;
+  using value_t           = typename iter_t::value_t;
+  constexpr auto dims     = iter_t::dimensions;
+  constexpr auto max_v    = std::numeric_limits<value_t>::max();
+  constexpr auto max_m1_v = max_v - value_t{1};
 
   // Offset all the iterators and compute the two min values.
-  auto smallest      = std::numeric_limits<value_t>::max() - value_t{1};
-  auto next_smallest = std::numeric_limits<value_t>::max();
-  for_each(ls_iterators, [&] (auto&& it)
-  {
-    unrolled_for<dims>([&] (auto dim)
-    {
+  auto smallest = max_m1_v, next_smallest = max_v;
+  for_each(ls_iterators, [&] (auto&& it) {
+    unrolled_for<dims>([&] (auto dim) {
       it.shift(flattened_id(dim), dim);
     });
-    if (*it < smallest)
-    {
+    if (*it < smallest) {
       next_smallest = smallest;
       smallest      = *it;
-    }
-    else if (*it < next_smallest)
-    {
+    } else if (*it < next_smallest) {
       next_smallest = *it;
     }
   });
 
   // Compute the average which is used to project each cell:
+  // TODO: Check both values are valid ...
   smallest = value_t{0.5} * (smallest + next_smallest);
+
   // Perform the projection. Iterators were shifted above
   // so are pointing to the correct cells.
-  for_each(ls_iterators, [&] (auto&& it)
-  {
+  for_each(ls_iterators, [&] (auto&& it) {
     *it -= smallest;
   });
 }
@@ -137,8 +134,7 @@ fluidity_global void project_impl(LevelsetIterators ls_iterators)
 /// \tparam    LevelsetIterators  The type of the iterator container. This must
 ///                               be able to be used with for_each().
 template <typename LevelsetIterators>
-void project(LevelsetIterators&& ls_iterators)
-{
+void project(LevelsetIterators&& ls_iterators) {
   using iter_t        = std::decay_t<decltype(get<0>(ls_iterators))>;
   using value_t       = typename iter_t::value_t;
   constexpr auto dims = iter_t::dimensions;

@@ -19,6 +19,7 @@
 #include <fluidity/dimension/dimension.hpp>
 #include <fluidity/dimension/thread_index.hpp>
 #include <fluidity/math/math.hpp>
+#include <fluidity/traits/device_traits.hpp>
 #include <fluidity/utility/cuda.hpp>
 
 namespace fluid  {
@@ -171,19 +172,16 @@ struct BoundaryLoader {
   /// \tparam     I1       The type of the data iterator.
   /// \tparam     I2       The type of the patch iterator.
   /// \tparam     Dim      The type of the dimension.
-  template < typename I1, typename I2, typename Dim, exec::gpu_enable_t<I1> = 0>
+  template <typename I1 ,
+            typename I2 ,
+            typename Dim, traits::gpu_enable_t<I1> = 0>
   static fluidity_host_device void
-  load_boundary(I1&& data, I2&& patch, Dim dim, BoundarySetter setter)
-  {
-
+  load_boundary(I1&& data, I2&& patch, Dim dim, BoundarySetter setter) {
     int global_idx = flattened_id(dim), local_idx = thread_id(dim);
-    if (global_idx < padding)
-    {
+    if (global_idx < padding) {
       constexpr auto bi = BoundaryIndex::first;
       setter(*patch, *patch.offset(-2 * global_idx - 1, dim), dim, bi);
-    }
-    else if (local_idx < padding)
-    {
+    } else if (local_idx < padding) {
       const auto shift = -2 * local_idx - 1;
       *patch.offset(shift, dim) = *data.offset(shift, dim);
     }
@@ -191,33 +189,30 @@ struct BoundaryLoader {
     global_idx = static_cast<int>(data.size(dim)) - global_idx - 1;
     local_idx  = static_cast<int>(block_size(dim)) - local_idx - 1;
 
-    if (global_idx < padding)
-    {
+    if (global_idx < padding) {
       constexpr auto bi = BoundaryIndex::second;
       setter(*patch, *patch.offset(2 * global_idx + 1, dim), dim, bi);
-    }
-    else if (local_idx < padding)
-    {
+    } else if (local_idx < padding) {
       const auto shift = 2 * local_idx + 1;
       *patch.offset(shift, dim) = *data.offset(shift, dim);
     }
   }
 
-  template < typename I1, typename I2, typename Dim, exec::gpu_enable_t<I1> = 0>
+
+  template <typename I1 ,
+            typename I2 ,
+            typename Dim, traits::gpu_enable_t<I1> = 0>
   static fluidity_host_device void
-  load_boundary_global(I1&& data, Dim dim, BoundarySetter setter)
-  {
+  load_boundary_global(I1&& data, Dim dim, BoundarySetter setter) {
     // Set the near boundary:
     int idx = flattened_id(dim);
-    if (idx < padding)
-    {
+    if (idx < padding) {
       constexpr auto bi = BoundaryIndex::first;
       setter(*data, *data.offset(-2 * idx - 1, dim), dim, bi);
     }
     // Set the far boundary:
     idx = static_cast<int>(data.size(dim)) - idx - 1;
-    if (idx < padding)
-    {
+    if (idx < padding) {
       constexpr auto bi = BoundaryIndex::second;
       setter(*data, *data.offset(2 * idx + 1, dim), dim, bi);
     }
@@ -259,18 +254,15 @@ struct BoundaryLoader {
   template <typename I1 ,
             typename I2 ,
             typename OW ,
-            typename Dim,
-            exec::gpu_enable_t<I1> = 0>
-  static fluidity_host_device void load_boundary_unsplit(I1&&           data   ,
-                                                         I2&&           patch  ,
-                                                         OW&&           offwrap,
-                                                         Dim            dim    ,
-                                                         BoundarySetter setter)
-  {
-
+            typename Dim, traits::gpu_enable_t<I1> = 0>
+  static fluidity_host_device void 
+  load_boundary_unsplit(I1&&           data   ,
+                        I2&&           patch  ,
+                        OW&&           offwrap,
+                        Dim            dim    ,
+                        BoundarySetter setter) {
     int global_idx = flattened_id(dim), local_idx = thread_id(dim);
-    if (global_idx < padding)
-    {
+    if (global_idx < padding) {
       constexpr auto bi     = BoundaryIndex::first;
       const auto     shift  = -2 * global_idx - 1;
 
@@ -278,9 +270,7 @@ struct BoundaryLoader {
 
       offwrap.offset(shift, dim);
       offwrap.set_as_global();
-    }
-    else if (local_idx < padding)
-    {
+    } else if (local_idx < padding) {
       const auto shift = -2 * local_idx - 1;
 
       *patch.offset(shift, dim) = *data.offset(shift, dim);
@@ -292,8 +282,7 @@ struct BoundaryLoader {
     global_idx = static_cast<int>(data.size(dim)) - global_idx - 1;
     local_idx  = static_cast<int>(block_size(dim)) - local_idx - 1;
 
-    if (global_idx < padding)
-    {
+    if (global_idx < padding) {
       constexpr auto bi    = BoundaryIndex::second;
       const auto     shift = 2 * global_idx + 1;
 
@@ -301,9 +290,7 @@ struct BoundaryLoader {
 
       offwrap.offset(shift, dim);
       offwrap.set_as_global();
-    }
-    else if (local_idx < padding)
-    {
+    } else if (local_idx < padding) {
       const auto shift = 2 * local_idx + 1;
 
       *patch.offset(shift, dim) = *data.offset(shift, dim);
@@ -343,9 +330,10 @@ struct BoundaryLoader {
   /// \tparam    D     The number of dimensions for the iterators.
   /// \tparam    I1    The type of the data iterator.
   /// \tparam    I2    The type of the patch iterator.
-  template <std::size_t D, typename I1, typename I2, exec::gpu_enable_t<I1> = 0>
-  static fluidity_host_device void load_corners(I1&& data, I2&& patch)
-  {
+  template <std::size_t D ,
+            typename    I1,
+            typename    I2, traits::gpu_enable_t<I1> = 0>
+  fluidity_host_device static void load_corners(I1&& data, I2&& patch) {
     auto outer_it = patch;
     auto inner_it = data;
 
@@ -368,8 +356,7 @@ struct BoundaryLoader {
     using vel_array_t = Array<velocity_t, D>;
     vel_array_t velocities{0};
 
-    unrolled_for<D>([&] (auto d)
-    {
+    unrolled_for<D>([&] (auto d) {
       constexpr auto dim = std::size_t{d};
       auto tid = thread_id(dim) , ftid = flattened_id(dim);
       auto bs  = block_size(dim), gs   = data.size(dim);
@@ -447,7 +434,7 @@ struct BoundaryLoader {
     }
   }
 
-  template <typename IT, exec::gpu_enable_t<IT> = 0>
+  template <typename IT, traits::gpu_enable_t<IT> = 0>
   static fluidity_host_device void 
   load_global_boundaries(IT&& data, const BoundarySetter& setter)
   {
@@ -480,7 +467,7 @@ struct BoundaryLoader {
     if (is_corner == 2) { *corner_it = corner; }
   }
 
-  template <typename I1, typename I2, exec::gpu_enable_t<I1> = 0>
+  template <typename I1, typename I2, traits::gpu_enable_t<I1> = 0>
   static fluidity_host_device void load_patch_boundaries(I1&& data, I2&& patch)
   {
     auto patch_corner_it = patch;
@@ -549,7 +536,9 @@ struct BoundaryLoader {
   /// \tparam     I1       The type of the data iterator.
   /// \tparam     I2       The type of the patch iterator.
   /// \tparam     Dim      The type of the dimension.
-  template < typename I1, typename I2, typename Dim, exec::cpu_enable_t<I1> = 0>
+  template <typename I1 ,
+            typename I2 ,
+            typename Dim, traits::cpu_enable_t<I1> = 0>
   static fluidity_host_device void
   load_boundary(I1&& data, I2&& patch, Dim dim, BoundarySetter setter)
   {

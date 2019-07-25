@@ -64,6 +64,15 @@ struct MultidimIterator : public DimensionInfo {
   /// Defines that the iterator is multi-dimensional.
   static constexpr auto is_multi_dimensional = true;
 
+  /// Defines a vector type, which is either the type of the data if it is
+  /// already a container, otherwise it is an array with size equal to the
+  /// number of dimensions.
+  using vec_t = std::conditional_t<
+    traits::is_container_v<value_t>,
+    value_t                        ,
+    Array<value_t, dimensions>
+  >;
+
  private:
   pointer_t _ptr; //!< A pointer to the data to iterate over.
 
@@ -88,7 +97,7 @@ struct MultidimIterator : public DimensionInfo {
   /// \tparam    SO  The types of the rest of the dimension sizes.
   template <typename S1, typename... SO, var_or_int_enable_t<S1, SO...> = 0>
   fluidity_host_device MultidimIterator(pointer_t ptr, S1&& s1, SO&&... so)
-  :   dim_info_t{std::forward<S1>(s1), std::forward<SO>(so)...}, _ptr{ptr} {
+  : dim_info_t{std::forward<S1>(s1), std::forward<SO>(so)...}, _ptr{ptr} {
     assert(_ptr != nullptr && "Cannot iterate from a nullptr!");
   }
 
@@ -99,9 +108,9 @@ struct MultidimIterator : public DimensionInfo {
   /// \tparam    Sizes The types of the sizes.
   fluidity_host_device
   MultidimIterator(pointer_t ptr, const dim_info_t& dim_info)
-  :   dim_info_t{dim_info}, _ptr{ptr} {
+  : dim_info_t{dim_info}, _ptr{ptr} {
     // NOTE: This assertation causes a problem ...
-    assert(_ptr != nullptr && "Cannot iterate from a nullptr!");
+    //assert(_ptr != nullptr && "Cannot iterate from a nullptr!");
   }
 
   //==--- [access] ---------------------------------------------------------==//
@@ -152,6 +161,12 @@ struct MultidimIterator : public DimensionInfo {
     return _ptr;
   }
 
+  /// Returns the data in a vector form. This overload is enabled when the data
+  /// is already a container, and is the same as dereferencing.
+  fluidity_host_device constexpr auto as_vec() const -> vec_t {
+    return as_vec_impl(traits::make_container_overload_t<value_t>{});
+  }
+
   //==--- [iterators] ------------------------------------------------------==//
 
   /// Returns a strided iterator which can iterate over the \p dim dimension.
@@ -184,8 +199,10 @@ struct MultidimIterator : public DimensionInfo {
   /// \param[in]  amount  The amount to offset the iterator by.
   /// \tparam     Dim     The type of the dimension.
   template <typename Dim>
-  fluidity_host_device constexpr value_t
-  backward_diff(Dim dim, unsigned int amount = 1) const {
+  fluidity_host_device constexpr auto backward_diff(
+    Dim          dim       ,
+    unsigned int amount = 1
+  ) const -> value_t {
     return *_ptr - *(_ptr - amount * stride(dim));
   }
 
@@ -209,8 +226,10 @@ struct MultidimIterator : public DimensionInfo {
   /// \param[in]  amount  The amount to offset the iterator by.
   /// \tparam     Dim     The type of the dimension.
   template <typename Dim>
-  fluidity_host_device constexpr value_t
-  central_diff(Dim dim, unsigned int amount = 1) const {
+  fluidity_host_device constexpr auto central_diff(
+    Dim          dim       ,
+    unsigned int amount = 1
+  ) const -> value_t {
     const auto shift = amount * stride(dim);
     return *(_ptr + shift) - *(_ptr - shift);
   }
@@ -239,8 +258,10 @@ struct MultidimIterator : public DimensionInfo {
   /// \param[in]  amount  The amount to offset the iterator by.
   /// \tparam     Dim     The type of the dimension.
   template <typename Dim>
-  fluidity_host_device constexpr value_t
-  forward_diff(Dim dim, unsigned int amount = 1) const {
+  fluidity_host_device constexpr auto forward_diff(
+    Dim          dim       ,
+    unsigned int amount = 1
+  ) const -> value_t {
     return *(_ptr + amount * stride(dim)) - *_ptr;
   }
 
@@ -252,12 +273,14 @@ struct MultidimIterator : public DimensionInfo {
   /// as the gradient in the respective. The gradient uses the central
   /// difference scheme, thus the iterator must be valid on both sides.
   /// \param[in] dh The resolution of the grid the iterator iterates over.
-  fluidity_host_device constexpr auto grad(value_t dh) const {
-    auto r = Array<value_t, dimensions>();
+  fluidity_host_device constexpr auto grad(value_t dh = 1) const 
+  -> Array<value_t, dimensions> {
+    auto       result = Array<value_t, dimensions>();
+    const auto fact   = value_t{0.5} / dh;
     unrolled_for<dimensions>([&] (auto d) {
-      r[i] = value_t{0.5} * this->central_diff(d, 1) / dh;
+      result[d] = fact * this->central_diff(d, 1);
     });
-    return r;
+    return result;
   }
 
   /// Computes the norm of the data, which is defined as:
@@ -265,16 +288,21 @@ struct MultidimIterator : public DimensionInfo {
   ///   - \frac{\nabla \phi}{|\nabla \phi|}
   /// \end{equation}
   /// \param[in] dh The resolution of the grid the iterator iterates over.
-  fluidity_host_device constexpr auto norm(value_t dh) const {
-    auto r   = Array<value_t, dimensions>();
-    auto mag = value_t{0};
+  fluidity_host_device constexpr auto norm(value_t dh = 1) const 
+  -> Array<value_t, dimensions> {
+    // NOTE: Here we do not use the grad() function to save some loops.
+    auto result = Array<value_t, dimensions>();
+    auto mag    = value_t{0};
+
+    // NOTE: this may need to change to -0.5, as in some of the literature.
+    const auto fact = value_t{0.5} / dh;
     unrolled_for<dimensions>([&] (auto d) {
       // Add the negative sign in now, to avoid an op later ...
       // Since we square for the sum, this makes no difference to the sum.
-      r[i] = value_t{-0.5} * this->central_diff(d, 1) / dh;
-      mag += r[i] * r[i];
+      result[d] = fact * this->central_diff(d, 1);
+      mag      += result[d] * result[d];
     });
-    return r / std::sqrt(mag);
+    return result / std::sqrt(mag);
   }
 
   /// Computes the norm of the data, which is defined as:
@@ -283,23 +311,25 @@ struct MultidimIterator : public DimensionInfo {
   /// \end{equation}
   /// for the case that it is known that $phi$ is a signed distance function and
   /// hence that $|\nabla \phi| = 1$. In this case, the computation of the
-  /// magnitude, and the subsequent division by it, can be avoided which is a
+  /// magnitude, and the subsequent division by it can be avoided which is a
   /// significant performance increase.
   /// \param[in] dh The resolution of the grid the iterator iterates over.
-  fluidity_host_device constexpr auto norm_sd(value_t dh) const {
-    auto r   = Array<value_t, dimensions>();
+  fluidity_host_device constexpr auto norm_sd(value_t dh) const 
+  -> Array<value_t, dimensions> {
+    auto       result = Array<value_t, dimensions>();
+    const auto fact   = value_t{-1} / dh;
     unrolled_for<dimensions>([&] (auto d) {
       // Add the negative sign in now, to avoid an op later ...
       // Since we square for the sum, this makes no difference to the sum.
-      r[i] = value_t{-1} * this->central_diff(d, 1) / dh;
+      result[d] = fact * this->central_diff(d, 1);
     });
-    return r;
+    return result;
   }
 
   //==--- [size] -----------------------------------------------------------==//
 
   /// Returns the number of dimensions which can be iterated over.
-  fluidity_host_device constexpr std::size_t num_dimensions() const {
+  fluidity_host_device constexpr auto num_dimensions() const -> std::size_t {
     return dimensions;
   }
 
@@ -308,9 +338,9 @@ struct MultidimIterator : public DimensionInfo {
   /// \param[in] dim    The dimension to get the offset for.
   /// \tparam    Dim    The type of the dimension.
   template <typename Dim> 
-  fluidity_host_device constexpr std::size_t stride(Dim dim) const
-  {
-    r
+  fluidity_host_device constexpr auto stride(Dim dim) const -> std::size_t {
+    return dim_stride(static_cast<const dim_info_t&>(*this), dim);
+  }
 
   //==--- [shifting] -------------------------------------------------------==//
 
@@ -365,6 +395,26 @@ struct MultidimIterator : public DimensionInfo {
     return dim_info_t::size(dim);
   }
 
+ private:
+
+  //==--- [as_vec impl] ----------------------------------------------------==//
+  
+  /// Returns the data in a vector form. This overload is enabled when the data
+  /// is already a container, and is the same as dereferencing.
+  fluidity_host_device constexpr auto as_vec_impl(
+    traits::container_overload_t
+  ) const -> vec_t {
+    return *_ptr;
+  }
+
+  /// Returns the data in a vector form. This overload is enabled when the data
+  /// is not in a container, and puts the data into a container.
+  fluidity_host_device constexpr auto as_vec_impl(
+    traits::non_container_overload_t
+  ) const -> vec_t {
+    return vec_t{*_ptr};
+  }
+
 };
 
 #if defined(__CUDACC__)
@@ -380,13 +430,12 @@ struct MultidimIterator : public DimensionInfo {
 /// \tparam DimInfo The information which defines the multi dimensional space.
 /// \tparam Padding The amount of padding for the iterator space.
 template <typename T, typename DimInfo, std::size_t Padding = 0>
-fluidity_device_only auto make_multidim_iterator() {
-  using iter_t = MultidimIterator<T, DimInfo, exec::gpu_t>;
-  constexpr std::size_t buffer_size =
-    DimInfo().template total_size<Padding>();
-
+fluidity_device_only auto make_multidim_iterator()
+-> MultidimIterator<T, DimInfo, exec::gpu_t> {
+  constexpr std::size_t buffer_size = DimInfo().template total_size<Padding>();
   __shared__ T buffer[buffer_size];
-  return iter_t{buffer};
+
+  return MultidimIterator<T, DimInfo, exec::gpu_t>{buffer};
 }
 
 /// Makes a multidimensional iterator over a multidimensional space, where the
@@ -399,13 +448,12 @@ fluidity_device_only auto make_multidim_iterator() {
 /// \tparam DimInfo The information which defines the multi dimensional space.
 /// \tparam PadInfo The information for the padding.
 template <typename T, typename DimInfo, typename PadInfo>
-fluidity_device_only auto make_multidim_iterator() {
-  using iter_t = MultidimIterator<T, DimInfo, exec::gpu_t>;
-  constexpr std::size_t buffer_size =
-    DimInfo().template total_size<PadInfo>();
-
+fluidity_device_only auto make_multidim_iterator()
+-> MultidimIterator<T, DimInfo, exec::gpu_t> {
+  constexpr std::size_t buffer_size = DimInfo().template total_size<PadInfo>();
   __shared__ T buffer[buffer_size];
-  return iter_t{buffer};
+
+  return MultidimIterator<T, DimInfo, exec::gpu_t>{buffer};
 }
 
 /// Makes a multidimensional iterator over a multidimensional space, where the
@@ -418,10 +466,9 @@ fluidity_device_only auto make_multidim_iterator() {
 /// \tparam    DimInfo The information which defines the multi dimensional
 ///                    space.
 template <typename T, typename DimInfo, nonmultiit_enable_t<T> = 0>
-fluidity_device_only constexpr auto make_multidim_iterator(T* ptr)
-{
-  using iter_t = MultidimIterator<T, DimInfo, exec::gpu_t>;
-  return iter_t{ptr};
+fluidity_device_only constexpr auto make_multidim_iterator(T* ptr) 
+-> MultidimIterator<T, DimInfo, exec::gpu_t> {
+  return MultidimIterator<T, DimInfo, exec::gpu_t>{ptr};
 }
 
 /// Makes a multidimensional iterator over a multidimensional space, where the
@@ -433,10 +480,11 @@ fluidity_device_only constexpr auto make_multidim_iterator(T* ptr)
 /// \tparam    T       The type of the data to iterate over.
 /// \tparam    DimInfo The information which defines the multi dimensional space.
 template <typename T, typename DimInfo, nonmultiit_enable_t<T> = 0>
-fluidity_device_only constexpr auto make_multidim_iterator(T* ptr, DimInfo info)
-{
-  using iter_t = MultidimIterator<T, DimInfo, exec::gpu_t>;
-  return iter_t{ptr, info};
+fluidity_device_only constexpr auto make_multidim_iterator(
+  T*      ptr ,
+  DimInfo info
+) -> MultidimIterator<T, DimInfo, exec::gpu_t> {
+  return MultidimIterator<T, DimInfo, exec::gpu_t>{ptr, info};
 }
 
 //==--- [Multidim default cretion] -----------------------------------------==//
@@ -470,9 +518,11 @@ fluidity_device_only constexpr auto make_multidim_iterator(Num<2>) {
 template <typename T>
 fluidity_device_only constexpr auto make_multidim_iterator(Num<3>) {
   using data_t     = std::decay_t<T>;
-  using dim_info_t = DimInfoCt<threads_per_block_3d_x,
-                               threads_per_block_3d_y,
-                               threads_per_block_3d_z>;
+  using dim_info_t = DimInfoCt<
+    threads_per_block_3d_x,
+    threads_per_block_3d_y,
+    threads_per_block_3d_z
+  >;
   return make_multidim_iterator<data_t, dim_info_t>();
 }
 
@@ -525,9 +575,11 @@ fluidity_device_only constexpr auto make_multidim_iterator(const It& it) {
 template <typename It, std::size_t Padding = 0, enable_3d_it_t<It> = 0>
 fluidity_device_only constexpr auto make_multidim_iterator(const It& it) {
   using data_t     = std::decay_t<decltype(*it)>;
-  using dim_info_t = DimInfoCt<threads_per_block_3d_x,
-                               threads_per_block_3d_y,
-                               threads_per_block_3d_z>;
+  using dim_info_t = DimInfoCt<
+    threads_per_block_3d_x,
+    threads_per_block_3d_y,
+    threads_per_block_3d_z
+  >;
   return make_multidim_iterator<data_t, dim_info_t, Padding>();
 }
 
@@ -540,13 +592,14 @@ fluidity_device_only constexpr auto make_multidim_iterator(const It& it) {
 /// \tparam T       The type of the data to iterate over.
 /// \tparam DimInfo The information which defines the multi dimensional space.
 template <typename T, typename DimInfo>
-fluidity_host_only auto make_multidim_iterator()
-{
-  using iter_t = MultidimIterator<T, DimInfo>;
-  static_assert(fluid::is_same_v<DimInfo, DimInfoCt>,
-                "DimInfo must be DimInfoCt type to make a multidim iterator!");
+fluidity_host_only auto make_multidim_iterator() 
+-> MultidimIterator<T, DimInfo> {
+  static_assert(
+    fluid::is_same_v<DimInfo, DimInfoCt>,
+    "DimInfo must be DimInfoCt type to make a multidim iterator!"
+  );
   static thread_local T buffer[DimInfo::total_size()];
-  return iter_t{buffer};
+  return MultidimIterator<T, DimInfo>{buffer};
 }
 
 #endif // __CUDACC__

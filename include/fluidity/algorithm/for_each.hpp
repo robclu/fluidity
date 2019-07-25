@@ -30,11 +30,9 @@ namespace fluid {
 /// \tparam    Ts       The types in the tuple.
 /// \tparam    Args     The types of the arguments.
 template <typename Functor, typename... Ts, typename... Args>
-void for_each(std::tuple<Ts...>& tup, Functor&& functor, Args&&... args)
-{
+void for_each(std::tuple<Ts...>& tup, Functor&& functor, Args&&... args) {
   constexpr auto elements = sizeof...(Ts);
-  unrolled_for<elements>([&] (auto i)
-  {
+  unrolled_for<elements>([&] (auto i) {
     auto& t_element = std::get<i>(tup);
     functor(t_element, std::forward<Args>(args)...);
   });
@@ -48,11 +46,9 @@ void for_each(std::tuple<Ts...>& tup, Functor&& functor, Args&&... args)
 /// \tparam    Ts       The types in the tuple.
 /// \tparam    Args     The types of the arguments.
 template <typename Functor, typename... Ts, typename... Args>
-void for_each(const std::tuple<Ts...>& tup, Functor&& functor, Args&&... args)
-{
+void for_each(const std::tuple<Ts...>& tup, Functor&& functor, Args&&... args) {
   constexpr auto elements = sizeof...(Ts);
-  unrolled_for<elements>([&] (auto i)
-  {
+  unrolled_for<elements>([&] (auto i) {
     const auto& t_element = std::get<i>(tup);
     functor(t_element, std::forward<Args>(args)...);
   });
@@ -68,11 +64,9 @@ void for_each(const std::tuple<Ts...>& tup, Functor&& functor, Args&&... args)
 /// \tparam    Args     The types of the arguments.
 template <typename Functor, typename... Ts, typename... Args>
 fluidity_host_device void
-for_each(Tuple<Ts...>& tup, Functor&& functor, Args&&... args)
-{
+for_each(Tuple<Ts...>& tup, Functor&& functor, Args&&... args) {
   constexpr auto elements = sizeof...(Ts);
-  unrolled_for<elements>([&] (auto i)
-  {
+  unrolled_for<elements>([&] (auto i) {
     auto& t_element = get<i>(tup);
     functor(t_element, std::forward<Args>(args)...);
   });
@@ -87,11 +81,9 @@ for_each(Tuple<Ts...>& tup, Functor&& functor, Args&&... args)
 /// \tparam    Args     The types of the arguments.
 template <typename Functor, typename... Ts, typename... Args>
 fluidity_host_device void
-for_each(const Tuple<Ts...>& tup, Functor&& functor, Args&&... args)
-{
+for_each(const Tuple<Ts...>& tup, Functor&& functor, Args&&... args) {
   constexpr auto elements = sizeof...(Ts);
-  unrolled_for<elements>([&] (auto i)
-  {
+  unrolled_for<elements>([&] (auto i) {
     const auto& t_element = get<i>(tup);
     functor(t_element, std::forward<Args>(args)...);
   });
@@ -121,10 +113,10 @@ for_each(const Tuple<Ts...>& tup, Functor&& functor, Args&&... args)
 /// \tparam    Iterator The type of the iterator.
 /// \tparam    Pred     The type of the predicate.
 /// \tparam    Args     The type of arguments for a callable predicate.
-template <typename Iterator               ,
-          typename Pred                   ,
-          multiit_enable_t<Iterator> = 0  ,
-          exec::gpu_enable_t<Iterator> = 0>
+template <typename Iterator                 ,
+          typename Pred                     ,
+          multiit_enable_t<Iterator> = 0    ,
+          traits::gpu_enable_t<Iterator> = 0>
 void for_each(Iterator&& it, Pred&& pred)
 {
   detail::cuda::for_each(std::forward<Iterator>(it), std::forward<Pred>(pred));

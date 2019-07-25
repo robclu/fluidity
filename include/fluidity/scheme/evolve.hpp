@@ -19,68 +19,118 @@
 
 #include "cuda/evolve.cuh"
 #include "interfaces/evolver.hpp"
-#include <fluidity/execution/execution_policy.hpp>
+#include <fluidity/boundary/boundary_loading.hpp>
+#include <fluidity/traits/device_traits.hpp>
 
 namespace fluid  {
 namespace scheme {
 
-
-/// Interface for evolving the \p in data using the \p evl to set the \p out
-/// data. The \p evl evolver must conform to the Evolver interface. This
-/// overload is only enabled when the input iterator has a CPU execution policy.
-/// \param[in] evl
-/// \param[in] in
-/// \param[in] out
-/// \param[in] dt
-/// \param[in] dh
-/// \param[in] args
-/// \tparam    Evolver
-/// \tparam    ItIn
-/// \tparam    ItOut
-/// \tparam    T
-/// \tparam    Args
-template <typename    Evl  ,
-          typename    ItIn ,
-          typename    ItOut,
-          typename    T    , 
-          typename... Args , exec::cpu_enable_t<ItIn> = 0>
-void evolve(Evl&& evl, ItIn&& in, ItOut&& out, T dt, T dh, Args&&... args)
-{
-  static_assert(is_evolver_v<Evl>,
-                "Provided evolver does not conform to the Evolver interface!");
-
+/// Interface for evolving the \p in_it data using the \p evolver to set the
+/// \p out_it data. After calling this method, the \p out_it data will
+/// be evolved by \p dt from the \p in_it data, using the method implemented by
+/// the \p evolver. 
+///
+/// This overload is only enabled when the \p in_it iterator is a CPU iterator.
+///
+/// \param[in] evolver        The type of the evolver.    
+/// \param[in] in_it          The input iterator.
+/// \param[in] out_it         The output iterator.          
+/// \param[in] dt             The time delta for the evolution.
+/// \param[in] dh             The size of the spacial resolution.
+/// \param[in] boundaries     The boundaries for the evolution.
+/// \param[in] func_or_it     An functor/iterator to use for the evaluation.
+/// \param[in] args           Additional argumens for the evolution.
+/// \tparam    Evolver        The type of the evolver.
+/// \tparam    InIterator     The type of the input iterator.
+/// \tparam    OutIterator    The type of the output iterator.
+/// \tparam    T              The data type for the deltas.
+/// \tparam    BoundContainer The type of the boundary container.
+/// \tparam    FuncOrIt       The type of the functor/additional iterator.
+/// \tparam    Args           Additional argument types.
+template <
+  typename    Evolver       ,
+  typename    InIterator    ,
+  typename    OutIterator   ,
+  typename    T             , 
+  typename    BoundContainer,
+  typename    FuncOrIt      ,
+  typename... Args          ,
+  traits::cpu_enable_t<InIterator> = 0
+>
+auto evolve(
+  Evolver&&        evolver   ,
+  InIterator&&     in_it     , 
+  OutIterator&&    out_it    ,
+  T                dt        ,
+  T                dh        ,
+  BoundContainer&& boundaries,
+  FuncOrIt&&       func_or_it,
+  Args&&...        args
+) -> void {
+  static_assert(
+    is_evolver_v<Evolver>,
+    "Provided evolver does not conform to the Evolver interface!"
+  );
+  // TODO: Add implemenation ... 
 }
 
-/// Interface for evolving the \p it_in data using the \p evolver to set the
-/// \p out_it data.
-/// \param[in] evl
-/// \param[in] in
-/// \param[in] out
-/// \param[in] dt
-/// \param[in] dh
-/// \param[in] args
-/// \tparam    Evolver
-/// \tparam    ItIn
-/// \tparam    ItOut
-/// \tparam    T
-/// \tparam    Args
-template <typename    Evl  ,
-          typename    ItIn ,
-          typename    ItOut,
-          typename    T    , 
-          typename... Args , exec::gpu_enable_t<ItIn> = 0>
-void evolve(Evl&& evl, ItIn&& in, ItOut&& out, T dt, T dh, Args&&... args)
-{
-  static_assert(is_evolver_v<Evl>,
-                "Provided evolver does not conform to the Evolver interface!");
-  cuda::evolve(std::forward<Evl>(evl)     ,
-               std::forward<ItIn>(in)     ,
-               std::forward<ItOut>(out)   ,
-               dt                         ,
-               dh                         ,
-               std::forward<Args>(args)...);
+/// Interface for evolving the \p in_it data using the \p evolver to set the
+/// \p out_it data. After calling this method, the \p out_it data will
+/// be evolved by \p dt from the \p in_it data, using the method implemented by
+/// the \p evolver.  
+///
+/// This overload is only enabled when the \p in_it iterator is a GPU iterator.
+///
+/// \param[in] evolver        The type of the evolver.    
+/// \param[in] in_it          The input iterator.
+/// \param[in] out_it         The output iterator.          
+/// \param[in] dt             The time delta for the evolution.
+/// \param[in] dh             The size of the spacial resolution.
+/// \param[in] boundaries     The boundaries for the evolution.
+/// \param[in] func_or_it     An functor/iterator to use for the evaluation.
+/// \param[in] args           Additional argumens for the evolution.
+/// \tparam    Evolver        The type of the evolver.
+/// \tparam    InIterator     The type of the input iterator.
+/// \tparam    OutIterator    The type of the output iterator.
+/// \tparam    T              The data type for the deltas.
+/// \tparam    BoundContainer The type of the boundary container.
+/// \tparam    FuncOrIt       The type of the functor/additional iterator.
+/// \tparam    Args           Additional argument types.
+template <
+  typename    Evolver       ,
+  typename    InIterator    ,
+  typename    OutIterator   ,
+  typename    T             , 
+  typename    BoundContainer,
+  typename    FuncOrIt      ,
+  typename... Args          ,
+  traits::gpu_enable_t<InIterator> = 0
+>
+auto evolve(
+  Evolver&&        evolver   ,
+  InIterator&&     in_it     , 
+  OutIterator&&    out_it    ,
+  T                dt        ,
+  T                dh        ,
+  BoundContainer&& boundaries,
+  FuncOrIt&&       func_or_it,
+  Args&&...        args
+) -> void {
+  static_assert(
+    is_evolver_v<Evolver>,
+    "Provided evolver does not conform to the Evolver interface!"
+  );
+  cuda::evolve(
+    std::forward<Evolver>(evolver)          ,
+    std::forward<InIterator>(in_it)         ,
+    std::forward<OutIterator>(out_it)       ,
+    dt                                      ,
+    dh                                      ,
+    std::forward<BoundContainer>(boundaries),
+    std::forward<FuncOrIt>(func_or_it)      ,
+    std::forward<Args>(args)...
+  );
 }
-
 
 }} // namespace fluid::scheme
 

@@ -17,7 +17,7 @@
 #define FLUIDITY_ALGORITHM_REDUCE_HPP
 
 #include "reduce.cuh"
-#include <fluidity/execution/execution_policy.hpp>
+#include <fluidity/traits/device_traits.hpp>
 #include <fluidity/utility/type_traits.hpp>
 
 namespace fluid {
@@ -62,12 +62,10 @@ namespace fluid {
 /// \tparam     It    The type of the iterator.
 /// \tparam     P     The type of the predicate.
 /// \tparam     As    The type of any additional args for the predicate.
-template < typename It, typename P, typename... As, exec::cpu_enable_t<It> = 0>
-auto reduce(It&& begin, It&& end, P&& pred, As&&... args)
-{
+template <typename It, typename P, typename... As, traits::cpu_enable_t<It> = 0>
+auto reduce(It&& begin, It&& end, P&& pred, As&&... args) {
   auto best = *begin; begin++;
-  while (end - begin > 0)
-  {
+  while (end - begin > 0) {
     pred(best, *begin, std::forward<As>(args)...);
     begin++;
   }
@@ -114,9 +112,8 @@ auto reduce(It&& begin, It&& end, P&& pred, As&&... args)
 /// \tparam     It    The type of the iterator.
 /// \tparam     P     The type of the predicate.
 /// \tparam     As    The type of any additional args for the predicate.
-template <typename It, typename P, typename... As, exec::gpu_enable_t<It> = 0>
-auto reduce(It&& begin, It&& end, P&& pred, As&&... args)
-{
+template <typename It, typename P, typename... As, traits::gpu_enable_t<It> = 0>
+auto reduce(It&& begin, It&& end, P&& pred, As&&... args) {
   return detail::cuda::reduce(std::forward<It>(begin)  ,
                               std::forward<It>(end)    ,
                               std::forward<P>(pred)    ,

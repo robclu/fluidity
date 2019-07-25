@@ -20,7 +20,7 @@
 #include <fluidity/container/array.hpp>
 #include <fluidity/dimension/dimension.hpp>
 #include <fluidity/dimension/thread_index.hpp>
-#include <fluidity/iterator/iterator_traits.hpp>
+#include <fluidity/traits/iterator_traits.hpp>
 #include <fluidity/utility/debug.hpp>
 #include <fluidity/utility/portability.hpp>
 #include <fluidity/utility/type_traits.hpp>
@@ -39,7 +39,10 @@ namespace cuda   {
 /// \tparam    It        The type of the iterator.
 /// \tparam    P         The type of the predicate.
 /// \tparam    As        The arguments for the predicate.
-template <typename It, typename P, multiit_enable_t<It> = 0, typename... As>
+template <typename It,
+          typename P,
+          traits::multiit_enable_t<It> = 0,
+          typename... As>
 fluidity_global void for_each_impl_multi(It it, P pred, As... args)
 {
   using it_t = std::decay_t<It>;

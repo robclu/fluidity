@@ -28,7 +28,7 @@ namespace setting {
 struct ExecutionOption : Option<ExecutionOption> {
   /// Defines the type of the choice list.
   using choice_list_t = 
-    OptionTuple<OptionHolder<exec::gpu_type>>;
+    OptionTuple<OptionHolder<exec::gpu_t>>;
 
   /// Defines the number of choices for the option.
   static constexpr size_t num_choices = choice_list_t::size;

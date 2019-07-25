@@ -72,46 +72,8 @@ struct GodunovUpwind : public Solvable<GodunovUpwind<Stencil>> {
 
  public:
   /// Returns the width of the scheme.
-  fluidity_host_device constexpr auto width() const
-  {
+  fluidity_host_device constexpr auto width() const {
     return stencil_t().width();
-  }
-
-  /// Returns the value of the \p it which would solve the Godunov upwind
-  /// discretization given the Stencil template. This overload is for the case
-  /// that the source data is zero over the whole domain.
-  ///
-  /// \param[in] it       The iterable data to apply the stencil to.
-  /// \param[in] dh       The delta for the stencil.
-  /// \tparam    It       The type of the iterator.
-  /// \tparam    T        The type of the delta.
-  template <typename It, typename T>
-  fluidity_host_device auto solve(It&& it, T dh) const
-  {
-    return get_quadratic(it, dh).solve().larger;
-  }
-
-  /// Returns the value of the \p it which would solve the Godunov upwind
-  /// discretization given the Stencil template. This overload is for the case
-  /// that the source data is zero over the whole domain.
-  ///
-  /// \param[in] it       The iterable data to apply the stencil to.
-  /// \param[in] dh       The delta for the stencil.
-  /// \param[in] f        A functor to apply to the quadratic before solving.
-  /// \param[in] args     Arguments for the functor.
-  /// \tparam    It       The type of the iterator.
-  /// \tparam    T        The type of the delta.
-  /// \tparam    F        The type of the functor.
-  /// \tparam    Args     The types of the functor arguments.
-  template <typename It, typename T, typename F, typename... Args>
-  fluidity_host_device auto solve(It&& it, T dh, F&& f, Args&&... args) const
-  {
-    auto quad = get_quadratic(it, dh);
-    f(quad, std::forward<Args>(args)...);
-
-    // Apply the functor to make any changes to the quadratic before solving:
-    f(quad, std::forward<Args>(args)...);
-    return quad.solve().larger;
   }
 
   /// Computes the forward gradient term for the upwinding, which is:
@@ -126,27 +88,34 @@ struct GodunovUpwind : public Solvable<GodunovUpwind<Stencil>> {
   /// \param[in] it       The iterable data to apply the stencil to.
   /// \param[in] dh       The delta for the stencil.
   /// \param[in] args     Additional arguments for the stencil.
-  /// \tparam    It       The type of the iterator.
+  /// \tparam    Iterator The type of the iterator.
   /// \tparam    T        The type of the delta.
   /// \tparam    Args     The types of the stencil arguments.
-  template <typename It, typename T, typename... Args>
-  fluidity_host_device auto forward(It&& it, T dh, Args&&... args) const
-  {
-    using it_t          = std::decay_t<It>;
+  template <typename Iterator, typename T, typename... Args>
+  fluidity_host_device auto forward(
+    Iterator&& it  ,
+    T          dh  ,
+    Args&&...  args
+  ) const -> std::decay_t<T> {
+    using it_t          = std::decay_t<Iterator>;
     using value_t       = std::decay_t<T>;
-    using stencil_ret_t = 
-      decltype(stencil_t{}.forward_deriv(it, dh, std::size_t{0}, args...));
+    using stencil_ret_t = decltype(
+      stencil_t{}.forward_deriv(it, dh, dim_x, args...)
+    );
 
     constexpr auto zero = value_t{0};
     const auto stencil  = stencil_t{};
 
     auto result = zero;
-    unrolled_for<it_t::dimensions>([&] (auto dim)
-    {
-      const auto back  = 
-        std::max(stencil.backward_deriv(it, dh, dim, args...), zero);
-      const auto fwrd  =
-        std::min(stencil.forward_deriv(it, dh, dim, args...), zero);
+    unrolled_for<it_t::dimensions>([&] (auto dim) {
+      const auto back  = std::max(
+        stencil.backward_deriv(it, dh, dim, args...), 
+        zero
+      );
+      const auto fwrd  = std::min(
+        stencil.forward_deriv(it, dh, dim, args...), 
+        zero
+      );
       result += std::max(back * back, fwrd * fwrd);
     });
     return std::sqrt(result);
@@ -163,60 +132,37 @@ struct GodunovUpwind : public Solvable<GodunovUpwind<Stencil>> {
   /// \param[in] it       The iterable data to apply the stencil to.
   /// \param[in] dh       The delta for the stencil.
   /// \param[in] args     Additional arguments for the stencil.
-  /// \tparam    It       The type of the iterator.
+  /// \tparam    Iterator The type of the iterator.
   /// \tparam    T        The type of the delta.
   /// \tparam    Args     The types of the stencil arguments.
-  template <typename It, typename T, typename... Args>
-  fluidity_host_device auto backward(It&& it, T dh, Args&&... args) const
-  {
-    using it_t          = std::decay_t<It>;
+  template <typename Iterator, typename T, typename... Args>
+  fluidity_host_device auto backward(
+    Iterator&& it  , 
+    T          dh  , 
+    Args&&...  args
+  ) const -> std::decay_t<T> {
+    using it_t          = std::decay_t<Iterator>;
     using value_t       = std::decay_t<T>;
-    using stencil_ret_t = 
-      decltype(stencil_t{}.forward_deriv(it, dh, std::size_t{0}, args...));
+    using stencil_ret_t = decltype(
+      stencil_t{}.forward_deriv(it, dh, std::size_t{0}, args...)
+    );
     
     constexpr auto zero = value_t{0};
     const auto stencil  = stencil_t{};
 
     auto result = zero;
-    unrolled_for<it_t::dimensions>([&] (auto dim)
-    {
-      const auto back  = 
-        std::min(stencil.backward_deriv(it, dh, dim, args...), zero);
-      const auto fwrd  =
-        std::max(stencil.forward_deriv(it, dh, dim, args...), zero);
+    unrolled_for<it_t::dimensions>([&] (auto dim) {
+      const auto back  = std::min(
+        stencil.backward_deriv(it, dh, dim, args...), 
+        zero
+      );
+      const auto fwrd  = std::max(
+        stencil.forward_deriv(it, dh, dim, args...), 
+        zero
+      );
       result += std::max(back * back, fwrd * fwrd);
     });
     return std::sqrt(result);
-  }
-
- private:
-  /// Gets the quadratic to solve before applying any source term.
-  /// \param[in] it The iterable data to apply the stencil to.
-  /// \param[in] dh The delta for the stencil.
-  /// \tparam    It The type of the iterator.
-  /// \tparam    T  The type of the delta.
-  template <typename I, typename T>
-  fluidity_host_device auto get_quadratic(I&& it, T dh) const
-  {
-    using it_t           = std::decay_t<I>;
-    const auto stencil   = stencil_t();
-    const auto quad_zero = math::Quadratic<T>{T(0), T(0), T(0)};
-    auto       quad      = quad_zero;
-
-    // Update the quadratic:
-    unrolled_for<it_t::dimensions>([&] (auto dim)
-    {
-      if (stencil.backward_deriv(it, dh, dim) > T(0))
-      {
-        quad += stencil.quadratic_back(it, dh, dim);
-      }
-
-      if (stencil.forward_deriv(it, dh, dim) < T(0))
-      {
-        quad += stencil.quadratic_fwrd(it, dh, dim);
-      }
-    });
-    return quad;
   }
 };
 

@@ -19,8 +19,11 @@
 
 #include "multimaterial_simulation_data.hpp"
 #include <fluidity/container/tuple.hpp>
+#include <fluidity/ghost_fluid/simple_ghost_fluid.hpp>
 #include <fluidity/levelset/levelset.hpp>
+#include <fluidity/levelset/levelset_evolution.hpp>
 #include <fluidity/material/material.hpp>
+#include <fluidity/scheme/eikonal/fast_iterative.hpp>
 #include <fluidity/scheme/evaluators/levelset_hamiltonian.hpp>
 #include <fluidity/scheme/evolvers/basic_evolver.hpp>
 #include <fluidity/scheme/stencils/weno_hj_5.hpp>
@@ -47,6 +50,13 @@ namespace sim   {
 
 namespace detail {
 
+//==--- [Material Traits] --------------------------------------------------==//
+
+/// Defines a class to represent the traits for a material. This is the default
+/// case where there is only a single material.
+/// \tparam SimTraits The traits for the simulator.
+/// \tparam Materials The materials to determine the traits for.
+/// \tparam Levelset  The type of the levelset for the material.
 template <typename SimTraits, typename Materials, typename Levelset>
 struct MaterialTraits {
   /// Defines the type of the container which stores the materials.
@@ -58,6 +68,12 @@ struct MaterialTraits {
   static constexpr auto is_multimaterial_v = false;
 };
 
+/// Defines a class to represent the traits for a material. This is a
+/// specialization for the case that there are multiple materails to get the
+/// traits for.
+/// \tparam SimTraits The traits for the simulator.
+/// \tparam Es        The equations of state for the materials.
+/// \tparam Levelset  The type of the levelset for the material.
 template <typename SimTraits, typename... Es, typename Levelset>
 struct MaterialTraits<SimTraits, Tuple<Es...>, Levelset> {
   /// Defines the type of the levelset.
@@ -83,9 +99,15 @@ struct MaterialTraits<SimTraits, Tuple<Es...>, Levelset> {
 
 } // namespace detail
 
+/// An alias for the materials traits for materials defined by the Es equations
+/// of state.
+/// \tparam SimTraits The traits for the simulator.
+/// \tparam Es        The equations of state for the materials.
+/// \tparam Levelset  The type of the levelset for the material.
 template <typename SimTraits, typename Es, typename Levelset>
 using material_traits_t = detail::MaterialTraits<SimTraits, Es, Levelset>;
 
+//==--- [Simulator Traits] -------------------------------------------------==//
 
 /// Defines traits for a simulator implementation which can simulate multiple
 /// materials in the domain.
@@ -94,12 +116,14 @@ using material_traits_t = detail::MaterialTraits<SimTraits, Es, Levelset>;
 /// \tparam Ts      The traits for the simulator implementation.
 template <typename SimBase, typename SimImpl, typename... Ts>
 struct MultimaterialSimTraits {
+ private:
+  //==--- [Defaults] -------------------------------------------------------==//
+  
   /// Defines the default data type to use.
   using def_data_t    = double;
   /// Defines the default number of dimensions.
   using def_dims_t    = Num<1>;
   /// Defines the default material to use.
-  //using def_mat_t     = material::IdealGas<def_data_t>;
   using def_mat_t     = Tuple<material::IdealGas<def_data_t>,
                               material::IdealGas<def_data_t>>;
   /// Defines the default limiting form.
@@ -111,8 +135,30 @@ struct MultimaterialSimTraits {
   /// Defines the default flux method to use.
   using def_flux_t    = flux::Force;
   // Defines the default execution type for the simulation.
-  using def_exec_t    = fluid::exec::gpu_type;
+  using def_exec_t    = fluid::exec::gpu_t;
 
+ public:
+  /// Defines the type of the state data to store, always conservative.
+  using data_t      = type_at_t<0, def_data_t, Ts...>;
+  /// Defines the number of dimensions for the simulation.
+  using dim_t       = type_at_t<1, def_dims_t, Ts...>;
+  /// Defines the type of the material for the simulation.
+  using materials_t = type_at_t<2, def_mat_t, Ts...>;
+  /// Defines the form of limiting.
+  using lform_t     = type_at_t<3, def_form_t, Ts...>;
+  /// Defines the type of the limiter to use.
+  using limiter_t   = type_at_t<4, def_limiter_t, Ts...>;
+  /// Defines the type of the reconstruction method to use.
+  using recon_t     = type_at_t<5, def_recon_t, Ts...>;
+  /// Defines the type of the flux method to use for solving.
+  using flux_t      = type_at_t<6, def_flux_t, Ts...>;
+  /// Defines execution policy for the simulator.
+  using exec_t      = type_at_t<7, def_exec_t, Ts...>;
+
+  //==--- [Levelset] -------------------------------------------------------==//
+
+  /// Defines the type of the level sets used.
+  using levelset_t   = levelset::LevelSet<data_t, dim_t::value, exec_t::device>; 
   /// Defines the stencil used for the levelset evolution.
   using ls_stencil_t = scheme::stencil::HJWeno5;
   /// Defines the scheme used for the levelset evolution.
@@ -121,32 +167,15 @@ struct MultimaterialSimTraits {
   using ls_updater_t = scheme::updater::RungeKutta3<ls_eval_t>;
   /// Defines the type of the evolver for the levelset evolution.
   using ls_evolver_t = scheme::evolver::BasicEvolver<ls_updater_t>; 
+  /// Defines the type of the reinitialization scheme for the levelset.
+  using ls_reinit_t  = scheme::eikonal::FastIterative;
 
-  /// Defines the type of the state data to store, always conservative.
-  using data_t     = type_at_t<0, def_data_t, Ts...>;
-  /// Defines the number of dimensions for the simulation.
-  using dim_t      = type_at_t<1, def_dims_t, Ts...>;
-  /// Defines the type of the material for the simulation.
-  using materials_t = type_at_t<2, def_mat_t, Ts...>;
-  /// Defines the form of limiting.
-  using lform_t    = type_at_t<3, def_form_t, Ts...>;
-  /// Defines the type of the limiter to use.
-  using limiter_t  = type_at_t<4, def_limiter_t, Ts...>;
-  /// Defines the type of the reconstruction method to use.
-  using recon_t    = type_at_t<5, def_recon_t, Ts...>;
-  /// Defines the type of the flux method to use for solving.
-  using flux_t     = type_at_t<6, def_flux_t, Ts...>;
-  /// Defines execution policy for the simulator.
-  using exec_t     = type_at_t<7, def_exec_t, Ts...>;
+  //==--- [Ghost/Cutcell/Interface] ----------------------------------------==//
+  
+  /// Defines the type of the solver for the interface.
+  using interface_solve_t = ghost::SimpleGFM<3>;
 
-  /// Defines the type of the level sets used.
-  using levelset_t = levelset::LevelSet<data_t, dim_t::value, exec_t::device>; 
-
-  /// Defines the materials for the simulation.
-  //using mat_traits_t = material_traits_t<materials_t, levelset_t>;
-
-  /// TODO: Change this to be per material, or change the solver to take the
-  ///       material is a template parameter.
+  //==--- [Solver] ---------------------------------------------------------==//
 
   /// Defines the type of the data loader.
   using loader_t     = solver::BoundaryLoader<recon_t::width>;
@@ -156,6 +185,8 @@ struct MultimaterialSimTraits {
   using def_solver_t = solver::SplitSolver<face_flux_t, loader_t, dim_t>;
   /// Defines the type of the solver.
   using solver_t     = type_at_t<8, def_solver_t, Ts...>;
+
+  //==--- [Material] -------------------------------------------------------==//
 
   /// Defines the type of the loader for the material ghost state data.
   using mm_loader_t  = solver::MaterialLoader;
@@ -167,6 +198,8 @@ struct MultimaterialSimTraits {
   using mm_solver_t = 
     solver::SplitSolver<
       solver::FaceFlux<recon_t, flux_t, Eos>, loader_t, dim_t>;
+
+  //==--- [State] ----------------------------------------------------------==//
 
   /// Defines the storage format for the state data.
   static constexpr auto state_layout = StorageFormat::row_major;
@@ -181,6 +214,11 @@ struct MultimaterialSimTraits {
 
   /// Defines the type of the states for this solver.
   using state_t = conservative_t;
+
+  //==--- [Option Manager] -------------------------------------------------==//
+  // TODO: Change this -- it is too complex, the resulting code is ugly, and the
+  // compilation time is insane to build the tree when the defaults are not
+  // used!
 
   /// Defines the type of the option manger to configure the simulation traits.
   using option_manager_t =
@@ -197,6 +235,8 @@ struct MultimaterialSimTraits {
       setting::FluxMethodOption                          ,
       setting::ExecutionOption                           ,
       setting::SolverOption<face_flux_t, loader_t, dim_t>>;
+
+  //==--- [Constants] ------------------------------------------------------==//
 
   /// Defines the number of dimensions for the simulation.
   static constexpr auto dimensions = std::size_t{dim_t::value};

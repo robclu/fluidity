@@ -47,16 +47,16 @@ struct IsContainer<
   std::conditional_t<
     false,
     IsContainerHelper<
-      typename T::value_type,
-      typename T::size_type,
-      typename T::allocator_type,
-      typename T::iterator,
-      typename T::const_iterator,
+      typename T::value_type                   ,
+      typename T::size_type                    ,
+      typename T::allocator_type               ,
+      typename T::iterator                     ,
+      typename T::const_iterator               ,
       decltype(std::declval<T>().operator[](0)),
-      decltype(std::declval<T>().size()),
-      decltype(std::declval<T>().begin()),
-      decltype(std::declval<T>().end()),
-      decltype(std::declval<T>().cbegin()),
+      decltype(std::declval<T>().size())       ,
+      decltype(std::declval<T>().begin())      ,
+      decltype(std::declval<T>().end())        ,
+      decltype(std::declval<T>().cbegin())     ,
       decltype(std::declval<T>().cend())
     >,
     void
@@ -90,6 +90,33 @@ using container_enable_t = std::enable_if_t<is_container_v<T>, int>;
 /// is not a container.
 template <typename T>
 using non_container_enable_t = std::enable_if_t<!is_container_v<T>, int>;
+
+namespace detail {
+
+/// Struct to use to overload if a class is a container or not.
+/// \tparam IsContainer If the class is a container or not.
+template <bool IsContainer>
+struct ContainerOverload {
+  /// Defines if the class is a container or not.
+  static constexpr auto value = IsContainer;
+};
+
+} // namespace detail;
+
+/// Defines a class which can be used for overloading when a class is a
+/// container.
+using container_overload_t = detail::ContainerOverload<true>;
+
+/// Defines a class which can be used for overloading when a class is not a
+/// container.
+using non_container_overload_t = detail::ContainerOverload<false>;
+
+/// Can be used to select an implementation based on whether or not the class T
+/// is a container or not.
+/// \tparam T The class to base the overlaoding on.
+template <typename T>
+using make_container_overload_t = 
+  detail::ContainerOverload<is_container_v<std::decay_t<T>>>;
 
 }} // namespace fluid::traits
 

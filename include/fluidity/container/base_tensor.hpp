@@ -153,9 +153,21 @@ class BaseTensor {
 
   /// Returns the size of the \p nth dimension.
   /// \param[in] n The index of the dimension to get the size of.
-  fluidity_host_device std::size_t size(std::size_t n) const;
+  fluidity_host_device auto size(std::size_t n) const -> std::size_t {
+    return _dim_sizes[n];
+  }
 
   /// Returns the total number of elements in the tensor.
+  fluidity_host_device auto size() const -> std::size_t {
+    std::size_t sz = 1;
+    unrolled_for<dimensions>([&] (auto i) {
+      sz *= _dim_sizes[i];
+    });
+    return sz;
+  }
+
+  /// Returns the total number of elements in the tensor.
+  /// TODO: Deprecate!
   fluidity_host_device std::size_t total_size() const;
 
  protected:
@@ -192,12 +204,6 @@ BaseTensor<T, D>::set_dim_sizes(const BaseTensor<T, D>& other)
   {
     _dim_sizes[i] = other.size(i);
   });
-}
-
-template <typename T, std::size_t D>
-fluidity_host_device std::size_t BaseTensor<T, D>::size(std::size_t n) const
-{
-  return _dim_sizes[n];
 }
 
 template <typename T, std::size_t D>

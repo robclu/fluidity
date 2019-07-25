@@ -48,18 +48,15 @@ struct SimpleGFM {
   /// \tparam    T               The type of the resolution.
   template <typename MatItWrappers, typename T>
   fluidity_host_device static void
-  invoke(MatItWrappers&& mat_it_wrappers, T dh)
-  {
-    constexpr auto dims = 
-      std::decay_t<decltype(get<0>(mat_it_wrappers).ls_it)>::dimensions;
+  invoke(MatItWrappers&& mat_it_wrappers, T dh) {
+    constexpr auto dims = std::decay_t<
+      decltype(get<0>(mat_it_wrappers).levelset_iterator())
+    >::dimensions;
     
     // Start by offsetting the iterator wrappers to the current thread index ...
-    unrolled_for<dims>([&] (auto dim)
-    {
-      for_each(mat_it_wrappers, [&] (auto& wrapper)
-      {
-        wrapper.ls_it.shift(flattened_id(dim), dim);
-        wrapper.state_it.shift(flattened_id(dim), dim);
+    for_each(mat_it_wrappers, [&] (auto& wrapper) {
+      unrolled_for<dims>([&] (auto dim) {
+        wrapper.shift(flattened_id(dim), dim);
       });
     });
     __syncthreads();
@@ -77,49 +74,46 @@ struct SimpleGFM {
     // we need to set ghost cells for it, and we need to do this for each
     // material.
     int wrapper_index = 0;
-    for_each(mat_it_wrappers, [&] fluidity_host_device (auto& wrapper)
-    {
+    for_each(mat_it_wrappers, [&] (auto& wrapper) {
       wrapper_index++;
       const auto band = dh * static_cast<decltype(dh)>(width);
-      if (levelset::outside_interfacial_cell(wrapper.ls_it, band) ||
-          levelset::on_boundary(wrapper.ls_it))
-      {
-        unrolled_for<dims>([&] (auto dim)
-        {
+      auto ls_it      = wrapper.levelset_iterator();
+      if (levelset::outside_interfacial_cell(ls_it, band) ||
+          levelset::on_boundary(ls_it)) {
+        unrolled_for<dims>([&] (auto dim) {
           // Find the material on the otherside of the boundary ...
           int other_wrapper_index = 0;
-          for_each(mat_it_wrappers, [&] (auto& other_wrapper)
-          {
-            if (wrapper_index != ++other_wrapper_index)
-            {
-              auto other_ls_it = other_wrapper.ls_it;
-              if (levelset::inside_interfacial_cell(other_ls_it, band))
-              {
+          for_each(mat_it_wrappers, [&] (auto& other_wrapper) {
+            if (wrapper_index != ++other_wrapper_index) {
+              auto other_ls_it = other_wrapper.levelset_iterator();
+              if (levelset::inside_interfacial_cell(other_ls_it, band)) {
                 // Determine if we need to walk to the right or to the left to
                 // find the interface.
                 const auto step = 
-                  (*wrapper.ls_it.offset(1, dim) < *wrapper.ls_it) ?
-                  int{1} : int{-1};
+                  (*ls_it.offset(1, dim) < *ls_it)
+                  ? int{1}
+                  : int{-1};
 
                 // Set the starting offset to try for the interface.
-                auto off = step *
-                  static_cast<int>(std::floor(std::abs(*wrapper.ls_it / dh)));
+                auto off = step * static_cast<int>(
+                  std::floor(std::abs(*ls_it / dh))
+                );
 
                 // Find the interface ...
                 // TODO: There must be a better way to do this!
-                auto entrop_ls_it = wrapper.ls_it.offset(off, dim);
-                while (!levelset::inside_interfacial_cell(entrop_ls_it, 1.25f * dh))
-                {
+                auto entrop_ls_it = ls_it.offset(off, dim);
+                const auto w      = dh * 1.25;
+                while (!levelset::inside_interfacial_cell(entrop_ls_it, w)) {
                   entrop_ls_it.shift(step, dim);
                   off += step;
                 }
 
-                auto& mat_eos = wrapper.eos;
+                auto& mat_eos    = wrapper.eos();
                 // The ghost state is the one that the data must be set for.
                 // The real state is the one with real data to use to set the
                 // ghost cells.
-                auto ghost_state = wrapper.state_it->primitive(mat_eos);
-                auto real_state  = other_wrapper.state_it;
+                auto ghost_state = wrapper.state_iterator()->primitive(mat_eos);
+                auto real_state  = other_wrapper.state_iterator();
 
                 // Copy pressure and velocity to the ghost cells:
                 // Note that we don't need to convert the other state to
@@ -133,14 +127,15 @@ struct SimpleGFM {
                 // the ghost state such that it has the same entropy as the
                 // inside entropy state (i.e constant extrapolation of the
                 // entropy from the inside interfacial cell to the ghost cell)
-                const auto entrop_state = wrapper.state_it.offset(off, dim);
-                const auto density      =
-                  mat_eos.density_for_const_entropy_log(*entrop_state, 
-                                                     ghost_state);
+                const auto entrop_state = 
+                  wrapper.state_iterator().offset(off, dim);
+                const auto density      = mat_eos.density_for_const_entropy_log(
+                    *entrop_state, ghost_state
+                );
                 ghost_state.set_density(density);
 
                 // Convert the primitive ghost state back to conservative form.
-                *wrapper.state_it = ghost_state.conservative(mat_eos);
+                *wrapper.state_iterator() = ghost_state.conservative(mat_eos);
               }
             }
           });

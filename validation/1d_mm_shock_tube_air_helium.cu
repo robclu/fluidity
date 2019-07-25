@@ -43,7 +43,7 @@ int main(int argc, char** argv)
   fluid::sim::mm_sim_option_manager_t sim_manager;
   auto simulator = sim_manager.create_simulator();
 
-  simulator->configure_resolution(0.01);
+  simulator->configure_resolution(0.005);
   simulator->configure_dimension(fluid::dim_x, 0.0, 1.0);
   simulator->configure_sim_time(0.2);
   simulator->configure_cfl(0.9);

@@ -97,6 +97,16 @@ template <typename StateType>
 static constexpr auto state_dispatch_tag = 
   detail::StateDispatchTag<std::decay_t<StateType>::format>{};
 
+/// Defines a type which enables functions for any state type.
+/// \tparam State The type to base the enabling on.
+template <typename T>
+using state_enable_t = std::enable_if_t<is_state_v<T>, int>;
+
+/// Defines a type which enables functions for any type which is not a state.
+/// \tparam State The type to base the enabling on.
+template <typename T>
+using non_state_enable_t = std::enable_if_t<!is_state_v<T>, int>;
+
 /// Defines a type which enables functions for a primitive state type.
 /// \tparam State The type to base the primitive enabling on.
 template <typename StateType>

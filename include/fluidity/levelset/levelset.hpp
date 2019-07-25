@@ -27,13 +27,17 @@ namespace fluid    {
 namespace levelset {
 
 /// The LevelSet class 
-template <typename         T                              , 
-          std::size_t      Dims                           ,
-          exec::DeviceKind Kind    = exec::DeviceKind::gpu,
-          typename         Storage =
-            std::conditional_t<
-              Kind == exec::DeviceKind::gpu,
-                DeviceTensor<T, Dims>, HostTensor<T, Dims>>>
+template <
+  typename         T                              , 
+  std::size_t      Dims                           ,
+  exec::DeviceKind Kind    = exec::DeviceKind::gpu,
+  typename         Storage =
+    std::conditional_t<
+      Kind == exec::DeviceKind::gpu,
+      DeviceTensor<T, Dims>        ,
+      HostTensor<T, Dims>
+    >
+>
 class LevelSet {
   /// Defines the data type used for the level set.
   using value_t   = std::decay_t<T>;

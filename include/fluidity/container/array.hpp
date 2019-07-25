@@ -64,13 +64,17 @@ class Array {
   /// Defines the number of elements in the array.
   static constexpr auto elements   = Elements;
 
-  /// The default constructor uses the default initialization.
-  fluidity_host_device constexpr Array() = default;
+  /// The default constructor uses the default initialization. This initializes
+  /// the data to be empty.
+  fluidity_host_device constexpr Array() {
+    for (auto i : range(elements)) {
+      _data[i] = value_t();
+    }
+  };
 
   /// Initializes each of the elements in the array to have the value \p value.
   /// \param[in] value The value to set the array elements to.
-  fluidity_host_device constexpr Array(value_t value)
-  {
+  fluidity_host_device constexpr Array(value_t value) {
     initialize<elements>(value);
   }
 
@@ -202,7 +206,7 @@ class Array {
   }
 
  private:
-  value_t _data[Elements] = {0};  //!< Data for the array.
+  value_t _data[Elements];  //!< Data for the array.
 
   /// Fill implementation for small arrays, where all elements of the array are
   /// filled with the value \p value in an unrolled manner.

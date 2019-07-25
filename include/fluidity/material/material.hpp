@@ -201,4 +201,4 @@ auto make_material_iterator_wrapper(Eos&& eos, LSIt&& ls_it, StateIt&& state_it)
 } // namespace material
 } // namespace fluid
 
-#endif // FLUIDITY_MATERIAL_IDEAL_GAS_HPP
+#endif // FLUIDITY_MATERIAL_MATERIAL_HPP

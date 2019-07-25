@@ -76,14 +76,12 @@ struct UnsplitSolver {
     _block_sizes{get_block_sizes(it, _thread_sizes, padding << 1)} {}
 
   /// Returns the number of threads per block for the solver.
-  auto thread_sizes() const
-  {
+  auto thread_sizes() const {
     return _thread_sizes;
   }
 
   /// Returns the dimension information for the blocks to solve.
-  auto block_sizes() const
-  {
+  auto block_sizes() const {
     return _block_sizes;
   }
 
@@ -94,9 +92,10 @@ struct UnsplitSolver {
   /// \param[in] flux     An iterator which points to the flux to update. 
   /// \tparam    Iterator The type of the iterator.
   /// \tparam    Flux     The type of the flux iterator.
-  template <typename It, typename Mat, typename T, exec::gpu_enable_t<It> = 0>
-  void solve(It&& in, It&& out, Mat&& mat, T dtdh, setter_ref_t setter) const 
-  {
+  template <typename It ,
+            typename Mat,
+            typename T  , traits::gpu_enable_t<It> = 0>
+  void solve(It&& in, It&& out, Mat&& mat, T dtdh, setter_ref_t setter) const {
     detail::cuda::solve_impl_unsplit(*this, 
                                      std::forward<It>(in)  ,
                                      std::forward<It>(out) ,
@@ -120,49 +119,45 @@ struct UnsplitSolver {
                                           It&&             out   ,
                                           Mat&&            mat   ,
                                           T                dtdh  ,
-                                          setter_ref_t     setter)
-  {
-      auto print_vec = [] (auto v, auto d, auto p)
-      {
-        //if (flattened_block_id(0) == 0 && thread_id(1) == 0)
-        if (v[0] != 0.0 || v[1] != 0.0 || v[2] != 0.0 || v[3] != 0.0)
-        {
-          printf("TX, TY, BX, BY, GX, GY : { %03lu, %03lu } : { %03lu, %03lu }, {%03lu, %03lu }, { %4.4f, %4.4f, %4.4f, %4.4f }\n",
-            thread_id(0), thread_id(1), 
-            block_id(0), block_id(1),
-            flattened_id(0), flattened_id(1),
-            v[0], v[1], v[2], v[3]);
+                                          setter_ref_t     setter) {
+    auto print_vec = [] (auto v, auto d, auto p) {
+      if (v[0] != 0.0 || v[1] != 0.0 || v[2] != 0.0 || v[3] != 0.0) {
+        printf(
+          "TX, TY, BX, BY, GX, GY : "
+          "{ %03lu, %03lu } : "
+          "{ %03lu, %03lu } : "
+          "{ %03lu, %03lu } : "
+          "{ %4.4f, %4.4f, %4.4f, %4.4f }\n",
+          thread_id(0)   , thread_id(1)   ,
+          block_id(0)    , block_id(1)    ,
+          flattened_id(0), flattened_id(1),
+          v[0], v[1], v[2], v[3]
+        );
+      }
+    };
+
+    auto pool = [&] (auto it, auto&& p) {
+      auto r = std::decay_t<decltype(p(*it))>();
+      for (auto off_1 : range(-1, 2)) {
+        auto i = it.offset(off_1, 0);
+        for (auto off_2 : range(-1, 2)) {
+          r += p(*i.offset(off_2, 1));
         }
-      };
+      }
+      return r;
+    };
 
-      auto pool = [&] (auto it, auto&& p)
-      {
-        auto r = std::decay_t<decltype(p(*it))>();
-        for (auto off_1 : range(-1, 2))
-        {
-          auto i = it.offset(off_1, 0);
-          for (auto off_2 : range(-1, 2))
-          {
-            r += p(*i.offset(off_2, 1));
-          }
-        }
-        return r;
-      };
+    using perp_flux_solver_t = FaceFlux<
+      recon::BasicReconstructor<limiter_t> ,
+      typename flux_solver_t::flux_method_t,
+      std::decay_t<decltype(mat)>
+    >;
 
-    using perp_flux_solver_t = 
-      FaceFlux<
-        recon::BasicReconstructor<limiter_t> ,
-        typename flux_solver_t::flux_method_t,
-        std::decay_t<decltype(mat)>          >;
-
-    if (in_range(in, padding << 1))
-    {
+    if (in_range(in, padding << 1)) {
       const auto flux_solver  = flux_solver_t(mat, dtdh);
       const auto pflux_solver = perp_flux_solver_t(mat, dtdh); 
             auto patch        = make_patch_iterator(in, dispatch_tag);
-//            auto flux            = make_patch_iterator(in, dispatch_tag);
 
-      //using flux_sum_t = std::decay_t<decltype(*flux)>;
       using flux_sum_t = std::decay_t<decltype(*patch)>;
       auto flux_sum    = flux_sum_t(0.0, 0.0, 0.0, 0.0);
 
@@ -170,68 +165,30 @@ struct UnsplitSolver {
       constexpr auto b_off = -f_off;
 
       // Shift the iterators to offset the padding, then set the patch data:
-      unrolled_for<num_dimensions>([&] (auto dim)
-      {
+      unrolled_for<num_dimensions>([&] (auto dim) {
         const auto shift_global = flattened_id(dim) + padding;
         const auto shift_local  = thread_id(dim)    + padding;
         in.shift(shift_global, dim);
         out.shift(shift_global, dim);
         patch.shift(shift_local, dim);
-//        flux.shift(shift_local, dim);
       });
      *patch = *in;
 
       // Load the boundary patch data from the global data:
       loader_t::load_patch_boundaries(in, patch);
       __syncthreads();
-/*
-      unrolled_for<num_dimensions>([&] (auto dim)
-      {
-        loader_t::load_boundary(in, patch, dim, setter);
-      });
-      loader_t::template load_corners<num_dimensions>(in, patch);
-      __syncthreads();
-*/
 
       // Compute the flux contibution from each dimension:
-      unrolled_for<num_dimensions - 1>([&] (auto d)
-      {
+      unrolled_for<num_dimensions - 1>([&] (auto d) {
         constexpr auto dim = std::size_t{0};
-//        constexpr auto dim = std::size_t{1};
         // For each dimension, compute the flux difference in the dimensions
         // perpendicular, and store those in the shared flux memory.
-        unrolled_for<num_dimensions - 1>([&] (auto i)
-        {
-       //   constexpr auto dim  = std::size_t{d};
+        unrolled_for<num_dimensions - 1>([&] (auto i) {
           constexpr auto pdim = (dim + i + std::size_t{1}) % num_dimensions;
-
-          //flux.shift(-f_off, dim);
-          //patch.shift(-f_off, dim);
-          //__syncthreads();
-          // Move the iterators forward in the __dim__ (i.e solving) dimension,
-          // and then solve for the flux difference in that offset cell in the
-          // perpendicular dimension.
 
           auto flux_c = pflux_solver.flux_delta(patch, pdim);
           auto flux_b = pflux_solver.flux_delta(patch.offset(b_off, dim), pdim);
           auto flux_f = pflux_solver.flux_delta(patch.offset(f_off, dim), pdim);
-
-          //*flux = perpflux_solver.flux_delta(patch, pdim);
-//          *flux.shift(f_off, dim) 
-//            = perpflux_solver.flux_delta(patch.shift(f_off, dim), pdim);
-
-          //*flux = perpflux_solver.flux_delta(patch, pdim);
-
-//          flux.shift(b_off, dim);
-//          patch.shift(b_off, dim);
-          // Need to load 2 * width more fluxes (width fluxes at the start
-          // because of the shift above, and width fluxes in the padded region
-          // at the start of the dim dimension).
-//          if (thread_id(dim) < (f_off << 1))
-//          {
-            //*flux.offset(b_off, dim) = 
-            //  perpflux_olver.flux_delta(patch.offset(b_off, dim), pdim);
-//          }
 
           // Need to sync here since we are now going to use the flux deltas on
           // either side (in the dim direction) of this cell.
@@ -239,44 +196,33 @@ struct UnsplitSolver {
           flux_sum = flux_solver.flux_delta(patch, dim);
 /*
           flux_sum += 
-//            pool(patch, [&] (auto& x) { return x; });
-
             flux_solver.backward(patch, dim, [&] (auto& l, auto& r)
             {
               l -= -0.5 * dtdh * flux_b;
               r -= -0.5 * dtdh * flux_c;
             })
-          -
+            -
             flux_solver.forward(patch, dim, [&] (auto& l, auto& r)
             {
               l -= -0.5 * dtdh * flux_c;
               r -= -0.5 * dtdh * flux_f;
             });
-*/
-//              print_vec(flux_sum, std::size_t{dim}, std::size_t{pdim});
           if (flux_sum[0] != 0.000 && flux_sum[1] != 0.00)
             print_vec(flux_sum, std::size_t{0}, std::size_t{dim});
+*/
         });
 
         // Can't start on the next dimension until this one is done ...
-        //__syncthreads();
+        __syncthreads();
       });
-      //__syncthreads();
       // Update states as (for dimension i):
       //  U_i + dt/dh * lambda + sum_{i=0..D} [F_{i-1/2} - F_{i+1/2}]
       //*out = *patch + dtdh * flux_sum;
       *out = flux_sum;
-      //out->set_density(1.0);
-
-      //patch->set_density(4.0);
-//      *out = pool(patch, [] (auto& v) { return v; });
 
       // Load the boundary data for the output iterator, so that for the next
       // iteration the boundaries are loaded:
       loader_t::load_global_boundaries(out, setter);
-
-//      if (flattened_id(0) == 0 && flattened_id(1) == 0)
-//        printf("\n\n");
     }
   }
 
