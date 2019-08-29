@@ -31,12 +31,16 @@ static constexpr auto third   = double{1} / double{3};
 static constexpr auto one     = double{1};
 /// Defines a constant value of two;
 static constexpr auto two     = double{2};
+
 /// Defines a constant value of $sqrt(2)$. Floating point numbers can store:
 ///   $'log_{10}(2^n)$
 /// digits of precision, where $n$ is the number of bits used for the fractional
 /// part of the number, So for $n=53$ for doubles, we can store approx 16
 /// decimals. We are extra safe here, and set the number using a few more.
 static constexpr auto root_2  = double{1.4142135623730950488016887242096980785};
+
+/// Defines a constant for 1/sqrt(2);
+static constexpr auto one_div_root_2 = one / root_2;
 
 }} // namespace fluid::cx
 

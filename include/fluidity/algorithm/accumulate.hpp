@@ -26,8 +26,7 @@ namespace fluid {
 /// \tparam    V  The type of the value.
 /// \tparam    Vs The types of the rest of the values.
 template <typename V, typename... Vs>
-fluidity_host_device constexpr auto accumulate(V&& v, Vs&&... vs)
-{
+fluidity_host_device constexpr auto accumulate(V&& v, Vs&&... vs) {
   return v + sizeof...(Vs) == 0 ? 0 : accumulate(std::forward<Vs>(vs)...);
 }
 

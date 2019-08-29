@@ -229,9 +229,10 @@ class MultimaterialSimulator final :
   void simulate_mm() {
     // Initialize everything which doesn't depend on the material type.
     _params.print_static_summary();
-    auto       cfl   = _params.cfl;
-    auto       timer = util::default_timer_t();
-    const auto dh    = _params.domain.resolution();
+    auto       cfl           = _params.cfl;
+    auto       timer         = util::default_timer_t();
+    const auto dh            = _params.domain.resolution();
+    constexpr auto bandwidth = 3;
 
     using host_vel_t = HostTensor<value_t, dimensions>;
     using dev_vel_t  = DeviceTensor<value_t, dimensions>;
@@ -260,6 +261,17 @@ class MultimaterialSimulator final :
       //==-- [R] Loading the ghost cells -----------------------------------==//
       print_subprocess("Loading ghost cells");
       ghost::load_ghost_cells(interface_solve_t(), _mm_data, dh);
+
+      //==--- [R] Extrapolate the interfaces -------------------------------==//
+      print_subprocess("Extrapolating the ghost cells");
+      //for_each(_mm_data, [] (auto& mm_data) {
+      //  ghost::extrapolate_interface(
+      //    extrapolator_t(),
+      //    mm_data         ,
+      //    dh              ,
+      //    mm_data.solver().width()
+      //  );
+      //});
 
       //==-- [R] Update the timestep for the iteration ---------------------==//
       update_time_delta();

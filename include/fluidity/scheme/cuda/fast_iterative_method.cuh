@@ -17,13 +17,13 @@
 #ifndef FLUIDITY_SCHEME_CUDA_FAST_ITERATIVE_METHOD_CUH
 #define FLUIDITY_SCHEME_CUDA_FAST_ITERATIVE_METHOD_CUH
 
+#include <fluidity/algorithm/cuda/broadcast.cuh>
 #include <fluidity/execution/execution_policy.hpp>
 #include <fluidity/math/math.hpp>
 #include <fluidity/scheme/schemes/godunov_upwind_scheme.hpp>
 #include <fluidity/traits/iterator_traits.hpp>
 #include <fluidity/traits/tensor_traits.hpp>
 #include <fluidity/utility/constants.hpp>
-#include <fluidity/utility/portability.hpp>
 #include <array>
 #include <limits>
 
@@ -216,60 +216,6 @@ fluidity_global auto fix_gradient_error(Iterator in_out_it, T dh)
   }
 }
 
-//==--- [Broadcast sums] ---------------------------------------------------==//
-
-/// Performs a reduction sum over the entire warp using the value \p val for
-/// each of the threads. Each thread gets the result of the sum.
-/// \param[in] val    The value to add to the reduction for this thread.
-/// \tparam    T      The type of the value.
-template <typename T>
-fluidity_device_only T warp_broadcast_sum(T val) {
-  for (int offset = warpSize / 2; offset > 0; offset /= 2) {
-    val += __shfl_xor_sync(0xffffffff, val, offset, warpSize);
-  }
-  return val;
-};
-
-/// Performs a reduction sum over the entire block using the value \p val for
-/// each of the threads. The result of the sum is returned to all threads in the
-/// block.
-/// \param[in] val    The value to add to the reduction for this thread.
-/// \param[in] shared A pointer to the start of a shared memory block to use.
-///                   This should be at least the size of the warp.
-/// \tparam    T      The type of the value.
-template <typename T>
-fluidity_device_only T block_broadcast_sum(T val, T* shared) {
-  const auto flat_idx = static_cast<int>(flattened_thread_id());
-  const auto lane     = flat_idx % warpSize;
-  const auto wid      = flat_idx / warpSize;
-  const auto warps    = static_cast<std::size_t>(
-    std::ceil(
-      static_cast<float>(block_size()) / 
-      static_cast<float>(warpSize)
-    )
-  );
-        
-  // Compute the warp sum, sending the result to all threads in the warp.
-  val = warp_broadcast_sum(val);
-
-  // Load the value into shared memory. Here, we need to consider the case that
-  // there are less warps than the size of the shared memory, hence the else
-  // branch. This is easier and faster than passing the shared memory size to
-  // the kernel.
-  if (lane == 0) {
-    shared[wid] = val;
-  } else if (flat_idx >= warps && flat_idx < warpSize) {
-    shared[flat_idx] = T{0};
-  }
-  __syncthreads();
-
-  // Reload the results back from the shared memory, and then perform another
-  // broadcast sum of all warp sums to send the result to all threads.
-  val = shared[lane];
-
-  return warp_broadcast_sum(val);
-}
-
 /// Solves the Eikonal equation with a constant speed function of $f = 1$,
 /// using the \p input data as the input data, and writing the results to the
 /// \p output data. The \p solver is the solver implementation which is used.
@@ -291,6 +237,8 @@ fluidity_global auto fast_iterative_solve(
   T                 dh     ,
   ConvergedIterator conv_it
 ) ->void  {
+  using namespace ::fluid::cuda;
+
   using iter_t   = std::decay_t<Iterator>;
   using value_t  = typename iter_t::value_t;
   using solver_t = scheme::GodunovUpwindScheme;

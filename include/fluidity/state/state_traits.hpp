@@ -30,13 +30,21 @@ enum class FormType {
   conservative = 1    //!< Stored state data is in conservative form.
 };
 
-/// Defines a class to represent a state.
-/// \tparam T The type of data used by the state.
-template <typename      T             ,
-          FormType      Form          ,
-          std::size_t   Dimensions    ,
-          std::size_t   Components = 0,
-          StorageFormat Format     = StorageFormat::row_major>
+/// Defines a class to represent a state, which stores density, pressure,
+/// velocity components for each spatial dimension, as well as additional
+/// components.
+/// \tparam T          The type of data used by the state.
+/// \tparam Form       The form of the state, i.e primitive, conservative etc.
+/// \tparam Dimensions The number of spatial dimensions for the state.
+/// \tparam Components The number of additional components for the state.
+/// \tparam Format     The storage format for the state data.
+template <
+  typename      T             ,
+  FormType      Form          ,
+  std::size_t   Dimensions    ,
+  std::size_t   Components = 0,
+  StorageFormat Format     = StorageFormat::row_major
+>
 class State;
 
 namespace traits {
@@ -54,8 +62,15 @@ struct IsState {
 /// Returns true if the type T is a State class. This is the general case for
 /// when the class is a State.
 /// \tparam T   The type to check for a State type.
-template <typename T, FormType F, std::size_t D, std::size_t C, StorageFormat S>
-struct IsState<State<T, F, D, C, S>> {
+template <
+  typename      T         ,
+  FormType      Form      ,
+  std::size_t   Dimensions,
+  std::size_t   Components,
+  StorageFormat Storage
+>
+struct IsState<State<T, Form, Dimensions, Components, Storage>> {
+  /// Returns that this is a state.
   static constexpr bool value = true;
 };
 

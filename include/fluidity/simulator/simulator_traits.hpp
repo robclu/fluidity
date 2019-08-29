@@ -55,7 +55,7 @@ struct SimTraits {
   /// Defines the default flux method to use.
   using def_flux_t    = flux::Force;
   // Defines the default execution type for the simulation.
-  using def_exec_t    = fluid::exec::gpu_type;
+  using def_exec_t    = fluid::exec::gpu_t;
 
   /// Defines the type of the state data to store, always conservative.
   using data_t     = type_at_t<0, def_data_t, Ts...>;

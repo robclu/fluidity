@@ -19,6 +19,7 @@
 #include <fluidity/container/array.hpp>
 #include <fluidity/utility/portability.hpp>
 #include <type_traits>
+#include <math.h>
 
 namespace fluid  {
 namespace math   {
@@ -184,6 +185,80 @@ fluidity_host_device constexpr auto dot(Array<T, S>&& a, Array<U, S>&& b) -> T {
     sum += a[i] * b[i];
   });
   return sum;
+}
+
+//==--- [cross] ------------------------------------------------------------==//
+
+/// Performs a cross product of the arrays \p a and \p, returning the result.
+/// \param[in] a  The first array for the cross product.
+/// \param[in] b  The second array for the cross product.
+/// \tparam    T  The type of the data.
+/// \tparam    S  The number of elements in the arrays.
+template <typename T, std::size_t S, std::enable_if_t<S == 1, int> = 0>
+fluidity_host_device constexpr auto cross(
+  const Array<T, S>& a,
+  const Array<T, S>& b
+) -> T {
+  return T(0);
+}
+
+/// Performs a cross product of the arrays \p a and \p, returning the result.
+/// For 2D this actually computed det(a, b).
+/// \param[in] a  The first array for the cross product.
+/// \param[in] b  The second array for the cross product.
+/// \tparam    T  The type of the data.
+/// \tparam    S  The number of elements in the arrays.
+template <typename T, std::size_t S, std::enable_if_t<S == 2, int> = 0>
+fluidity_host_device constexpr auto cross(
+  const Array<T, S>& a,
+  const Array<T, S>& b
+) -> T {
+  return a[0] * b[1] - a[1] * b[0];
+}
+
+/// Performs a cross product of the arrays \p a and \p, returning the result.
+/// \param[in] a  The first array for the cross product.
+/// \param[in] b  The second array for the cross product.
+/// \tparam    T  The type of the data.
+/// \tparam    S  The number of elements in the arrays.
+template <typename T, std::size_t S, std::enable_if_t<S == 2, int> = 0>
+fluidity_host_device constexpr auto cross(
+  const Array<T, S>& a,
+  const Array<T, S>& b
+) -> Array<T, S> {
+  return Array<T, S>{
+    a[1] * b[2] - a[2] * b[1],
+    a[2] * b[0] - a[0] * b[2],
+    a[0] * b[1] - a[1] * b[0]
+  };
+}
+
+//==--- [isnan] ------------------------------------------------------------==//
+
+/// Returns true if any of the elements in the array \p a ara nan, othterwise
+/// returns false.
+/// \param[in] a  The array to check for nan elements.
+/// \tparam    T  The type of the data.
+/// \tparam    S  The number of elements in the arrays.
+template <typename T, std::size_t S>
+fluidity_host_device constexpr auto isnan(const Array<T, S>& a) -> bool {
+  for (auto i : range(S)) {
+    if (std::isnan(a[i])) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/// Returns true if any of the elements in the array \p a ara nan, othterwise
+/// returns false. This is a wrapper around std::isnan so that it works with
+/// arrays as well as build in numerical types.
+/// \param[in] a  The data to check for nan.
+/// \tparam    T  The type of the data.
+/// \tparam    S  The number of elements in the arrays.
+template <typename T, std::enable_if_t<std::is_arithmetic<T>::value, int> = 0>
+fluidity_host_device constexpr auto isnan(T a) -> bool {
+  return std::isnan(a);
 }
 
 //==--- [length] -----------------------------------------------------------==//

@@ -65,13 +65,10 @@ class LevelSet {
             typename... Sizes          ,
             size_enable_t<Sizes...> = 0>
   LevelSet(Pred&& pred, Sizes&&... sizes)
-  : _data(std::forward<Sizes>(sizes)...)
-  {
-    fill(_data.multi_iterator(), [&] fluidity_host_device (auto it)
-    {
+  : _data(std::forward<Sizes>(sizes)...) {
+    fill(_data.multi_iterator(), [&] fluidity_host_device (auto it) {
       auto positions = Array<float, num_dimensions>{};
-      unrolled_for<num_dimensions>([&] (auto dim)
-      {
+      unrolled_for<num_dimensions>([&] (auto dim) {
         positions[dim] = static_cast<float>(flattened_id(dim)) 
                        / static_cast<float>(it.size(dim));
       });
@@ -81,25 +78,21 @@ class LevelSet {
 
   /// Resizes the level set data.
   template <typename... Sizes, size_enable_t<Sizes...> = 0>
-  void resize(Sizes&&... sizes)
-  {
+  void resize(Sizes&&... sizes) {
     _data.resize(std::forward<Sizes>(sizes)...);
   }
 
   /// Resizes a single dimension \p dim to have \p elements number of elements.
   /// \param[in] dim      The dimension to resize.
   /// \param[in] elements The number of elements to resize the dimension to.
-  void resize_dim(std::size_t dim, std::size_t elements)
-  {
+  void resize_dim(std::size_t dim, std::size_t elements) {
     _data.resize_dim(dim, elements);
   }
 
   /// Initializes the levelset data using the \p predicate.
   template <typename Pred>
-  void initialize(Pred&& pred)
-  {
-    fill(_data.multi_iterator(), [&] fluidity_host_device (auto it)
-    {
+  void initialize(Pred&& pred) {
+    fill(_data.multi_iterator(), [&] fluidity_host_device (auto it) {
       auto positions = Array<float, num_dimensions>{};
       unrolled_for<num_dimensions>([&] (auto dim)
       {
@@ -111,20 +104,17 @@ class LevelSet {
   }
 
   /// Returns the storage for the levelset for the host.
-  auto host_storage() const
-  {
+  auto host_storage() const {
     return std::move(_data.as_host());
   }
 
   /// Returns a multi-dimensional iterator over the levelset data.
-  auto multi_iterator() const
-  {
+  auto multi_iterator() const {
     return _data.multi_iterator();
   }
 
   /// Resets the levelset data.
-  fluidity_host_device void reset_data(pointer_t new_data)
-  {
+  fluidity_host_device void reset_data(pointer_t new_data) {
     _data.reset_data(new_data);
   }
 
@@ -174,8 +164,7 @@ class LevelSet {
 /// \param[in] levelset_it An iterator over levelset data.
 /// \tparam    LSIT        The type of the levelset iterator.
 template <typename LSIT>
-fluidity_host_device constexpr auto inside(LSIT&& levelset_it) -> bool
-{
+fluidity_host_device constexpr auto inside(LSIT&& levelset_it) -> bool {
   using type_t = std::decay_t<decltype(*levelset_it)>;
   return *levelset_it <= type_t{0} || *levelset_it <= -type_t{0};
 }
@@ -185,8 +174,7 @@ fluidity_host_device constexpr auto inside(LSIT&& levelset_it) -> bool
 /// \param[in] levelset_it An iterator over levelset data.
 /// \tparam    LSIT        The type of the levelset iterator.
 template <typename LSIT>
-fluidity_host_device constexpr auto outside(LSIT&& levelset_it) -> bool
-{
+fluidity_host_device constexpr auto outside(LSIT&& levelset_it) -> bool {
   using type_t = std::decay_t<decltype(*levelset_it)>;
   return *levelset_it > type_t{0};
 }
@@ -196,8 +184,7 @@ fluidity_host_device constexpr auto outside(LSIT&& levelset_it) -> bool
 /// \param[in] levelset_it An iterator over levelset data.
 /// \tparam    LSIT        The type of the levelset iterator.
 template <typename LSIT>
-fluidity_host_device constexpr auto on_boundary(LSIT&& levelset_it) -> bool
-{
+fluidity_host_device constexpr auto on_boundary(LSIT&& levelset_it) -> bool {
   using type_t = std::decay_t<decltype(*levelset_it)>;
   return *levelset_it == type_t{0} || *levelset_it == -type_t{0};
 }
@@ -211,10 +198,9 @@ fluidity_host_device constexpr auto on_boundary(LSIT&& levelset_it) -> bool
 /// \tparam    T           The type of the resolution data.
 template <typename LSIT, typename T>
 fluidity_host_device constexpr auto
-inside_interfacial_cell(LSIT&& levelset_it, T dh) -> bool
-{
+inside_interfacial_cell(LSIT&& levelset_it, T dh) -> bool {
   return (inside(levelset_it) || on_boundary(levelset_it)) && 
-         (*levelset_it >= -std::abs(dh));
+         (*levelset_it >= -dh);
 }
 
 /// Returns true if dereferencing the \p levelset_it has a value greater than 0
@@ -226,8 +212,7 @@ inside_interfacial_cell(LSIT&& levelset_it, T dh) -> bool
 /// \tparam    T           The type of the resolution data.
 template <typename LSIT, typename T>
 fluidity_host_device constexpr auto
-outside_interfacial_cell(LSIT&& levelset_it, T dh) -> bool
-{
+outside_interfacial_cell(LSIT&& levelset_it, T dh) -> bool {
   return outside(levelset_it) && (*levelset_it < std::abs(dh));
 }
 

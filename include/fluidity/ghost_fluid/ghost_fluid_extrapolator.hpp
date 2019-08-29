@@ -17,6 +17,10 @@
 #ifndef FLUIDITY_GHOST_FLUID_GHOST_CELL_EXTRAPOLATOR_HPP
 #define FLUIDITY_GHOST_FLUID_GHOST_CELL_EXTRAPOLATOR_HPP
 
+#include <fluidity/algorithm/unrolled_for.hpp>
+#include <fluidity/iterator/multidim_iterator.hpp>
+#include <fluidity/traits/iterator_traits.hpp>
+#include <fluidity/utility/constants.hpp>
 #include <fluidity/utility/portability.hpp>
 
 namespace fluid {
@@ -43,17 +47,22 @@ struct GhostCellExtrapolator {
   static constexpr auto width = 1;
 
   /// Invokes the extrapolation on the material iterators.
-  /// \param[in] mat_iterator  The type of the material iterator.
+  /// \param[in] mat_it        The type of the material iterator.
   /// \param[in] dh            The resolution of the material data grids.
   /// \tparam    MatIterator   The type of the material iterator.
   /// \tparam    T             The type of the resolution data.
   template <typename MatIterator, typename T>
   fluidity_host_device static void
-  invoke(MatIterator&& mat_iterator, T dh, std::size_t band_width = 3) {
-    static_assert(traits::is_mat_iterator_v<MatIterator>,
-      "Extrapolation of ghost cells requires a material iterator!");
+  invoke(MatIterator&& mat_it, T dh, std::size_t band_width = 3) {
+    static_assert(
+      traits::is_material_iter_v<MatIterator>,
+      "Extrapolation of ghost cells requires a material iterator!"
+    );
+    using value_t      = T;
     using mat_iter_t   = std::decay_t<MatIterator>;
-    using state_data_t = std::decay_t<decltype(*mat_iter.state_it)>;
+    using state_iter_t = std::decay_t<decltype(mat_it.state_iterator())>;
+    using ls_iter_t    = std::decay_t<decltype(mat_it.levelset_iterator())>;
+    using state_data_t = std::decay_t<decltype(*mat_it.state_iterator())>;
 
     // The amount of padding for the loading. We need on element on each side
     // for each of the dimensions.
@@ -62,72 +71,134 @@ struct GhostCellExtrapolator {
 
     // Shared memory iterators for the state and levelset data. Here we only
     // need a single padding element on each side.
-    auto ls_it    = make_multi_iter<1>(mat_iter.ls_it);
-    auto state_it = make_multi_iter<1>(mat_iter.state_it);
+    //auto ls_it    = 
+    //  make_multidim_iterator<ls_iter_t, 1>(mat_it.levelset_iterator());
+    //auto state_it = 
+    //  make_multidim_iterator<state_iter_t, 1>(mat_it.state_iterator());
 
     // Offset the iterators ...
-    unrollled_for<dims>([&] (auto dim) {
-      const auto offset = thread_id(dim) + 1;
-      mat_iter.shift(flattened_id(dim), dim);
-      ls_it.shift(offset, dim);
-      state_it.shift(offset, dim);
+    unrolled_for<dims>([&] (auto dim) {
+      //const auto offset = thread_id(dim) + 1;
+      mat_it.shift(flattened_id(dim), dim);
+      //ls_it.shift(offset, dim);
+      //state_it.shift(offset, dim);
     });
 
     // Set the boundary data ...
-    unrolled_for<iter_t::dimensions>([&] (auto dim) {
-      if (flattened_id(dim) == 0) {
-        *ls_it.offset(-1, dim) = std::numeric_limits<value_t>::max(); 
-      } else if (flattened_id(dim) >= output.size(dim) - 1) {
-        *ls_it.offset(1, dim) = std::numeric_limits<value_t>::max(); 
-      } else if (thread_id(dim) == 0) {
-        *state_it.offset(-1, dim) = *mat_iter.state_it.offset(-1, dim);
-        *ls_it.offset(-1, dim)    = *mat_iter.ls_it.offset(-1, dim);
-      } else if (thread_id(dim) == block_size(dim) - 1) {
-        *state_it.offset(1, dim) = *mat_iter.state_it.offset(1, dim);
-        *ls_it.offset(1, dim)    = *mat_iter.ls_it.offset(1, dim);
-      }
-    });
+//    unrolled_for<dims>([&] (auto dim) {
+//      if (flattened_id(dim) == 0) {
+//        *ls_it.offset(-1, dim) = std::numeric_limits<value_t>::max(); 
+//      } else if (flattened_id(dim) >= mat_it.state_iterator().size(dim) - 1) {
+//        *ls_it.offset(1, dim) = std::numeric_limits<value_t>::max(); 
+//      } else if (thread_id(dim) == 0) {
+//        //*state_it.offset(-1, dim) = *mat_it.state_iterator().offset(-1, dim);
+//        *ls_it.offset(-1, dim)    = *mat_it.levelset_iterator().offset(-1, dim);
+//      } else if (thread_id(dim) == block_size(dim) - 1) {
+//        //*state_it.offset(1, dim) = *mat_it.state_iterator().offset(1, dim);
+//        *ls_it.offset(1, dim)    = *mat_it.levelset_iterator().offset(1, dim);
+//      }
+//    });
 
-    *ls_it    = *mat_iter.ls_it;
-    *state_it = *mat_iter.state_it;
+//    *ls_it    = *mat_it.levelset_iterator();
+    auto ls_it    = mat_it.levelset_iterator();
+    auto state_it = mat_it.state_iterator();
     // TODO: Change this to synchronize();
     __syncthreads();
 
     // For each dimension, the value to choose is the one which has a smaller
     // levelset value (i.e the one towards the interface).
     auto extrap_data = Array<state_data_t, dims>{};
-    for (auto i : range(band_width)) {
-      const auto sign         = math::signum(*ls_it);
-      const auto norm         = -sign * ls_it->norm(dh);
-      const auto norm_mag_l1  = 0.0;
+//    for (auto i : range(band_width)) {
+    band_width += 3;
+    int iters = std::abs(*ls_it) / dh + 1;
+    for (auto j : range(1)) {
+      // Need to handle the case that the normal is zero, when the interface is
+      // exactly at the center of the cell ...
+      constexpr auto tolerance = 1e-8;
+      const auto sign        = math::signum(*ls_it);
+      const auto norm        = -sign * ls_it.norm(dh);
+      auto       norm_mag_l1 = 0.0;
 
-      const auto upper = (2.0 * i + 1.0) * dh * one_div_root_2;
-      const auto lower = (2.0 * i - 1.0) * dh * one_div_root_2;
+      const auto upper = band_width * dh * cx::one_div_root_2;
+      //const auto lower = dh * cx::one_div_root_2;
+      const auto lower = dh;
 
-      if (*ls_it >= lower && *ls_it <= upper) {
+      // NOTE: The levelset here needs to be positive so that we know we are
+      //       outside of the material, hence in the region which needs to be
+      //       extrapolated to.
+      if (levelset::outside(ls_it) && *ls_it <= upper && *ls_it >= lower) {
         unrolled_for<dims>([&] (auto dim) {
           norm_mag_l1 += std::abs(norm[dim]);
+        });
 
-          // Add the contibution for this dimension ...
-          extrap_data[dim] = *ls_it.offset(-1, dim) < *ls_it.offset(1, dim)
-            ? *state_it.offset(-1, dim) : *state_it.offset(1, dim);
-        });
+        using state_t    = std::decay_t<decltype(*state_it)>;
+        bool keep_trying = true;
+        auto p           = *state_it;
+        auto q           = state_t{std::numeric_limits<value_t>::max()};
+        using state_t    = std::decay_t<decltype(p)>;
+        int i = 0;
+        int dir = 0;
+        while (keep_trying || iters-- >= 0) {
+          i++;
+          p = 0.0;
+          // Compute the data to extrapolate, using the cell which is closer to
+          // the interface ...
+          unrolled_for<dims>([&] (auto dim) {
+            // Add the contibution for this dimension ...
+            dir = *ls_it.offset(-1, dim) < *ls_it.offset(1, dim) ? -1 : 1;
+            extrap_data[dim] = *state_it.offset(dir, dim);
+            p += extrap_data[dim] 
+               * (norm_mag_l1 > 1e-2 ? std::abs(norm[dim]) : 0.5);
+          });
         
-        *state_it = 0.0;
-        unrolled_for<dims>([&] (auto dim) {
-          *state_it += extrap_data * 
-            (norm_mag_l1 > 1e-2 ? std::abs(norm[dim]) : 0.5);
-        });
-        if (norm_mag_l1 > 1e-2) {
-          *state_it /= norm_mag_l1;
+          if (norm_mag_l1 > 1e-2) {
+            p = p / norm_mag_l1;
+          }
+
+          //if (math::isnan(p)) {
+          //  continue;
+          //}
+
+          auto err = std::abs(p[0] - q[0]);
+          unrolled_for<state_t::elements - 1>([&] (auto e) {
+            err += std::abs(p[e + 1] - q[e + 1]);
+          });
+          keep_trying = err >= tolerance || math::isnan(err);
+
+          constexpr auto maxxx = 1e3;
+
+          printf("A : %3lu : I : %3i, DIR: %3i : ER: %4.4f : NM : %4.4f : "
+                 "K : %3lu "
+                 "L : {%4.4f, %4.4f, %4.4f} "
+                 "S : {%4.4f, %4.4f, %4.4f} "
+                 "S1 : {%4.4f, %4.4f, %4.4f} "
+                 "P : {%4.4f, %4.4f, %4.4f} "
+                 "Q : {%4.4f, %4.4f, %4.4f}\n", 
+            flattened_id(dim_x), i, dir, err, norm_mag_l1, keep_trying,
+            *ls_it, *ls_it.offset(-1, 0), *ls_it.offset(1, 0),
+            (*state_it)[0], (*state_it)[1], (*state_it)[2],
+            (*state_it.offset(1, 0))[0], (*state_it.offset(1, 0))[1], 
+            (*state_it.offset(1, 0))[2],
+            p[0], p[1], p[2],
+            min(q[0], maxxx), min(q[1], maxxx), min(q[2], maxxx)
+          );
+          // Set the old value to the new one.
+          if (p != value_t{0} && !math::isnan(p)) {
+            q = p;
+            *mat_it.state_iterator() = p;
+          } //else {
+          //  q = *mat_it.state_iterator();
+          //}
         }
+        *mat_it.state_iterator() = p;
       }
       // Make sure that the updated cell values are seen by the other threads
       // for the next iteration.
-      __syncthreads();
     }
 
-    *mat_iter.state_it = *state_it;
+    // In the case that the data does not need to be extrapolated, this just
+    // sets the state to its unmodified original value.
+    //*mat_it.state_iterator() = *state_it;
   }
 };
 

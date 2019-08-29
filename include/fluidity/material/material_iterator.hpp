@@ -83,8 +83,7 @@ class MaterialIterator {
   /// \tparam    LsIterator The type of the levelset iterator.
   /// \tparam    StIterator The type of the state iterator.
   template <typename EqOfState, typename LsIterator, typename StIterator>
-  MaterialIterator(EqOfState&& eos, LsIterator&& ls_it, StIterator&& state_it)
-  : 
+  MaterialIterator(EqOfState&& eos, LsIterator&& ls_it, StIterator&& state_it) : 
   _eos(std::forward<EqOfState>(eos))          ,
   _ls_it(std::forward<LsIterator>(ls_it))     ,
   _state_it(std::forward<StIterator>(state_it)) {

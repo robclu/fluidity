@@ -112,9 +112,26 @@ class Array {
   /// Overload of access operator to access an element in the array. __Note:__
   /// this does not check that the value of \p i is in range.
   /// \param[in] i The index of the element in the vetor to return.
-  fluidity_host_device constexpr const_reference_t operator[](size_t i) const
-  {
+  fluidity_host_device constexpr const_reference_t operator[](size_t i) const {
     return _data[i];
+  }
+
+  /// Overload of operator== to compare each element of the array with a scalar.
+  /// \param[in] scalar The scalar to compare each element to.
+  fluidity_host_device constexpr auto operator==(value_t scalar) const -> bool {
+    for (auto i : range(elements)) {
+      if (_data[i] == scalar) {
+        continue;
+      }
+      return false;
+    }
+    return true;
+  }
+
+  /// Overload of operator!= to check for inequality.
+  /// \param[in] scalar The scalar to compare each element to.
+  fluidity_host_device constexpr auto operator!=(value_t scalar) const -> bool {
+    return !(*this == scalar);
   }
 
   /// Overload of operator- to subtract each element of a container from each
@@ -250,11 +267,26 @@ template <typename T, typename U, std::size_t S, conv_enable_t<T, U> = 0>
 fluidity_host_device constexpr auto operator*(T scalar, const Array<U, S>& a)
     -> Array<U, S> {
   auto result = a;
-  unrolled_for_bounded<S>([&] (auto i)
-  {
+  unrolled_for_bounded<S>([&] (auto i) {
     result[i] *= scalar;
   });
   return result;
+}
+
+/// Overload of multiplication operator to perform elementwise multiplication of
+/// a scalar constant to an array.
+/// \param[in] scalar The scalar to multiply to each element of the array.
+/// \param[in] a      The array to multiply with the scalar.
+/// \tparam    T      The type of the scalar data.
+/// \tparam    U      The type of the data in the array.
+/// \tparam    S      The size of the array.
+template <typename T, typename U, std::size_t S, conv_enable_t<T, U> = 0>
+fluidity_host_device constexpr auto operator*(T scalar, Array<U, S>&& a)
+    -> Array<U, S>&& {
+  unrolled_for_bounded<S>([&] (auto i) {
+    a[i] *= scalar;
+  });
+  return std::move(a);
 }
 
 /// Overload of multiplication operator to perform elementwise multiplication of
@@ -268,11 +300,26 @@ template <typename U, std::size_t S, typename T, conv_enable_t<T, U> = 0>
 fluidity_host_device constexpr auto operator*(const Array<U, S>& a, T scalar)
     -> Array<U, S> {
   auto result = a;
-  unrolled_for_bounded<S>([&] (auto i)
-  {
+  unrolled_for_bounded<S>([&] (auto i) {
     result[i] *= scalar;
   });
   return result;
+} 
+
+/// Overload of multiplication operator to perform elementwise multiplication of
+/// a scalar constant to an array.
+/// \param[in] a      The array to multiply with the scalar.
+/// \param[in] scalar The scalar to multiply to each element of the array.
+/// \tparam    U      The type of the data in the array.
+/// \tparam    S      The size of the array.
+/// \tparam    T      The type of the scalar data.
+template <typename U, std::size_t S, typename T, conv_enable_t<T, U> = 0>
+fluidity_host_device constexpr auto operator*(Array<U, S>&& a, T scalar)
+    -> Array<U, S> {
+  unrolled_for_bounded<S>([&] (auto i) {
+    a[i] *= scalar;
+  });
+  return std::move(a);
 } 
 
 /// Overload of devision operator to perform elementwise division of a scalar

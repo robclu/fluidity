@@ -25,17 +25,26 @@
 namespace fluid  {
 namespace state  {
 
-/// Defines a class to represent a state.
-/// \tparam T The type of data used by the state.
-template < typename      T
-         , FormType      Form         
-         , std::size_t   Dimensions
-         , std::size_t   Components
-         , StorageFormat Format>
+/// Defines a class to represent a state, which stores density, pressure,
+/// velocity components for each spatial dimension, as well as additional
+/// components.
+/// \tparam T          The type of data used by the state.
+/// \tparam Form       The form of the state, i.e primitive, conservative etc.
+/// \tparam Dimensions The number of spatial dimensions for the state.
+/// \tparam Components The number of additional components for the state.
+/// \tparam Format     The storage format for the state data.
+template <
+  typename      T         ,
+  FormType      Form      ,  
+  std::size_t   Dimensions,
+  std::size_t   Components,
+  StorageFormat Format
+>
 class State : public traits::storage_t<T, Dimensions, Components, Format> {
  private:
   /// Defines the type of a dispatch tag for the state.
   using dispatch_tag_t = traits::detail::StateDispatchTag<Form>;
+
  public:
   /// Defines an alias for the type of storage;
   using storage_t = traits::storage_t<T, Dimensions, Components, Format>;
@@ -49,6 +58,7 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
   template <typename TT>
   using non_value_enable_t = std::enable_if_t<
     !std::is_convertible<std::decay_t<TT>, value_t>::value, int>;
+
   /// Defines a valid type if the template type is convertible to the valuet_t
   /// type.
   /// \tparam TT The template paramter to check the type of.
@@ -73,7 +83,8 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
   /// Use the storage class constructors.
   using storage_t::storage_t;
 
-  /// The index struct returns the values where data is stored in the state.
+  /// The index struct returns the values of the indices for where the data
+  /// is stored in the state.
   struct index {
     /// Defines that the density is always stored as the first state element.
     static constexpr int density  = 0;
@@ -94,21 +105,18 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
     /// ~~~
     /// 
     /// describes the layout of the state data elements.
-    static auto element_names()
-    {
+    static auto element_names() {
       // ASCII offst to char code x:
       constexpr int ascii_offset = 120;
 
       std::vector<std::string> names = { "rho" };
       names.emplace_back(format == FormType::primitive ? "p" : "E");
 
-      unrolled_for<dimensions>([&names] (auto i)
-      {
+      unrolled_for<dimensions>([&names] (auto i) {
         std::string s = std::string("v_") + char(ascii_offset + i);
         names.push_back(s);
       });
-      unrolled_for<additional_components>([&names] (auto i)
-      {
+      unrolled_for<additional_components>([&names] (auto i) {
         std::string s = "add_" + std::to_string(i);
         names.emplace_back(s);
       });
@@ -155,10 +163,8 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
   /// \param[in] container The container with the data to set the elements to.
   /// \tparam    Container The type of the container.
   template <typename Container, non_value_enable_t<Container> = 0>
-  fluidity_host_device State(Container&& container)
-  {
-    unrolled_for_bounded<elements>([&] (auto i)
-    {
+  fluidity_host_device State(Container&& container) {
+    unrolled_for_bounded<elements>([&] (auto i) {
       this->operator[](i) = container[i];
     });
   }
@@ -166,10 +172,8 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
   /// Constructor to create a state with a default value for each element.
   /// \param[in] value The value to initialize each element to.
   template <typename Value, value_enable_t<Value> = 0>
-  fluidity_host_device State(Value&& value)
-  {
-    unrolled_for_bounded<elements>([&] (auto i)
-    {
+  fluidity_host_device State(Value&& value) {
+    unrolled_for_bounded<elements>([&] (auto i) {
       this->operator[](i) = value;
     });
   }
@@ -185,55 +189,52 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
 
   /// Sets the data for the density component for the state.
   /// \param[in] rho The density component to use to set the density.
-  void set_component(components::density_t rho)
-  {
+  void set_component(components::density_t rho) {
     set_density(rho.value);
   }
 
   /// Sets the data for the pressure component for the state.
   /// \param[in] pressure The pressure component to use to set the pressure.
-  void set_component(components::pressure_t p)
-  {
-    if (format == FormType::primitive)
+  void set_component(components::pressure_t p) {
+    if (format == FormType::primitive) {
       set_pressure(p.value);
+    }
   }
 
   /// Sets the data for the x-velocity component for the state.
   /// \param[in] vx The velocity component to use to set the x velocity.
-  void set_component(components::v_x_t vx)
-  {
-    if (dimensions >= 1)
+  void set_component(components::v_x_t vx) {
+    if (dimensions >= 1) {
       set_velocity(vx.value, std::size_t{0});
+    }
   }
 
   /// Sets the data for the y-velocity component for the state.
   /// \param[in] vy The velocity component to use to set the y velocity.
-  void set_component(components::v_y_t vy)
-  {
-    if (dimensions >= 2)
+  void set_component(components::v_y_t vy) {
+    if (dimensions >= 2) {
       set_velocity(vy.value, std::size_t{1});
+    }
   }
 
   /// Sets the data for the z-velocity component for the state.
   /// \param[in] vz The velocity component to use to set the z velocity.
-  void set_component(components::v_z_t vz)
-  {
-    if (dimensions >= 3)
+  void set_component(components::v_z_t vz) {
+    if (dimensions >= 3) {
       set_velocity(vz.value, std::size_t{2});
+    }
   }
 
-  //==--- Data access ------------------------------------------------------==//
+  //==--- [Data access] ----------------------------------------------------==//
 
   /// Returns the density of the state.
-  fluidity_host_device constexpr auto density() const
-  { 
+  fluidity_host_device constexpr auto density() const { 
     return detail::density(*this);
   }
 
   /// Sets the density of the state.
   /// \param[in] value The value of the density to set the state to.
-  fluidity_host_device constexpr void set_density(value_t value)
-  {
+  fluidity_host_device constexpr void set_density(value_t value) {
     this->operator[](index::density) = value;
   }
 
@@ -241,8 +242,7 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
   /// \param[in]  mat  The material for the system the state represents.
   /// \tparam     Mat  The type of the material.
   template <typename Mat>
-  fluidity_host_device constexpr auto pressure(Mat&& mat) const
-  {
+  fluidity_host_device constexpr auto pressure(Mat&& mat) const {
     return detail::pressure(*this, std::forward<Mat>(mat));
   }
 
@@ -250,8 +250,7 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
   /// is only enabled for primitive form states.
   /// other conservative components.
   /// \param[in] value The value to set the pressure for the state to.
-  fluidity_host_device constexpr void set_pressure(value_t value)
-  {
+  fluidity_host_device constexpr void set_pressure(value_t value) {
     set_pressure_impl(value, traits::state_dispatch_tag<self_t>);
   }
 
@@ -259,16 +258,14 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
   /// \param[in]  mat   The material for the system the state represents.
   /// \tparam     Mat   The type of the material.
   template <typename Mat>
-  fluidity_host_device constexpr auto energy(Mat&& mat) const
-  {
+  fluidity_host_device constexpr auto energy(Mat&& mat) const {
     return detail::energy(*this, std::forward<Mat>(mat));
   }
 
   /// Sets the energy of the state. This overload is enabled for conservative
   /// form states.
   /// \param[in] value The value to set the energy to.
-  fluidity_host_device constexpr void set_energy(value_t value) 
-  {
+  fluidity_host_device constexpr void set_energy(value_t value)  {
     set_energy_impl(value, traits::state_dispatch_tag<self_t>);
   }
 
@@ -278,8 +275,7 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
   /// \param[in]  dim   The dimension to get the velocity for.
   /// \tparam     Dim   The type of the dimension.
   template <typename Dim>
-  fluidity_host_device constexpr auto velocity(Dim dim) const
-  {
+  fluidity_host_device constexpr auto velocity(Dim dim) const {
     return detail::velocity(*this, dim);
   }
 
@@ -289,8 +285,7 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
   /// \param[in] dim   The dimension to set the velocity for.
   /// \tparam    Dim   The type of the dimension.
   template <typename Dim>
-  fluidity_host_device constexpr void set_velocity(value_t value, Dim dim)
-  {
+  fluidity_host_device constexpr void set_velocity(value_t value, Dim dim) {
     set_velocity_impl(value, dim, traits::state_dispatch_tag<self_t>);
   }
 
@@ -299,8 +294,7 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
   /// valid index for an additional element then the behaviour is undefined.
   /// \tparam    Index The type of the index for the additional element.
   template <typename Index>
-  fluidity_host_device constexpr auto additional(Index i) const
-  {
+  fluidity_host_device constexpr auto additional(Index i) const {
     return this->operator[](index::additional(i));
   }
 
@@ -311,8 +305,7 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
   /// \param[in] value The value to set the component to.
   /// \tparam    Index The type of the index.
   template <typename Index>
-  fluidity_host_device constexpr void set_additional(value_t value, Index i)
-  {
+  fluidity_host_device constexpr void set_additional(value_t value, Index i) {
     this->operator[](index::additional(i)) = value;
   }
 
@@ -321,8 +314,7 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
   /// \param[in] mat The material to use when conversion is required.
   /// \tparam    Mat The type of the material.
   template <typename Mat>
-  fluidity_host_device constexpr auto conservative(Mat&& mat) const
-  {
+  fluidity_host_device constexpr auto conservative(Mat&& mat) const {
     return detail::conservative(*this, std::forward<Mat>(mat));
   }
 
@@ -331,8 +323,7 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
   /// \param[in] mat The material to use when conversion is required.
   /// \tparam    Mat The type of the material.
   template <typename Mat>
-  fluidity_host_device constexpr auto primitive(Mat&& mat) const
-  {
+  fluidity_host_device constexpr auto primitive(Mat&& mat) const {
     return detail::primitive(*this, std::forward<Mat>(mat));
   }
 
@@ -343,8 +334,7 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
   /// \tparam    Mat  The type of the material.
   /// \tparam    Dim  The value which defines the dimension.
   template <typename Mat, typename Dim>
-  fluidity_host_device constexpr auto flux(Mat&& mat, Dim dim) const
-  {
+  fluidity_host_device constexpr auto flux(Mat&& mat, Dim dim) const {
     return detail::flux(*this, std::forward<Mat>(mat), dim);
   }
 
@@ -358,8 +348,7 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
   /// \param[in] mat The material for the system.
   /// \tparam    Mat The type of the material.
   template <typename Mat>
-  fluidity_host_device constexpr value_t max_wavespeed(Mat&& mat)
-  {
+  fluidity_host_device constexpr value_t max_wavespeed(Mat&& mat) {
     return detail::max_wavespeed(*this, std::forward<Mat>(mat));
   };
 
@@ -369,14 +358,22 @@ class State : public traits::storage_t<T, Dimensions, Components, Format> {
   ///   \sum_{i}^{N} u_i^2
   /// \end{equation}
   /// where $N$ is the number of spacial dimension for the state.
-  fluidity_host_device constexpr value_t v_squared_sum() const
-  {
+  fluidity_host_device constexpr value_t v_squared_sum() const {
     return detail::v_squared_sum(*this);
   }
 
+  /// Returns a vector of just the velocities.
+  fluidity_host_device constexpr auto velocity_vec() const 
+  -> Array<value_t, dimensions> {
+    auto r = Array<T, dimensions>();
+    unrolled_for<dimensions>([&] (auto dim) {
+      r[dim] = this->velocity(dim);
+    });
+    return r;
+  }
+
   /// Returns the number of elements (total components) of the state.
-  fluidity_host_device constexpr auto size() const
-  {
+  fluidity_host_device constexpr auto size() const {
     return index::a_offset + additional_components;
   }
 

@@ -35,8 +35,7 @@ class FastIterative : public Eikonal<FastIterative> {
   /// Returns the width required by the Eikonal solver. The width is the maximum
   /// offset (in any dimension) from a cell to another cell whose data needs to
   /// be used by the cell. It is dependent on the implementation.
-  constexpr auto width() const
-  {
+  constexpr auto width() const {
     return std::size_t{1};
   }
 
@@ -49,8 +48,7 @@ class FastIterative : public Eikonal<FastIterative> {
   /// \param[in] out_it The iteratable output data to update.
   /// \tparam    I      The type of the input iterator.
   template <typename I, typename T, traits::gpu_enable_t<I> = 0>
-  fluidity_host_device void solve(I&& it_in, I&& it_out, T dh) const
-  {
+  fluidity_host_device void solve(I&& it_in, I&& it_out, T dh) const {
     static_assert(is_multidim_iter_v<I>, 
       "Input & output iterators must be a multidimensional iterators!");
 

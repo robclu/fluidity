@@ -56,6 +56,12 @@ endif()
 # If clang for cuda then set the cuda compiler. When clang is used for cuda,
 # the CXX compiler is automatically set to clang as well.
 if (${CUDA_CLANG})
+  message("NOTE: Currently, this will only compile with clang version 6.0,")
+  message("and with CUDA 9.0. Other combinations don't seem to work, and there")
+  message("seems to be some problem with clang 7.0 and up which does not allow")
+  message("static shared memory to be initialized, which are required for")
+  message("creating shared memory multi-dimensional iterators.")
+
   if (NOT EXISTS ${CLANG_COMPILER_PATH})
     message("-- CUDA : Using system clang++ for cuda since -DCUDA_CLANG=ON" )
     message("          but CLANG_PATH is empty. Specify -DCLANG_PATH=<path>")
@@ -73,7 +79,7 @@ else()
 endif()
 
 if (NOT EXISTS ${CUDA_PATH})
-  set(CUDA_PATH "/lsc/opt/cuda-9.2")
+  set(CUDA_PATH "/lsc/opt/cuda-10.0")
   message("-- CUDA : CUDA_PATH is not valid, using : ${CUDA_PATH}")
 endif()
 set(CUDA_TOOLKIT_ROOT_DIR ${CUDA_PATH})
@@ -94,7 +100,7 @@ execute_process(
   COMMAND ${FLUID_CUDA_COMPILER} --version OUTPUT_VARIABLE NVCC_VERSION
 )
 
-if (NVCC_VERSION MATCHES "V9")
+if (NVCC_VERSION MATCHES "V9" OR NVCC_VERSION MATCHES "V10")
 else()
   if (NOT ${USING_CLANG})
     message("-- ERROR: NVCC Version > 9 is required.")

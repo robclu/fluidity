@@ -20,6 +20,7 @@
 #include "multimaterial_simulation_data.hpp"
 #include <fluidity/container/tuple.hpp>
 #include <fluidity/ghost_fluid/simple_ghost_fluid.hpp>
+#include <fluidity/ghost_fluid/riemann_ghost_fluid.hpp>
 #include <fluidity/levelset/levelset.hpp>
 #include <fluidity/levelset/levelset_evolution.hpp>
 #include <fluidity/material/material.hpp>
@@ -173,7 +174,7 @@ struct MultimaterialSimTraits {
   //==--- [Ghost/Cutcell/Interface] ----------------------------------------==//
   
   /// Defines the type of the solver for the interface.
-  using interface_solve_t = ghost::SimpleGFM<3>;
+  using interface_solve_t = ghost::RiemannGFM<3>;
 
   //==--- [Solver] ---------------------------------------------------------==//
 

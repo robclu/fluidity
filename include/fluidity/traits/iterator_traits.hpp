@@ -16,6 +16,7 @@
 #ifndef FLUIDITY_TRAITS_ITERATOR_TRAITS_HPP
 #define FLUIDITY_TRAITS_ITERATOR_TRAITS_HPP
 
+#include <fluidity/material/material_iterator.hpp>
 #include <fluidity/iterator/multidim_iterator_fwd.hpp>
 #include <type_traits>
 
@@ -47,6 +48,30 @@ struct IsMultidimensional<MultidimIterator<T, DimInfo, Exec>> {
   static constexpr auto value = true;
 };
 
+/// Struct which is specialized for material iterators.
+/// \tparam T The type to determine if is a material iterator.
+template <typename T>
+struct IsMaterialIterator {
+  /// Defines that the type is not multidimensional.
+  static constexpr auto value = false;
+};
+
+/// Specialization for material iterators.
+/// \tparam EquationOfState   The equation of state for the material.
+/// \tparam LevelsetIterator  The type of the iterator over the levelset data.
+/// \tparam StateIterator     The type of the iterator over the state data.
+template <
+  typename EquationOfState ,
+  typename LevelsetIterator,
+  typename StateIterator
+>
+struct IsMaterialIterator<
+  material::MaterialIterator<EquationOfState, LevelsetIterator, StateIterator>
+> {
+  /// Defines that the class is a material iterator.
+  static constexpr auto value = true;
+};
+
 } // namespace detail
 
 /// Returns true if the type T is a multidimensional iterator, otherwise returns
@@ -55,6 +80,13 @@ struct IsMultidimensional<MultidimIterator<T, DimInfo, Exec>> {
 template <typename T>
 static constexpr auto is_multidim_iter_v 
   = detail::IsMultidimensional<std::decay_t<T>>::value;
+
+/// Returns true if the type T is a material iterator, otherwise returns
+/// false.
+/// \tparam T The type to determine if is a material iterator.
+template <typename T>
+static constexpr auto is_material_iter_v 
+  = detail::IsMaterialIterator<std::decay_t<T>>::value;
 
 /// Defines a valid type used for enabling of multidimensional specializations.
 /// \tparam T The type to check multidimensional functionality for to base the

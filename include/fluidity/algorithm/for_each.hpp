@@ -18,6 +18,8 @@
 
 #include "for_each.cuh"
 #include <fluidity/container/tuple.hpp>
+#include <fluidity/traits/device_traits.hpp>
+#include <fluidity/traits/iterator_traits.hpp>
 #include <tuple>
 
 namespace fluid {
