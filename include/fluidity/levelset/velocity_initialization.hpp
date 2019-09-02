@@ -31,18 +31,25 @@ namespace levelset {
 /// \param[in] materials          Container with material simulation data for
 ///                               each material.
 /// \param[in] velocities         Iterator to the velocity data.
+/// \param[in] dh                 The grid resolution.
 /// \tparam    MaterialContainer  The type of the container for the material
 ///                               data. 
 /// \tparam    VelIterator        The type of the velocity iterator.
+/// \tparam    T                  The type of the grid resolution.
 template <
   typename MaterialContainer,
   typename VelIterator      ,
+  typename T                ,
   traits::cpu_enable_t<VelIterator> = 0
 >
-auto set_velocities(MaterialContainer&& materials, VelIterator&& velocities) 
--> void {
+auto set_velocities(
+  MaterialContainer&& materials ,
+  VelIterator&&       velocities,
+  T                   dh 
+) -> void {
   // TODO: Call CPU implementation ...
 }
+
 
 /// Sets the velocity values stored in the \p velocities iterator using the
 /// state data for each of the \p materials in the materials container.
@@ -53,19 +60,26 @@ auto set_velocities(MaterialContainer&& materials, VelIterator&& velocities)
 /// \param[in] materials          Container with material simulation data for
 ///                               each material.
 /// \param[in] velocities         Iterator to the velocity data.
+/// \param[in] dh                 The grid resolution.
 /// \tparam    MaterialContainer  The type of the container for the material
 ///                               data. 
 /// \tparam    VelIterator        The type of the velocity iterator.
+/// \tparam    T                  The type of the grid resolution.
 template <
   typename MaterialContainer,
   typename VelIterator      ,
+  typename T                ,
   traits::gpu_enable_t<VelIterator> = 0
 >
-auto set_velocities(MaterialContainer&& materials, VelIterator&& velocities) 
--> void {
+auto set_velocities(
+  MaterialContainer&& materials ,
+  VelIterator&&       velocities,
+  T                   dh 
+)  -> void {
   cuda::set_velocities(
     std::forward<MaterialContainer>(materials),
-    std::forward<VelIterator>(velocities)
+    std::forward<VelIterator>(velocities)     ,
+    dh
   );
 }
 

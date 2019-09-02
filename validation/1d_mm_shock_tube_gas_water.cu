@@ -1,4 +1,4 @@
-//==--- fluidity/tests/1d_mm_fedkiw_test_1_validation.cu --- -*- C++ -*- ---==//
+//==--- fluidity/validation/1d_mm_shock_tube_gas_water.cu -- -*- C++ -*- ---==//
 //            
 //                                Fluidity
 // 
@@ -8,13 +8,13 @@
 //
 //==------------------------------------------------------------------------==//
 //
-/// \file  1d_mm_fedkiw_test_1_validation.cu
-/// \brief This file defines a validation test against the 1d test for the
-///        original GFM of Fedkiw.
+/// \file  1d_mm_shock_tube_gas_water.cu
+/// \brief This file defines a validation test for a 1D shock tube with gas and
+///        water, presented in the ghost fluid method of \cite Sambasivan2009.
 //
 //==------------------------------------------------------------------------==//
 
-#include <fluidity/algorith/hash.hpp>
+#include <fluidity/algorithm/hash.hpp>
 #include <fluidity/setting/settings.hpp>
 #include <fluidity/state/state_components.hpp>
 #include <fluidity/simulator/multimaterial_simulator.hpp>
@@ -23,21 +23,20 @@
 
 using namespace fluid;
 
-
 // Defines the type of data to use.
 using real_t = double;
 
-int main(int argc, char** argv)
-{
+int main(int argc, char** argv) {
   using namespace fluid::state::components;
 
   fluid::sim::mm_sim_option_manager_t sim_manager;
   auto simulator = sim_manager.create_simulator();
 
-  simulator->configure_resolution(0.004);
-  simulator->configure_dimension(fluid::dim_x, 0.0, 4.0);
-  simulator->configure_sim_time(0.0022);
+  simulator->configure_resolution(0.005);
+  simulator->configure_dimension(fluid::dim_x, 0.0, 1.0);
+  simulator->configure_sim_time(0.2);
   simulator->configure_cfl(0.9);
+  simulator->configure_max_iterations(200);
 
   if (argc >= 2) {
     auto arg_index = 1;
@@ -45,7 +44,7 @@ int main(int argc, char** argv)
       switch (hash(argv[arg_index])) {
         case hash("res"):
           simulator->configure_resolution(atof(argv[++arg_index]));
-          simulator->configure_dimension(fluid::dim_x, 0.0, 4.0);
+          simulator->configure_dimension(fluid::dim_x, 0.0, 1.0);
           break;
         case hash("sim_time"):
           simulator->configure_sim_time(atof(argv[++arg_index]));
@@ -61,23 +60,25 @@ int main(int argc, char** argv)
   }
 
   constexpr auto membrane = real_t{0.5};
+  // Left side material, ideal gas:
   simulator->add_material(
-    fluid::material::IdealGas<real_t>{1.4},
+    fluid::material::IdealGas<real_t>{2.5},
     [&] fluidity_host_device (auto it, auto& positions) {
       *it = positions[0] - membrane;
     },
-    2000.0_rho, 980000.0_p, 0.0_v_x 
+    0.5_rho, 20000.0_p, 100.0_v_x 
   );
+  // Right side material, water:
   simulator->add_material(
-    fluid::material::IdealGas<real_t>{1.4},
+    fluid::material::StiffFluid<real_t>{4.4},
     [&] fluidity_host_device (auto it, auto& positions) {
       *it = membrane - positions[0];
     },
-    1000.0_rho, 245000.0_p, 0.0_v_x 
+    1.0_rho, 1.0_p, 0.0_v_x 
   );
 
 
   simulator->simulate_mm();
   simulator->print_results();
-  simulator->write_results("1d_mm_fedkiw_test_1_results");
+  simulator->write_results("1d_mm_shock_tube_gas_water");
 }

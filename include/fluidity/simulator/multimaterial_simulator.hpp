@@ -140,11 +140,9 @@ class MultimaterialSimulator final :
   /// \param[in] dim   The dimension to specify.
   /// \param[in] start The start value of the dimension.
   /// \param[in] end   The end value of the dimension.
-  void configure_dimension(std::size_t dim, double start, double end) override
-  {
+  void configure_dimension(std::size_t dim, double start, double end) override {
     _params.domain.set_dimension(dim, start, end);
-    for_each(_mm_data, [&] (auto& mm_data)
-    {
+    for_each(_mm_data, [&] (auto& mm_data) {
       mm_data.resize_dim(dim, _params.domain.elements(dim));
     });
   }
@@ -234,15 +232,19 @@ class MultimaterialSimulator final :
     const auto dh            = _params.domain.resolution();
     constexpr auto bandwidth = 3;
 
-    using host_vel_t = HostTensor<value_t, dimensions>;
-    using dev_vel_t  = DeviceTensor<value_t, dimensions>;
-    using vel_data_t = std::conditional_t<
-      std::is_same<exec_t, exec::cpu_t>::value, host_vel_t, dev_vel_t>;
+    // Define the type of the velocity container.
+    using host_vel_t      = HostTensor<value_t, dimensions>;
+    using dev_vel_t       = DeviceTensor<value_t, dimensions>;
+    using vel_data_t      = std::conditional_t<
+      std::is_same<exec_t, exec::cpu_t>::value, host_vel_t, dev_vel_t
+    >;
 
     // Define the velocities for evolving the levelset
     // and resize them to the appropriate size.
     vel_data_t velocities;
-    velocities.resize(get<0>(_mm_data).states().total_size());
+    unrolled_for<dimensions>([&] (auto dim) {
+      velocities.resize_dim(dim, get<0>(_mm_data).states().size(dim));
+    });
     
     init_material_data();
 
@@ -487,7 +489,9 @@ class MultimaterialSimulator final :
   template <typename Velocities>
   void set_levelset_velocities_from_materials(Velocities&& velocities) {
     print_subprocess("Setting levelset velocities");
-    levelset::set_velocities(_mm_data, velocities.multi_iterator());
+    levelset::set_velocities(
+      _mm_data, velocities.multi_iterator(), _params.dh()
+    );
 
     auto host_vel = velocities.as_host();
     auto i = 0;
@@ -506,7 +510,6 @@ class MultimaterialSimulator final :
         << v
         << "\n";
     }
-    std::cout << "\n";
   }
 
   /// Implementation of levelset evolution for all levelsets.

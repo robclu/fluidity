@@ -111,6 +111,15 @@ fluid_add_executable(
 )
 fluid_target_link_libraries(2d_liska_case_15 ${CUDA_LIBRARIES})
 
+
+#==--- [2D MM Tests] --------------------------------------------------------==#
+
+# 2D Spherical Riemann test:
+fluid_add_executable(
+  2d_mm_spherical_riemann ${SOURCE_DIR}/2d_mm_spherical_riemann.cu
+)
+fluid_target_link_libraries(2d_mm_spherical_riemann ${CUDA_LIBRARIES})
+
 #==--- [Eikonal tests] ------------------------------------------------------==#
 
 # 2D Eikonal test with speed function: f = 1 and multiple sources

@@ -51,7 +51,7 @@ template <
   > = 0
 >
 fluidity_device_only auto set_velocity_it_value(
-  VelIterator&&        vel_it,
+  VelIterator&&        vel_it  ,
   const StateIterator& state_it,
   Dim                  dim
 ) -> void {
@@ -81,8 +81,8 @@ template <
   typename Dim          ,
   std::enable_if_t<
     (std::decay_t<VelIterator>::dimensions > 1) &&
-    (std::decay_t<StateIterator>::dimensions > 1)
-    , int
+    (std::decay_t<StateIterator>::dimensions > 1),
+    int
   > = 0
 >
 fluidity_device_only auto set_velocity_it_value(
@@ -93,22 +93,27 @@ fluidity_device_only auto set_velocity_it_value(
   (*vel_it)[dim] = state_it->velocity(dim);
 }
 
-
 /// Sets the velocity values stored in the \p velocities iterator using the
 /// state data for each of the \p materials in the materials container.
 ///
 /// \param[in] mat_iters          Container with iterators for the material
 ///                               simulation data for each material.
 /// \param[in] vel_it             Iterator to the velocity data.
+/// \param[in] dh                 The domain resolution to use to compute the
+///                               norm.
 /// \tparam    MaterialIterators  The type of the container for the material
 ///                               data iterators. 
 /// \tparam    VelIterator        The type of the velocity iterator.
-template <typename MaterialIterators, typename VelIterator>
+/// \tparam    T                  The data type for the resolution.
+template <typename MaterialIterators, typename VelIterator, typename T>
 fluidity_global auto set_velocities(
   MaterialIterators mat_iters,
-  VelIterator       vel_it
+  VelIterator       vel_it   ,
+  T                 dh
 ) -> void {
-  constexpr auto dims = std::decay_t<VelIterator>::dimensions;
+  constexpr auto dims = std::decay_t<
+    decltype(*(get<0>(mat_iters).state_iterator()))
+  >::dimensions;
     
   // Offset the iterators to the correct place:
   unrolled_for<dims>([&] (auto dim) {
@@ -126,9 +131,13 @@ fluidity_global auto set_velocities(
     idx++;
     if (!set && levelset::inside(mat_it.levelset_iterator())) {
       set = true;
-      unrolled_for<dims>([&] (auto dim) {
-        set_velocity_it_value(vel_it, mat_it.state_iterator(), dim);
-      });
+      *vel_it = math::dot(
+        mat_it.state_iterator()->velocity_vec(),
+        mat_it.levelset_iterator().norm(dh)
+      );
+      //unrolled_for<dims>([&] (auto dim) {
+      //  set_velocity_it_value(vel_it, mat_it.state_iterator(), dim);
+      //});
     } 
   });
 }
@@ -136,16 +145,35 @@ fluidity_global auto set_velocities(
 } // namespace detail
 
 /// Sets the velocity values stored in the \p velocities iterator using the
-/// state data for each of the \p materials in the materials container.
+/// state data for each of the \p materials in the materials container. This
+/// sets the velocity value as
+/// 
+/// \begin{equation}
+///   v_n = \textbf{v} \dot \textbf{n
+/// \end{equation}
+/// 
+/// where $v$ is a vector of the velocities from state which the material is in,
+/// and $n$ is the normal vector for the corresponding cell.
 ///
 /// \param[in] materials          Container with material simulation data for
 ///                               each material.
 /// \param[in] vel_it             Iterator to the velocity data.
+/// \param[in] dh                 The grid spatial resolution, required for the
+///                               computation of the norm.
 /// \tparam    MaterialContainer  The type of the container for the material
 ///                               data. 
 /// \tparam    VelIterator        The type of the velocity iterator.
-template <typename MaterialContainer, typename VelIterator>
-void set_velocities(MaterialContainer&& materials, VelIterator&& vel_it) {
+/// \tparam    T                  The type of the grid resolution.
+template <
+  typename MaterialContainer,
+  typename VelIterator      ,
+  typename T
+>
+auto set_velocities(
+  MaterialContainer&& materials,
+  VelIterator&&       vel_it   ,
+  T                   dh 
+) -> void {
   // Get the wrappers which wrap the iterators for each of the materials.
   auto mat_iters = unpack(materials, [&] (auto&&... material) {
     return make_tuple(material.material_iterator()...);
@@ -155,7 +183,7 @@ void set_velocities(MaterialContainer&& materials, VelIterator&& vel_it) {
   auto threads = exec::get_thread_sizes(it);
   auto blocks  = exec::get_block_sizes(it, threads);
 
-  detail::set_velocities<<<threads, blocks>>>(mat_iters, vel_it);
+  detail::set_velocities<<<threads, blocks>>>(mat_iters, vel_it, dh);
   fluidity_check_cuda_result(cudaDeviceSynchronize());
 }
 

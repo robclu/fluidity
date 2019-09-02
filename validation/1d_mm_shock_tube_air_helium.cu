@@ -14,6 +14,7 @@
 //
 //==------------------------------------------------------------------------==//
 
+#include <fluidity/algorithm/hash.hpp>
 #include <fluidity/setting/settings.hpp>
 #include <fluidity/state/state_components.hpp>
 #include <fluidity/simulator/multimaterial_simulator.hpp>
@@ -22,22 +23,10 @@
 
 using namespace fluid;
 
-namespace fluid {
-
-constexpr unsigned hash(char const* input)
-{
-  return *input 
-    ? static_cast<unsigned int>(*input) + 33 * hash(input + 1)
-    : 5381;
-}
-
-} // namespace fluid
-
 // Defines the type of data to use.
 using real_t = double;
 
-int main(int argc, char** argv)
-{
+int main(int argc, char** argv) {
   using namespace fluid::state::components;
 
   fluid::sim::mm_sim_option_manager_t sim_manager;
@@ -49,13 +38,10 @@ int main(int argc, char** argv)
   simulator->configure_cfl(0.9);
   simulator->configure_max_iterations(100);
 
-  if (argc >= 2)
-  {
+  if (argc >= 2) {
     auto arg_index = 1;
-    while (arg_index + 1 <= argc)
-    {
-      switch (hash(argv[arg_index]))
-      {
+    while (arg_index + 1 <= argc) {
+      switch (hash(argv[arg_index])) {
         case hash("res"):
           simulator->configure_resolution(atof(argv[++arg_index]));
           simulator->configure_dimension(fluid::dim_x, 0.0, 1.0);
@@ -74,18 +60,18 @@ int main(int argc, char** argv)
   }
 
   constexpr auto membrane = real_t{0.5};
+  // Left side material, air:
   simulator->add_material(
     fluid::material::IdealGas<real_t>{1.4},
-    [&] fluidity_host_device (auto it, auto& positions)
-    {
+    [&] fluidity_host_device (auto it, auto& positions) {
       *it = positions[0] - membrane;
     },
     1.0_rho, 1.0_p, 0.0_v_x 
   );
+  // Right side material, helium:
   simulator->add_material(
     fluid::material::IdealGas<real_t>{1.667},
-    [&] fluidity_host_device (auto it, auto& positions)
-    {
+    [&] fluidity_host_device (auto it, auto& positions) {
       *it = membrane - positions[0];
     },
     0.125_rho, 0.1_p, 0.0_v_x 

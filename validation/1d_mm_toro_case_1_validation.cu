@@ -14,6 +14,7 @@
 //
 //==------------------------------------------------------------------------==//
 
+#include <fluidity/algorithm/hash.hpp>
 #include <fluidity/setting/settings.hpp>
 #include <fluidity/state/state_components.hpp>
 #include <fluidity/simulator/multimaterial_simulator.hpp>
@@ -21,16 +22,6 @@
 #include <memory>
 
 using namespace fluid;
-
-namespace fluid {
-
-constexpr unsigned hash(char const* input) {
-  return *input 
-    ? static_cast<unsigned int>(*input) + 33 * hash(input + 1)
-    : 5381;
-}
-
-} // namespace fluid
 
 // Defines the type of data to use.
 using real_t = double;
@@ -46,17 +37,6 @@ int main(int argc, char** argv) {
   simulator->configure_sim_time(0.2);
   simulator->configure_cfl(0.9);
 
-  // Command line arguments
-/*
-  if (argc >= 2)
-  {
-    simulator->configure_sim_time(atof(argv[1]));
-  }
-  if (argc >= 3)
-  {
-    simulator->configure_max_iterations(atoi(argv[2]));
-  }
-*/
   if (argc >= 2) {
     auto arg_index = 1;
     while (arg_index + 1 <= argc) {

@@ -131,11 +131,13 @@ fluidity_host_device auto interp(Iterator&& it, Weights&& weights)
     "Number of weights does not match the number of dimensions for the iterator"
   );
 
-  // Defines the type of container for the nodes. We need two nodes for each of
-  // the dimensions.
+  // Defines the type of container for the nodes.
+  // We need two nodes for each of the dimensions, and we reference
+  // the nodes rather than copying them because the data types could
+  // be large for complex states.
   using node_container_t = Array<Array<decltype(*it)&, 2>, 2>;
-  auto nodes       = node_container_t(&(*it));
-  auto new_weights = weights;
+  auto nodes             = node_container_t(*it);
+  auto new_weights       = weights;
 
   unrolled_for<2>([&] (auto dim) {
     const auto sign    = math::signum(weights[dim]);

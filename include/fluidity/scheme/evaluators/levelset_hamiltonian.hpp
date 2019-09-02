@@ -77,16 +77,13 @@ class LevelsetHamiltonian : public Evaluatable<LevelsetHamiltonian<Stencil>> {
       is_multidim_iter_v<Iterator> && is_multidim_iter_v<VelIterator>,
       "Iterators for Evaluatable must be a multi-dimensional iterator!"
     );
-    
-    using value_t = std::decay_t<decltype(*v_it)>;
+    using value_t = std::decay_t<T>;
 
     // Compute $v_n = \textbf{v} \dot \textbf{n}$
-    const auto vn = math::dot(v_it.as_vec(), it.norm(dh));
-
-    return vn * 
+    return (*v_it) * 
       // TODO: Change name and swap which methid is called ...
       //       change to: neg_direction, pos_direction ...
-      (vn <= value_t{0}
+      (*v_it <= value_t{0}
       ? scheme_t().forward(
           std::forward<Iterator>(it) ,
           dh                         ,
